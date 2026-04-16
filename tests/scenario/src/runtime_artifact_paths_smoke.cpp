@@ -2,18 +2,13 @@
 #include <filesystem>
 
 #include "icss/core/runtime.hpp"
+#include "tests/support/temp_repo.hpp"
 
 int main() {
     namespace fs = std::filesystem;
     using namespace icss::core;
 
-    const fs::path temp_root = fs::temp_directory_path() / "icss_runtime_artifacts_test";
-    fs::remove_all(temp_root);
-    fs::create_directories(temp_root / "configs");
-
-    fs::copy_file(fs::path{ICSS_REPO_ROOT} / "configs/server.example.yaml", temp_root / "configs/server.example.yaml");
-    fs::copy_file(fs::path{ICSS_REPO_ROOT} / "configs/scenario.example.yaml", temp_root / "configs/scenario.example.yaml");
-    fs::copy_file(fs::path{ICSS_REPO_ROOT} / "configs/logging.example.yaml", temp_root / "configs/logging.example.yaml");
+    const fs::path temp_root = icss::testsupport::make_temp_configured_repo("icss_runtime_artifacts_test_");
 
     BaselineRuntime runtime(default_runtime_config(temp_root));
     const auto result = runtime.run();

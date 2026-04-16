@@ -5,6 +5,8 @@
 #include <string>
 #include <string_view>
 
+#include "icss/net/transport.hpp"
+
 namespace icss::core {
 namespace {
 
@@ -44,24 +46,39 @@ const RuntimeConfig& BaselineRuntime::config() const {
 }
 
 RuntimeResult BaselineRuntime::run() const {
-    auto session = run_baseline_demo(config_);
-    const auto summary = session.build_summary();
+    auto transport = icss::net::make_transport(icss::net::BackendKind::InProcess, config_);
+    transport->connect_client(ClientRole::CommandConsole, 101U);
+    transport->connect_client(ClientRole::TacticalViewer, 201U);
+    transport->start_scenario();
+    transport->dispatch(icss::protocol::TrackRequestPayload{{1001U, 101U, 1U}, "target-alpha"});
+    transport->advance_tick();
+    transport->dispatch(icss::protocol::AssetActivatePayload{{1001U, 101U, 2U}, "asset-interceptor"});
+    transport->disconnect_client(ClientRole::TacticalViewer, "viewer reconnect exercised for resilience evidence");
+    transport->connect_client(ClientRole::TacticalViewer, 201U);
+    transport->dispatch(icss::protocol::CommandIssuePayload{{1001U, 101U, 3U}, "asset-interceptor", "target-alpha"});
+    transport->advance_tick();
+    transport->advance_tick();
+    transport->archive_session();
+
+    const auto summary = transport->summary();
     const auto aar_dir = config_.repo_root / config_.logging.aar_output_dir;
     const auto example_output = config_.repo_root / "examples/sample-output.md";
     const auto log_file = config_.repo_root / config_.logging.file_path;
 
-    session.write_aar_artifacts(aar_dir);
-    session.write_example_output(example_output);
+    transport->write_aar_artifacts(aar_dir);
+    transport->write_example_output(example_output, icss::view::make_replay_cursor(summary.event_count, summary.event_count == 0 ? 0 : summary.event_count - 1));
 
     std::filesystem::create_directories(log_file.parent_path());
     std::ofstream log(log_file);
     log << "{\"record_type\":\"session_summary\",\"level\":\"" << escape_json(config_.logging.level)
+        << "\",\"backend\":\"" << transport->backend_name()
         << "\",\"session_id\":" << summary.session_id
         << ",\"phase\":\"" << escape_json(to_string(summary.phase))
         << "\",\"snapshot_count\":" << summary.snapshot_count
         << ",\"event_count\":" << summary.event_count
+        << ",\"judgment_code\":\"" << escape_json(to_string(summary.judgment_code)) << "\""
         << ",\"resilience\":\"" << escape_json(summary.resilience_case) << "\"}\n";
-    for (const auto& event : session.events()) {
+    for (const auto& event : transport->events()) {
         log << "{\"record_type\":\"event\""
             << ",\"tick\":" << event.header.tick
             << ",\"timestamp_ms\":" << event.header.timestamp_ms

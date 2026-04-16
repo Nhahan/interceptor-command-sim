@@ -21,7 +21,10 @@ int main() {
     assert(reconnected);
     assert(resilience);
 
-    const auto frame = icss::view::render_tactical_frame(session.latest_snapshot(), events, events.size() - 1);
+    const auto frame = icss::view::render_tactical_frame(
+        session.latest_snapshot(),
+        events,
+        icss::view::make_replay_cursor(events.size(), events.empty() ? 0 : events.size() - 1));
     assert(frame.find("packet_loss=") != std::string::npos);
     assert(frame.find("AAR:") != std::string::npos);
     assert(frame.find("cursor_index=") != std::string::npos);

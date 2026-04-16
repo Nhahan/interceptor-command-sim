@@ -12,6 +12,43 @@ namespace {
 
 using FieldMap = std::unordered_map<std::string, std::string>;
 
+std::string encode_field_value(std::string_view value) {
+    constexpr char kHex[] = "0123456789ABCDEF";
+    std::string encoded;
+    encoded.reserve(value.size());
+    for (unsigned char ch : value) {
+        if (ch == '%' || ch == ';' || ch == '=' || ch < 0x20U) {
+            encoded += '%';
+            encoded += kHex[(ch >> 4U) & 0x0FU];
+            encoded += kHex[ch & 0x0FU];
+        } else {
+            encoded += static_cast<char>(ch);
+        }
+    }
+    return encoded;
+}
+
+std::string decode_field_value(std::string_view value) {
+    std::string decoded;
+    decoded.reserve(value.size());
+    for (std::size_t i = 0; i < value.size(); ++i) {
+        if (value[i] == '%' && i + 2 < value.size()) {
+            auto hex = [](char c) -> unsigned char {
+                if (c >= '0' && c <= '9') return static_cast<unsigned char>(c - '0');
+                if (c >= 'A' && c <= 'F') return static_cast<unsigned char>(10 + (c - 'A'));
+                if (c >= 'a' && c <= 'f') return static_cast<unsigned char>(10 + (c - 'a'));
+                throw std::runtime_error("invalid percent-encoding");
+            };
+            const unsigned char byte = static_cast<unsigned char>((hex(value[i + 1]) << 4U) | hex(value[i + 2]));
+            decoded += static_cast<char>(byte);
+            i += 2;
+        } else {
+            decoded += value[i];
+        }
+    }
+    return decoded;
+}
+
 std::vector<std::string_view> split(std::string_view text, char delim) {
     std::vector<std::string_view> parts;
     std::size_t start = 0;
@@ -37,7 +74,7 @@ FieldMap parse_fields(std::string_view wire) {
         if (pos == std::string_view::npos) {
             throw std::runtime_error("invalid wire field: missing '='");
         }
-        fields.emplace(std::string(part.substr(0, pos)), std::string(part.substr(pos + 1)));
+        fields.emplace(std::string(part.substr(0, pos)), decode_field_value(part.substr(pos + 1)));
     }
     return fields;
 }
@@ -52,7 +89,7 @@ std::string join_fields(std::initializer_list<std::pair<std::string_view, std::s
         first = false;
         wire += key;
         wire += '=';
-        wire += value;
+        wire += encode_field_value(value);
     }
     return wire;
 }
@@ -148,6 +185,27 @@ TelemetrySample parse_telemetry_sample(const FieldMap& fields) {
     };
 }
 
+template <typename Predicate>
+std::string require_enum_string(const FieldMap& fields, const std::string& key, Predicate is_valid) {
+    const auto value = require(fields, key);
+    if (!is_valid(value)) {
+        throw std::runtime_error("invalid enum field: " + key);
+    }
+    return value;
+}
+
+bool is_valid_asset_status(std::string_view value) {
+    return value == "idle" || value == "ready" || value == "engaging" || value == "complete";
+}
+
+bool is_valid_command_status(std::string_view value) {
+    return value == "none" || value == "accepted" || value == "executing" || value == "completed" || value == "rejected";
+}
+
+bool is_valid_judgment_code(std::string_view value) {
+    return value == "pending" || value == "intercept_success" || value == "invalid_transition" || value == "timeout_observed";
+}
+
 }  // namespace
 
 std::string serialize(const SessionCreatePayload& payload) {
@@ -155,6 +213,46 @@ std::string serialize(const SessionCreatePayload& payload) {
         {"kind", "session_create"},
         {"requested_sender_id", as_string(payload.requested_sender_id)},
         {"scenario_name", payload.scenario_name},
+    });
+}
+
+std::string serialize(const SessionJoinPayload& payload) {
+    return join_fields({
+        {"kind", "session_join"},
+        {"session_id", as_string(payload.envelope.session_id)},
+        {"sender_id", as_string(payload.envelope.sender_id)},
+        {"sequence", as_string(payload.envelope.sequence)},
+        {"client_role", payload.client_role},
+    });
+}
+
+std::string serialize(const SessionLeavePayload& payload) {
+    return join_fields({
+        {"kind", "session_leave"},
+        {"session_id", as_string(payload.envelope.session_id)},
+        {"sender_id", as_string(payload.envelope.sender_id)},
+        {"sequence", as_string(payload.envelope.sequence)},
+        {"reason", payload.reason},
+    });
+}
+
+std::string serialize(const ScenarioStartPayload& payload) {
+    return join_fields({
+        {"kind", "scenario_start"},
+        {"session_id", as_string(payload.envelope.session_id)},
+        {"sender_id", as_string(payload.envelope.sender_id)},
+        {"sequence", as_string(payload.envelope.sequence)},
+        {"scenario_name", payload.scenario_name},
+    });
+}
+
+std::string serialize(const ScenarioStopPayload& payload) {
+    return join_fields({
+        {"kind", "scenario_stop"},
+        {"session_id", as_string(payload.envelope.session_id)},
+        {"sender_id", as_string(payload.envelope.sender_id)},
+        {"sequence", as_string(payload.envelope.sequence)},
+        {"reason", payload.reason},
     });
 }
 
@@ -200,6 +298,32 @@ std::string serialize(const JudgmentPayload& payload) {
     });
 }
 
+std::string serialize(const CommandAckPayload& payload) {
+    return join_fields({
+        {"kind", "command_ack"},
+        {"session_id", as_string(payload.envelope.session_id)},
+        {"sender_id", as_string(payload.envelope.sender_id)},
+        {"sequence", as_string(payload.envelope.sequence)},
+        {"accepted", as_string(payload.accepted)},
+        {"reason", payload.reason},
+    });
+}
+
+std::string serialize(const AarResponsePayload& payload) {
+    return join_fields({
+        {"kind", "aar_response"},
+        {"session_id", as_string(payload.envelope.session_id)},
+        {"sender_id", as_string(payload.envelope.sender_id)},
+        {"sequence", as_string(payload.envelope.sequence)},
+        {"replay_cursor_index", as_string(payload.replay_cursor_index)},
+        {"judgment_code", payload.judgment_code},
+        {"resilience_case", payload.resilience_case},
+        {"total_events", as_string(static_cast<std::uint64_t>(payload.total_events))},
+        {"event_type", payload.event_type},
+        {"event_summary", payload.event_summary},
+    });
+}
+
 std::string serialize(const SnapshotPayload& payload) {
     return join_fields({
         {"kind", "world_snapshot"},
@@ -212,8 +336,11 @@ std::string serialize(const SnapshotPayload& payload) {
         {"target_id", payload.target_id},
         {"asset_id", payload.asset_id},
         {"tracking_active", as_string(payload.tracking_active)},
-        {"asset_ready", as_string(payload.asset_ready)},
+        {"track_confidence_pct", as_string(static_cast<std::uint32_t>(payload.track_confidence_pct))},
+        {"asset_status", payload.asset_status},
+        {"command_status", payload.command_status},
         {"judgment_ready", as_string(payload.judgment_ready)},
+        {"judgment_code", payload.judgment_code},
     });
 }
 
@@ -231,6 +358,16 @@ std::string serialize(const TelemetryPayload& payload) {
     });
 }
 
+std::string serialize(const ViewerHeartbeatPayload& payload) {
+    return join_fields({
+        {"kind", "viewer_heartbeat"},
+        {"session_id", as_string(payload.envelope.session_id)},
+        {"sender_id", as_string(payload.envelope.sender_id)},
+        {"sequence", as_string(payload.envelope.sequence)},
+        {"heartbeat_id", as_string(payload.heartbeat_id)},
+    });
+}
+
 std::string serialize(const AarRequestPayload& payload) {
     return join_fields({
         {"kind", "aar_request"},
@@ -238,6 +375,7 @@ std::string serialize(const AarRequestPayload& payload) {
         {"sender_id", as_string(payload.envelope.sender_id)},
         {"sequence", as_string(payload.envelope.sequence)},
         {"replay_cursor_index", as_string(payload.replay_cursor_index)},
+        {"control", payload.control},
     });
 }
 
@@ -245,6 +383,30 @@ SessionCreatePayload parse_session_create(std::string_view wire) {
     const auto fields = parse_fields(wire);
     require_kind(fields, "session_create");
     return {parse_u32(require(fields, "requested_sender_id")), require(fields, "scenario_name")};
+}
+
+SessionJoinPayload parse_session_join(std::string_view wire) {
+    const auto fields = parse_fields(wire);
+    require_kind(fields, "session_join");
+    return {parse_envelope(fields), require(fields, "client_role")};
+}
+
+SessionLeavePayload parse_session_leave(std::string_view wire) {
+    const auto fields = parse_fields(wire);
+    require_kind(fields, "session_leave");
+    return {parse_envelope(fields), require(fields, "reason")};
+}
+
+ScenarioStartPayload parse_scenario_start(std::string_view wire) {
+    const auto fields = parse_fields(wire);
+    require_kind(fields, "scenario_start");
+    return {parse_envelope(fields), require(fields, "scenario_name")};
+}
+
+ScenarioStopPayload parse_scenario_stop(std::string_view wire) {
+    const auto fields = parse_fields(wire);
+    require_kind(fields, "scenario_stop");
+    return {parse_envelope(fields), require(fields, "reason")};
 }
 
 TrackRequestPayload parse_track_request(std::string_view wire) {
@@ -271,6 +433,23 @@ JudgmentPayload parse_judgment(std::string_view wire) {
     return {parse_envelope(fields), parse_bool(require(fields, "accepted")), require(fields, "outcome")};
 }
 
+CommandAckPayload parse_command_ack(std::string_view wire) {
+    const auto fields = parse_fields(wire);
+    require_kind(fields, "command_ack");
+    return {parse_envelope(fields), parse_bool(require(fields, "accepted")), require(fields, "reason")};
+}
+
+AarResponsePayload parse_aar_response(std::string_view wire) {
+    const auto fields = parse_fields(wire);
+    require_kind(fields, "aar_response");
+    return {parse_envelope(fields), parse_u64(require(fields, "replay_cursor_index")),
+            require_enum_string(fields, "judgment_code", is_valid_judgment_code),
+            require(fields, "resilience_case"),
+            parse_u64(require(fields, "total_events")),
+            require(fields, "event_type"),
+            require(fields, "event_summary")};
+}
+
 SnapshotPayload parse_snapshot(std::string_view wire) {
     const auto fields = parse_fields(wire);
     require_kind(fields, "world_snapshot");
@@ -280,8 +459,11 @@ SnapshotPayload parse_snapshot(std::string_view wire) {
         require(fields, "target_id"),
         require(fields, "asset_id"),
         parse_bool(require(fields, "tracking_active")),
-        parse_bool(require(fields, "asset_ready")),
+        static_cast<int>(parse_u32(require(fields, "track_confidence_pct"))),
+        require_enum_string(fields, "asset_status", is_valid_asset_status),
+        require_enum_string(fields, "command_status", is_valid_command_status),
         parse_bool(require(fields, "judgment_ready")),
+        require_enum_string(fields, "judgment_code", is_valid_judgment_code),
     };
 }
 
@@ -294,7 +476,13 @@ TelemetryPayload parse_telemetry(std::string_view wire) {
 AarRequestPayload parse_aar_request(std::string_view wire) {
     const auto fields = parse_fields(wire);
     require_kind(fields, "aar_request");
-    return {parse_envelope(fields), parse_u64(require(fields, "replay_cursor_index"))};
+    return {parse_envelope(fields), parse_u64(require(fields, "replay_cursor_index")), require(fields, "control")};
+}
+
+ViewerHeartbeatPayload parse_viewer_heartbeat(std::string_view wire) {
+    const auto fields = parse_fields(wire);
+    require_kind(fields, "viewer_heartbeat");
+    return {parse_envelope(fields), parse_u64(require(fields, "heartbeat_id"))};
 }
 
 }  // namespace icss::protocol

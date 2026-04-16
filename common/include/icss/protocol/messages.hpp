@@ -23,6 +23,7 @@ enum class TcpMessageKind : std::uint8_t {
     CommandAck,
     JudgmentEvent,
     AarRequest,
+    AarResponse,
 };
 
 enum class UdpMessageKind : std::uint8_t {
@@ -30,6 +31,7 @@ enum class UdpMessageKind : std::uint8_t {
     EntityState,
     TrackingSummary,
     Telemetry,
+    ViewerHeartbeat,
 };
 
 enum class EventType : std::uint8_t {
@@ -71,7 +73,7 @@ struct EventRecordHeader {
     EventType event_type {EventType::SessionStarted};
 };
 
-inline constexpr std::array<TcpMessageKind, 11> kTcpMessageKinds {
+inline constexpr std::array<TcpMessageKind, 12> kTcpMessageKinds {
     TcpMessageKind::SessionCreate,
     TcpMessageKind::SessionJoin,
     TcpMessageKind::SessionLeave,
@@ -83,13 +85,15 @@ inline constexpr std::array<TcpMessageKind, 11> kTcpMessageKinds {
     TcpMessageKind::CommandAck,
     TcpMessageKind::JudgmentEvent,
     TcpMessageKind::AarRequest,
+    TcpMessageKind::AarResponse,
 };
 
-inline constexpr std::array<UdpMessageKind, 4> kUdpMessageKinds {
+inline constexpr std::array<UdpMessageKind, 5> kUdpMessageKinds {
     UdpMessageKind::WorldSnapshot,
     UdpMessageKind::EntityState,
     UdpMessageKind::TrackingSummary,
     UdpMessageKind::Telemetry,
+    UdpMessageKind::ViewerHeartbeat,
 };
 
 inline constexpr std::array<EventType, 11> kEventTypes {
@@ -127,6 +131,7 @@ inline constexpr std::string_view to_string(TcpMessageKind value) {
     case TcpMessageKind::CommandAck: return "command_ack";
     case TcpMessageKind::JudgmentEvent: return "judgment_event";
     case TcpMessageKind::AarRequest: return "aar_request";
+    case TcpMessageKind::AarResponse: return "aar_response";
     }
     return "unknown_tcp_message";
 }
@@ -137,6 +142,7 @@ inline constexpr std::string_view to_string(UdpMessageKind value) {
     case UdpMessageKind::EntityState: return "entity_state";
     case UdpMessageKind::TrackingSummary: return "tracking_summary";
     case UdpMessageKind::Telemetry: return "telemetry";
+    case UdpMessageKind::ViewerHeartbeat: return "viewer_heartbeat";
     }
     return "unknown_udp_message";
 }

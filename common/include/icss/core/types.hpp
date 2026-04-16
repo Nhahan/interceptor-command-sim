@@ -33,6 +33,28 @@ enum class SessionPhase : std::uint8_t {
     Archived,
 };
 
+enum class AssetStatus : std::uint8_t {
+    Idle,
+    Ready,
+    Engaging,
+    Complete,
+};
+
+enum class CommandLifecycle : std::uint8_t {
+    None,
+    Accepted,
+    Executing,
+    Completed,
+    Rejected,
+};
+
+enum class JudgmentCode : std::uint8_t {
+    Pending,
+    InterceptSuccess,
+    InvalidTransition,
+    TimeoutObserved,
+};
+
 struct Vec2 {
     int x {};
     int y {};
@@ -52,6 +74,17 @@ struct ClientState {
     bool has_connected_before {false};
 };
 
+struct TrackState {
+    bool active {false};
+    int confidence_pct {0};
+};
+
+struct JudgmentState {
+    bool ready {false};
+    JudgmentCode code {JudgmentCode::Pending};
+    std::string summary;
+};
+
 struct CommandResult {
     bool accepted {false};
     std::string reason;
@@ -63,10 +96,10 @@ struct Snapshot {
     protocol::SnapshotHeader header {};
     EntityState target;
     EntityState asset;
-    bool tracking_active {false};
-    bool asset_ready {false};
-    bool command_issued {false};
-    bool judgment_ready {false};
+    TrackState track;
+    AssetStatus asset_status {AssetStatus::Idle};
+    CommandLifecycle command_status {CommandLifecycle::None};
+    JudgmentState judgment;
     ConnectionState viewer_connection {ConnectionState::Disconnected};
     protocol::TelemetrySample telemetry {};
 };
@@ -85,6 +118,7 @@ struct SessionSummary {
     std::size_t snapshot_count {};
     std::size_t event_count {};
     bool judgment_ready {false};
+    JudgmentCode judgment_code {JudgmentCode::Pending};
     std::string resilience_case;
 };
 
@@ -118,6 +152,37 @@ inline constexpr const char* to_string(SessionPhase phase) {
     case SessionPhase::Archived: return "archived";
     }
     return "unknown_session_phase";
+}
+
+inline constexpr const char* to_string(AssetStatus status) {
+    switch (status) {
+    case AssetStatus::Idle: return "idle";
+    case AssetStatus::Ready: return "ready";
+    case AssetStatus::Engaging: return "engaging";
+    case AssetStatus::Complete: return "complete";
+    }
+    return "unknown_asset_status";
+}
+
+inline constexpr const char* to_string(CommandLifecycle lifecycle) {
+    switch (lifecycle) {
+    case CommandLifecycle::None: return "none";
+    case CommandLifecycle::Accepted: return "accepted";
+    case CommandLifecycle::Executing: return "executing";
+    case CommandLifecycle::Completed: return "completed";
+    case CommandLifecycle::Rejected: return "rejected";
+    }
+    return "unknown_command_lifecycle";
+}
+
+inline constexpr const char* to_string(JudgmentCode code) {
+    switch (code) {
+    case JudgmentCode::Pending: return "pending";
+    case JudgmentCode::InterceptSuccess: return "intercept_success";
+    case JudgmentCode::InvalidTransition: return "invalid_transition";
+    case JudgmentCode::TimeoutObserved: return "timeout_observed";
+    }
+    return "unknown_judgment_code";
 }
 
 }  // namespace icss::core

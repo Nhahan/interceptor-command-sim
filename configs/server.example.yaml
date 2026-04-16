@@ -1,4 +1,8 @@
+bind_host: 127.0.0.1
+tcp_frame_format: json
 tick_rate_hz: 20
+udp_max_batch_snapshots: 2
+udp_send_latest_only: false
 ports:
   tcp: 4000
   udp: 4001

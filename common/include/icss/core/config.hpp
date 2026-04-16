@@ -7,9 +7,13 @@
 namespace icss::core {
 
 struct ServerConfig {
+    std::string bind_host {"127.0.0.1"};
+    std::string tcp_frame_format {"json"};
     int tick_rate_hz {20};
     int tcp_port {4000};
     int udp_port {4001};
+    int udp_max_batch_snapshots {2};
+    bool udp_send_latest_only {false};
     int heartbeat_interval_ms {1000};
     int heartbeat_timeout_ms {3000};
     int max_clients {8};

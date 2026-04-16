@@ -22,6 +22,9 @@ public:
     CommandResult request_track();
     CommandResult activate_asset();
     CommandResult issue_command();
+    CommandResult record_transport_rejection(std::string summary,
+                                             std::string reason,
+                                             std::vector<std::string> entity_ids = {});
     void advance_tick();
     void archive_session();
 
@@ -59,10 +62,10 @@ private:
     EntityState asset_ {"asset-interceptor", {8, 2}, false};
     ClientState command_console_ {ClientRole::CommandConsole, ConnectionState::Disconnected, 0, 0};
     ClientState tactical_viewer_ {ClientRole::TacticalViewer, ConnectionState::Disconnected, 0, 0};
-    bool tracking_active_ {false};
-    bool asset_ready_ {false};
-    bool command_issued_ {false};
-    bool judgment_ready_ {false};
+    TrackState track_;
+    AssetStatus asset_status_ {AssetStatus::Idle};
+    CommandLifecycle command_status_ {CommandLifecycle::None};
+    JudgmentState judgment_;
     bool reconnect_exercised_ {false};
     bool timeout_exercised_ {false};
     bool packet_gap_exercised_ {false};

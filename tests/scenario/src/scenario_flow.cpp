@@ -1,4 +1,5 @@
 #include <cassert>
+#include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <string>
@@ -18,8 +19,14 @@ int main() {
     assert(summary.snapshot_count >= 5);
     assert(summary.event_count >= 8);
     assert(session.latest_snapshot().envelope.sender_id == kServerSenderId);
+    assert(summary.judgment_code == JudgmentCode::InterceptSuccess);
+    assert(session.latest_snapshot().asset_status == AssetStatus::Complete);
+    assert(session.latest_snapshot().command_status == CommandLifecycle::Completed);
+    assert(session.latest_snapshot().track.confidence_pct >= 80);
 
-    const fs::path out_dir = fs::temp_directory_path() / "icss_scenario_test";
+    const auto unique_suffix = std::to_string(
+        std::chrono::steady_clock::now().time_since_epoch().count());
+    const fs::path out_dir = fs::temp_directory_path() / ("icss_scenario_test_" + unique_suffix);
     session.write_aar_artifacts(out_dir);
     assert(fs::exists(out_dir / "replay-timeline.json"));
     assert(fs::exists(out_dir / "session-summary.md"));

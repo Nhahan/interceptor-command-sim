@@ -8,6 +8,7 @@ int main() {
     using namespace icss::core;
 
     const RuntimeConfig config = default_runtime_config(fs::path{ICSS_REPO_ROOT});
+    assert(config.server.bind_host == "127.0.0.1");
     assert(config.server.tick_rate_hz == 20);
     assert(config.server.tcp_port == 4000);
     assert(config.server.udp_port == 4001);

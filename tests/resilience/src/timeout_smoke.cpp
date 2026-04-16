@@ -22,5 +22,6 @@ int main() {
     assert(timeout_seen);
     assert(session.latest_snapshot().viewer_connection == ConnectionState::TimedOut);
     assert(session.build_summary().resilience_case == "timeout_visibility");
+    assert(session.build_summary().judgment_code == JudgmentCode::Pending);
     return 0;
 }

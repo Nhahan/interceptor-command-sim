@@ -25,7 +25,7 @@ void place(std::vector<std::string>& grid, int x, int y, char glyph) {
 
 std::string render_tactical_frame(const icss::core::Snapshot& snapshot,
                                   const std::vector<icss::core::EventRecord>& recent_events,
-                                  std::size_t aar_cursor_index) {
+                                  ReplayCursor cursor) {
     auto grid = make_grid();
     place(grid, snapshot.target.position.x, snapshot.target.position.y, 'T');
     place(grid, snapshot.asset.position.x, snapshot.asset.position.y, 'A');
@@ -41,9 +41,11 @@ std::string render_tactical_frame(const icss::core::Snapshot& snapshot,
     out << "- asset=" << snapshot.asset.id << " @ (" << snapshot.asset.position.x << ", " << snapshot.asset.position.y
         << ") active=" << (snapshot.asset.active ? "yes" : "no") << '\n';
     out << "State:\n";
-    out << "- tracking=" << (snapshot.tracking_active ? "on" : "off")
-        << ", asset_ready=" << (snapshot.asset_ready ? "yes" : "no")
-        << ", judgment_ready=" << (snapshot.judgment_ready ? "yes" : "no") << '\n';
+    out << "- tracking=" << (snapshot.track.active ? "on" : "off")
+        << " (confidence=" << snapshot.track.confidence_pct << "%)"
+        << ", asset_status=" << icss::core::to_string(snapshot.asset_status)
+        << ", command_status=" << icss::core::to_string(snapshot.command_status)
+        << ", judgment=" << icss::core::to_string(snapshot.judgment.code) << '\n';
     out << "Telemetry:\n";
     out << "- connection=" << icss::core::to_string(snapshot.viewer_connection)
         << ", tick=" << snapshot.telemetry.tick
@@ -51,7 +53,7 @@ std::string render_tactical_frame(const icss::core::Snapshot& snapshot,
         << ", packet_loss=" << snapshot.telemetry.packet_loss_pct
         << ", last_snapshot_ms=" << snapshot.telemetry.last_snapshot_timestamp_ms << '\n';
     out << "AAR:\n";
-    out << "- cursor_index=" << aar_cursor_index << "\n";
+    out << "- cursor_index=" << cursor.index << "/" << cursor.total << "\n";
     out << "Recent events:\n";
     for (const auto& event : recent_events) {
         out << "- [tick " << event.header.tick << "] " << event.summary << " ("

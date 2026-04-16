@@ -60,9 +60,13 @@ ServerConfig load_server_config(const std::filesystem::path& file) {
     for (const auto& raw_line : read_lines(file)) {
         const auto line = trim(raw_line);
         if (line.empty()) continue;
-        if (starts_with(line, "tick_rate_hz:")) config.tick_rate_hz = parse_int(value_after_colon(line));
+        if (starts_with(line, "bind_host:")) config.bind_host = value_after_colon(line);
+        else if (starts_with(line, "tcp_frame_format:")) config.tcp_frame_format = value_after_colon(line);
+        else if (starts_with(line, "tick_rate_hz:")) config.tick_rate_hz = parse_int(value_after_colon(line));
         else if (starts_with(line, "tcp:")) config.tcp_port = parse_int(value_after_colon(line));
         else if (starts_with(line, "udp:")) config.udp_port = parse_int(value_after_colon(line));
+        else if (starts_with(line, "udp_max_batch_snapshots:")) config.udp_max_batch_snapshots = parse_int(value_after_colon(line));
+        else if (starts_with(line, "udp_send_latest_only:")) config.udp_send_latest_only = parse_bool(value_after_colon(line));
         else if (starts_with(line, "interval_ms:")) config.heartbeat_interval_ms = parse_int(value_after_colon(line));
         else if (starts_with(line, "timeout_ms:")) config.heartbeat_timeout_ms = parse_int(value_after_colon(line));
         else if (starts_with(line, "max_clients:")) config.max_clients = parse_int(value_after_colon(line));

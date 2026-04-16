@@ -90,6 +90,10 @@ CommandResult SimulationSession::start_scenario() {
     }
     phase_ = SessionPhase::Detecting;
     target_.active = true;
+    track_ = {};
+    asset_status_ = AssetStatus::Idle;
+    command_status_ = CommandLifecycle::None;
+    judgment_ = {};
     push_event(protocol::EventType::SessionStarted,
                "simulation_server",
                {target_.id},
@@ -105,7 +109,8 @@ CommandResult SimulationSession::request_track() {
                               "track request is only valid while detecting",
                               {target_.id});
     }
-    tracking_active_ = true;
+    track_.active = true;
+    track_.confidence_pct = 82;
     phase_ = SessionPhase::Tracking;
     push_event(protocol::EventType::TrackUpdated,
                "command_console",
@@ -117,12 +122,12 @@ CommandResult SimulationSession::request_track() {
 }
 
 CommandResult SimulationSession::activate_asset() {
-    if (!tracking_active_) {
+    if (!track_.active) {
         return reject_command("Asset activation rejected",
                               "asset activation requires an active track",
                               {asset_.id});
     }
-    asset_ready_ = true;
+    asset_status_ = AssetStatus::Ready;
     asset_.active = true;
     phase_ = SessionPhase::AssetReady;
     push_event(protocol::EventType::AssetUpdated,
@@ -135,12 +140,12 @@ CommandResult SimulationSession::activate_asset() {
 }
 
 CommandResult SimulationSession::issue_command() {
-    if (!asset_ready_) {
+    if (asset_status_ != AssetStatus::Ready) {
         return reject_command("Command rejected",
                               "command issue requires asset_ready state",
                               {asset_.id, target_.id});
     }
-    command_issued_ = true;
+    command_status_ = CommandLifecycle::Accepted;
     phase_ = SessionPhase::CommandIssued;
     push_event(protocol::EventType::CommandAccepted,
                "command_console",
@@ -151,6 +156,12 @@ CommandResult SimulationSession::issue_command() {
     return {true, "command accepted", protocol::TcpMessageKind::CommandAck};
 }
 
+CommandResult SimulationSession::record_transport_rejection(std::string summary,
+                                                            std::string reason,
+                                                            std::vector<std::string> entity_ids) {
+    return reject_command(std::move(summary), std::move(reason), std::move(entity_ids));
+}
+
 void SimulationSession::advance_tick() {
     ++tick_;
 
@@ -159,11 +170,17 @@ void SimulationSession::advance_tick() {
         target_.position.y -= (tick_ % 2 == 0 ? 1 : 0);
     }
 
-    if (command_issued_ && phase_ == SessionPhase::CommandIssued) {
+    if (command_status_ == CommandLifecycle::Accepted && phase_ == SessionPhase::CommandIssued) {
         phase_ = SessionPhase::Engaging;
-    } else if (command_issued_ && phase_ == SessionPhase::Engaging) {
-        judgment_ready_ = true;
+        asset_status_ = AssetStatus::Engaging;
+        command_status_ = CommandLifecycle::Executing;
+    } else if (command_status_ == CommandLifecycle::Executing && phase_ == SessionPhase::Engaging) {
+        judgment_.ready = true;
+        judgment_.code = JudgmentCode::InterceptSuccess;
+        judgment_.summary = "authoritative intercept judgment complete";
         phase_ = SessionPhase::Judged;
+        asset_status_ = AssetStatus::Complete;
+        command_status_ = CommandLifecycle::Completed;
         push_event(protocol::EventType::JudgmentProduced,
                    "simulation_server",
                    {asset_.id, target_.id},
@@ -231,7 +248,7 @@ SessionSummary SimulationSession::build_summary() const {
     } else if (packet_gap_exercised_) {
         resilience_case = "udp_snapshot_gap_convergence";
     }
-    return {session_id_, phase_, snapshots_.size(), events_.size(), judgment_ready_,
+    return {session_id_, phase_, snapshots_.size(), events_.size(), judgment_.ready, judgment_.code,
             std::move(resilience_case)};
 }
 
@@ -272,6 +289,7 @@ void SimulationSession::write_aar_artifacts(const std::filesystem::path& output_
     summary_file << "- snapshot_count: " << summary.snapshot_count << "\n";
     summary_file << "- event_count: " << summary.event_count << "\n";
     summary_file << "- judgment_ready: " << (summary.judgment_ready ? "true" : "false") << "\n";
+    summary_file << "- judgment_code: " << to_string(summary.judgment_code) << "\n";
     summary_file << "- resilience_case: " << summary.resilience_case << "\n";
 }
 
@@ -286,7 +304,10 @@ void SimulationSession::write_example_output(const std::filesystem::path& output
     }
     out << "# Sample Output\n\n";
     out << "```text\n";
-    out << view::render_tactical_frame(latest_snapshot(), recent_events, events_.size() - 1);
+    out << view::render_tactical_frame(
+        latest_snapshot(),
+        recent_events,
+        view::make_replay_cursor(events_.size(), events_.empty() ? 0 : events_.size() - 1));
     out << "```\n";
 }
 
@@ -316,21 +337,22 @@ void SimulationSession::record_snapshot(float packet_loss_pct) {
     const auto timestamp = next_timestamp_ms();
     command_console_.last_seen_tick = tick_;
     tactical_viewer_.last_seen_tick = tick_;
-    if (tactical_viewer_.connection == ConnectionState::Reconnected) {
-        tactical_viewer_.connection = ConnectionState::Connected;
-    }
+    const auto viewer_connection = tactical_viewer_.connection;
     snapshots_.push_back({
         {session_id_, kServerSenderId, sequence_},
         {tick_, timestamp, sequence_},
         target_,
         asset_,
-        tracking_active_,
-        asset_ready_,
-        command_issued_,
-        judgment_ready_,
-        tactical_viewer_.connection,
+        track_,
+        asset_status_,
+        command_status_,
+        judgment_,
+        viewer_connection,
         {tick_, static_cast<std::uint32_t>((telemetry_interval_ms_ / 10) + tick_rate_hz_ + static_cast<int>(tick_)), packet_loss_pct, timestamp},
     });
+    if (viewer_connection == ConnectionState::Reconnected) {
+        tactical_viewer_.connection = ConnectionState::Connected;
+    }
 }
 
 CommandResult SimulationSession::reject_command(std::string summary,
@@ -341,6 +363,9 @@ CommandResult SimulationSession::reject_command(std::string summary,
                std::move(entity_ids),
                std::move(summary),
                reason);
+    command_status_ = CommandLifecycle::Rejected;
+    judgment_.code = JudgmentCode::InvalidTransition;
+    judgment_.summary = reason;
     return {false, std::move(reason), protocol::TcpMessageKind::CommandAck};
 }
 

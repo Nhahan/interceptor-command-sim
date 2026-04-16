@@ -14,6 +14,7 @@ include(CTest)
 
 function(target_common target_name)
     target_compile_features(${target_name} PRIVATE cxx_std_20)
+    target_include_directories(${target_name} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
     if (MSVC)
         target_compile_options(${target_name} PRIVATE /W4 /permissive-)
     else()
@@ -26,9 +27,11 @@ target_include_directories(icss_protocol INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/c
 
 add_library(icss_core
     common/src/config.cpp
+    common/src/frame_codec.cpp
     common/src/ascii_tactical_view.cpp
     common/src/runtime.cpp
     common/src/serialization.cpp
+    common/src/transport.cpp
     common/src/simulation.cpp)
 target_link_libraries(icss_core PUBLIC icss_protocol)
 target_include_directories(icss_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/common/include)
@@ -55,6 +58,14 @@ add_executable(icss_payload_codec_smoke tests/protocol/src/payload_codec_smoke.c
 target_link_libraries(icss_payload_codec_smoke PRIVATE icss_core)
 target_common(icss_payload_codec_smoke)
 
+add_executable(icss_frame_codec_smoke tests/protocol/src/frame_codec_smoke.cpp)
+target_link_libraries(icss_frame_codec_smoke PRIVATE icss_core)
+target_common(icss_frame_codec_smoke)
+
+add_executable(icss_transport_backend_smoke tests/protocol/src/transport_backend_smoke.cpp)
+target_link_libraries(icss_transport_backend_smoke PRIVATE icss_core)
+target_common(icss_transport_backend_smoke)
+
 add_executable(icss_scenario_flow tests/scenario/src/scenario_flow.cpp)
 target_link_libraries(icss_scenario_flow PRIVATE icss_core)
 target_common(icss_scenario_flow)
@@ -75,6 +86,10 @@ add_executable(icss_session_log_smoke tests/scenario/src/session_log_smoke.cpp)
 target_link_libraries(icss_session_log_smoke PRIVATE icss_core)
 target_common(icss_session_log_smoke)
 
+add_executable(icss_replay_cursor_smoke tests/scenario/src/replay_cursor_smoke.cpp)
+target_link_libraries(icss_replay_cursor_smoke PRIVATE icss_core)
+target_common(icss_replay_cursor_smoke)
+
 add_executable(icss_resilience_smoke tests/resilience/src/resilience_smoke.cpp)
 target_link_libraries(icss_resilience_smoke PRIVATE icss_core)
 target_common(icss_resilience_smoke)
@@ -83,14 +98,27 @@ add_executable(icss_timeout_smoke tests/resilience/src/timeout_smoke.cpp)
 target_link_libraries(icss_timeout_smoke PRIVATE icss_core)
 target_common(icss_timeout_smoke)
 
+add_executable(icss_socket_live_viewer_timeout_smoke tests/resilience/src/socket_live_viewer_timeout_smoke.cpp)
+target_link_libraries(icss_socket_live_viewer_timeout_smoke PRIVATE icss_core)
+target_common(icss_socket_live_viewer_timeout_smoke)
+
+add_executable(icss_socket_live_snapshot_batching_smoke tests/resilience/src/socket_live_snapshot_batching_smoke.cpp)
+target_link_libraries(icss_socket_live_snapshot_batching_smoke PRIVATE icss_core)
+target_common(icss_socket_live_snapshot_batching_smoke)
+
 if(BUILD_TESTING)
     add_test(NAME protocol_smoke COMMAND icss_protocol_smoke)
     add_test(NAME payload_codec_smoke COMMAND icss_payload_codec_smoke)
+    add_test(NAME frame_codec_smoke COMMAND icss_frame_codec_smoke)
+    add_test(NAME transport_backend_smoke COMMAND icss_transport_backend_smoke)
     add_test(NAME scenario_flow COMMAND icss_scenario_flow)
     add_test(NAME validation_rejects_invalid_flow COMMAND icss_validation_rejects_invalid_flow)
     add_test(NAME runtime_config_smoke COMMAND icss_runtime_config_smoke)
     add_test(NAME runtime_artifact_paths_smoke COMMAND icss_runtime_artifact_paths_smoke)
     add_test(NAME session_log_smoke COMMAND icss_session_log_smoke)
+    add_test(NAME replay_cursor_smoke COMMAND icss_replay_cursor_smoke)
     add_test(NAME resilience_smoke COMMAND icss_resilience_smoke)
     add_test(NAME timeout_smoke COMMAND icss_timeout_smoke)
+    add_test(NAME socket_live_viewer_timeout_smoke COMMAND icss_socket_live_viewer_timeout_smoke)
+    add_test(NAME socket_live_snapshot_batching_smoke COMMAND icss_socket_live_snapshot_batching_smoke)
 endif()
