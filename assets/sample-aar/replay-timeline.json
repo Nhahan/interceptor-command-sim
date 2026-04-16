@@ -1,0 +1,11 @@
+{
+  "session_id": "sample-session-001",
+  "events": [
+    {
+      "timestamp": "2026-04-16T00:00:00Z",
+      "tick": 0,
+      "event_type": "session_started",
+      "summary": "placeholder event"
+    }
+  ]
+}
