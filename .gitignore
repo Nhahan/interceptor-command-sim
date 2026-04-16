@@ -10,11 +10,23 @@
 /build/
 /out/
 /bin/
-/lib/
 /obj/
 /Debug/
 /Release/
 /cmake-build-*/
+logs/
+
+# Compiled/native artifacts
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.dylib
+*.dll
+*.exe
+*.pdb
+*.ilk
 
 # CMake / generated build files
 CMakeCache.txt
