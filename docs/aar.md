@@ -2,11 +2,11 @@
 
 ## Goal
 
-AAR (After Action Review) is one of the main differentiators between a simple demo and a system that looks operable and explainable.
+AAR (After Action Review) provides an inspectable record of what happened, when it happened, and why the system reached a given outcome.
 
 ## Minimum Output
 
-For one sample session, reconstruct:
+For one sample session, capture:
 - session start/end
 - client join/leave/reconnect events
 - target detection/tracking changes
@@ -16,7 +16,7 @@ For one sample session, reconstruct:
 
 ## Event Record Shape
 
-Suggested baseline fields:
+Suggested fields:
 - `timestamp`
 - `tick`
 - `session_id`
@@ -28,7 +28,7 @@ Suggested baseline fields:
 
 ## Replay Expectations
 
-Baseline replay does **not** need a complex cinematic viewer.
+Replay does **not** need a complex cinematic viewer.
 It only needs to support:
 - timeline progression
 - visible cursor/current step
@@ -43,6 +43,6 @@ During replay mode, the viewer should show:
 - visible event panel updates
 - enough state visualization to connect events with positions/status
 
-## Evidence Target
+## Output Target
 
-The project should be able to show one artifact under `assets/sample-aar/` that a collaborator can inspect without running the full system.
+Keep at least one inspectable artifact under `assets/sample-aar/`.

@@ -2,7 +2,7 @@
 
 ## Objective
 
-Define a server-authoritative real-time simulation architecture that is easy to explain in a design review and small enough to finish in 4 weeks.
+Define the server, client, transport, and replay boundaries clearly enough that runtime behavior stays predictable and easy to verify.
 
 ## Core Components
 
@@ -16,7 +16,7 @@ Responsibilities:
 - emit event logs and AAR artifacts
 - manage session lifecycle and resilience events
 
-Suggested internal modules:
+Internal modules:
 - `net/` — TCP/UDP transport boundaries
 - `session/` — connection/session tracking
 - `simulation/` — tick loop and state transitions
@@ -26,17 +26,19 @@ Suggested internal modules:
 - `config/` — loading/validation of runtime configuration
 - `runtime/` — orchestration that binds config, simulation, logs, and artifact paths
 
-Current committed anchor points:
+Implementation anchors:
 - shared protocol schema: `common/include/icss/protocol/messages.hpp`
 - payload structs/serialization: `common/include/icss/protocol/payloads.hpp`, `common/include/icss/protocol/serialization.hpp`, `common/src/serialization.cpp`
+- transport abstraction: `common/include/icss/net/transport.hpp`, `common/src/transport.cpp`
 - runtime config loader: `common/include/icss/core/config.hpp`, `common/src/config.cpp`
 - reusable runtime orchestration: `common/include/icss/core/runtime.hpp`, `common/src/runtime.cpp`
+- live transport backend: `common/src/transport.cpp`
 - simulation API: `common/include/icss/core/simulation.hpp`
 - simulation runtime: `common/src/simulation.cpp`
-- ASCII tactical viewer renderer: `common/src/ascii_tactical_view.cpp`
-- server baseline entrypoint: `server/src/main.cpp`
-- command console baseline entrypoint: `clients/command-console/src/main.cpp`
-- tactical viewer baseline entrypoint: `clients/tactical-viewer/src/main.cpp`
+- replay cursor + ASCII tactical viewer renderer: `common/include/icss/view/replay_cursor.hpp`, `common/src/ascii_tactical_view.cpp`
+- server reference entrypoint: `server/src/main.cpp`
+- command console reference entrypoint: `clients/command-console/src/main.cpp`
+- tactical viewer reference entrypoint: `clients/tactical-viewer/src/main.cpp`
 
 ### 2. Command Console Client
 Responsibilities:
@@ -48,10 +50,11 @@ Responsibilities:
 ### 3. Minimal 2D Tactical Viewer
 Responsibilities:
 - render target / asset positions
-- show tracking state and snapshot freshness
+- show tracking confidence and snapshot freshness
 - display connection status and telemetry
 - surface event log panel
 - show AAR playback cursor/state during replay
+- expose richer command/judgment state panels
 
 ## Authority Model
 
@@ -62,7 +65,7 @@ Responsibilities:
 
 ## Tick Model
 
-Each tick should conceptually do:
+Each tick should:
 1. collect inbound commands/events
 2. validate and enqueue accepted commands
 3. apply state transitions
@@ -70,25 +73,25 @@ Each tick should conceptually do:
 5. publish snapshot/telemetry
 6. persist replay/AAR-relevant records
 
-The current baseline uses a **deterministic in-process clock** so that generated AAR/example artifacts and regression tests remain stable across runs.
+The current implementation uses a **deterministic in-process clock** so that generated AAR/example artifacts and regression tests remain stable across runs.
 
-## Boundary Rules
+## Scope
 
-### In Scope for the 4-week baseline
+### Current Scope
 - one scenario
 - one authoritative state model
 - one event schema
-- one resilience path fully evidenced
+- one resilience path fully verified
 
-### Out of Scope for the 4-week baseline
+### Out of Scope
 - sophisticated physics
 - tactical AI sophistication
 - advanced rendering pipeline
 - large plugin-style extensibility
 
-## Evidence of Good Architecture
+## Review Questions
 
-A collaborator should be able to answer these questions quickly:
+The code and docs should answer:
 - Why is the server authoritative?
 - Why are TCP and UDP split?
 - Where is replay/AAR generated from?

@@ -1,8 +1,8 @@
-# Server Plan
+# Server
 
-Planned ownership for the authoritative runtime.
+Authoritative runtime entrypoint and boundary notes.
 
-Expected responsibilities:
+Responsibilities:
 - session lifecycle
 - authoritative state
 - command validation
@@ -11,12 +11,12 @@ Expected responsibilities:
 - event logging / AAR generation
 - resilience handling
 
-Committed entrypoint:
+Entrypoint:
 - `server/src/main.cpp`
 
-Current baseline behavior:
-- loads runtime config from the committed example config set
-- runs the authoritative demo session
+Current behavior:
+- loads runtime config from the example config set
+- runs the authoritative reference session
 - writes AAR artifacts to `assets/sample-aar/`
 - writes runtime logs to `logs/session.log`
 - writes a viewer-oriented sample output to `examples/sample-output.md`

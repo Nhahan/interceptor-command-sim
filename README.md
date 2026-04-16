@@ -1,44 +1,41 @@
 # Interceptor Command Simulation System
 
-> C++ authoritative simulation baseline with multi-client roles, a protocol-defined TCP/UDP split, and AAR-focused observability.
+> C++ authoritative simulation system with role-separated clients, a protocol-defined TCP/UDP split, and AAR-focused observability.
 
-## Project Overview
+## Overview
 
-Interceptor Command Simulation System is a **focused real-time simulation/control project**.
+Interceptor Command Simulation System is a **C++ real-time simulation/control system**.
 
-The goal is **not** to present a consumer game. The goal is to present a **battlefield-system style real-time simulation/control system** that demonstrates:
+Core characteristics:
 - C++ real-time server/software engineering
 - server-authoritative state management
 - protocol-defined TCP/UDP role separation
 - multi-client command/viewer handling
 - resilience under abnormal network conditions
 - replayable logging / AAR (After Action Review)
-- operability and explanation quality suitable for design review and maintenance
+- operability and maintainable component boundaries
 
-## Repository Status
+## Implementation State
 
-This repository is currently in **execution-prep / early implementation** stage.
+This repository contains an implemented system with deterministic local verification and a separate live transport path for socket-based exchange.
 
-- documentation scaffold is committed
-- placeholder config/examples are committed
-- canonical C++ build/test commands are committed
-- a minimal C++/CMake skeleton is committed
-- a shared protocol schema header is committed at `common/include/icss/protocol/messages.hpp`
-- local configure/build/test verification has passed for the current skeleton
-- payload serialization, config loading, and reusable runtime separation are committed
-- regression coverage now includes protocol, payload codec, scenario flow, invalid command rejection, runtime config loading, resilience smoke, and timeout visibility
+- documented runtime, protocol, and operations boundaries
+- CMake-based configure/build/test flow
+- shared protocol schema plus payload/frame codecs
+- deterministic in-process runtime plus socket-based transport backend
+- command, snapshot, telemetry, AAR, and timeout flows exercised in code
+- regression coverage for protocol, runtime, transport, logging, replay, and resilience paths
 
-This is still an early implementation baseline, but the repository now supports configure/build/test verification.
-The current runtime is **in-process** and uses a committed protocol schema to model TCP/UDP responsibilities; live socket transport has not been added yet.
+The default runtime remains **in-process** for deterministic verification, while a separate live socket backend provides TCP/UDP bind/listen behavior, command/AAR exchange, heartbeat handling, and configurable snapshot delivery.
 
-## Project Focus
+## Focus
 
 - **Primary focus:** server-side / real-time systems engineering
 - **Secondary focus:** state management, command handling, situation propagation, and operability thinking
 
-## Locked 4-Week Baseline
+## Scope
 
-### Must Implement
+### Runtime Shape
 - 1 C++ server
 - 2 clients
   - command console
@@ -50,39 +47,40 @@ The current runtime is **in-process** and uses a committed protocol schema to mo
 - at least 1 resilience case
   - reconnect, timeout, or UDP loss recovery
 
-### Must Show in the 2D Tactical Viewer
+### Viewer Surface
 - target / asset position icons
 - tracking status
+- tracking confidence
 - connection status
 - tick / latency / packet loss telemetry
 - last snapshot timestamp
 - event log panel
 - AAR playback cursor
+- asset status / command lifecycle / judgment state
 
 ### Explicit Non-Goals
-- flashy effects or game-like presentation
+- flashy effects or entertainment-oriented presentation
 - direct action controls such as WASD/manual aiming
 - progression systems (items, ranking, leveling)
 - precise real-world weapons physics or tactics
 - multi-project spread
 
-## Deliverables
-- GitHub repository
-- 3–5 minute demo video
+## Outputs
 - core documentation set under `docs/`
-- sample AAR evidence under `assets/sample-aar/`
+- generated AAR outputs under `assets/sample-aar/`
+- generated sample output under `examples/`
 
-## Repository Guide
+## Guide
 
 - `docs/architecture.md` — component boundaries and state authority
 - `docs/protocol.md` — TCP/UDP responsibilities and message families
 - `docs/scenario.md` — representative scenario and state flow
 - `docs/operations.md` — logging, configuration, resilience, cleanup
 - `docs/aar.md` — event schema and replay/AAR design
-- `docs/test-report.md` — verification plan and evidence ledger
+- `docs/test-report.md` — verification plan and result log
 - `docs/design-faq.md` — public design rationale and common questions
-- `docs/demo-script.md` — recommended demo flow
-- `docs/week1-checklist.md` — immediate Week 1 execution checklist
+- `docs/walkthrough.md` — recommended system walkthrough
+- `docs/implementation-checklist.md` — implementation checklist
 
 ## Canonical Commands
 
@@ -104,26 +102,32 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
-## Current Code Skeleton
+## Code Paths
 
 - `CMakeLists.txt` — root build/test entrypoint
 - `common/include/icss/protocol/messages.hpp` — shared protocol/message schema
 - `common/include/icss/protocol/payloads.hpp` — concrete payload structs
 - `common/include/icss/protocol/serialization.hpp` — textual payload serialization/parse helpers
+- `common/include/icss/net/transport.hpp` — transport abstraction and backend factory
 - `common/include/icss/core/` — shared session/domain types and simulation API
-- `common/src/` — config loader, runtime orchestration, simulation runtime, AAR writer, ASCII tactical viewer renderer
-- `server/src/main.cpp` — baseline authoritative demo entrypoint
-- `clients/command-console/src/main.cpp` — command console baseline flow
-- `clients/tactical-viewer/src/main.cpp` — minimal 2D tactical viewer baseline
+- `common/src/` — config loader, transport backends, runtime orchestration, simulation runtime, AAR writer, ASCII tactical viewer renderer
+- `server/src/main.cpp` — authoritative reference entrypoint
+- `clients/command-console/src/main.cpp` — command console reference flow
+- `clients/tactical-viewer/src/main.cpp` — minimal 2D tactical viewer reference flow
 - `tests/protocol/src/protocol_smoke.cpp` — protocol smoke verification
 - `tests/protocol/src/payload_codec_smoke.cpp` — payload serialization regression
-- `tests/scenario/src/scenario_flow.cpp` — end-to-end baseline scenario regression
+- `tests/protocol/src/frame_codec_smoke.cpp` — JSON/binary frame codec regression
+- `tests/protocol/src/transport_backend_smoke.cpp` — transport backend regression
+- `tests/scenario/src/scenario_flow.cpp` — end-to-end scenario regression
 - `tests/scenario/src/validation_rejects_invalid_flow.cpp` — invalid command-order regression
 - `tests/scenario/src/runtime_config_smoke.cpp` — config loading regression
 - `tests/scenario/src/runtime_artifact_paths_smoke.cpp` — artifact path regression
 - `tests/scenario/src/session_log_smoke.cpp` — structured session log regression
+- `tests/scenario/src/replay_cursor_smoke.cpp` — replay cursor/viewer regression
 - `tests/resilience/src/resilience_smoke.cpp` — reconnect/rendering resilience regression
 - `tests/resilience/src/timeout_smoke.cpp` — timeout visibility regression
+- `tests/resilience/src/socket_live_viewer_timeout_smoke.cpp` — live viewer heartbeat timeout regression
+- `tests/resilience/src/socket_live_snapshot_batching_smoke.cpp` — live snapshot batching/filtering regression
 
 ## High-Level Repo Layout
 
@@ -145,9 +149,9 @@ assets/
 examples/
 ```
 
-## Immediate Next Step
+## Start Here
 
-Start with `docs/week1-checklist.md` and lock:
+Start with `docs/implementation-checklist.md` and lock:
 1. component boundaries
 2. protocol categories
 3. event schema

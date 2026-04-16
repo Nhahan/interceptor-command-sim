@@ -1,8 +1,8 @@
 # Scenario Design
 
-## Baseline Scenario
+## Scenario
 
-A single representative training/control scenario is enough for the 4-week baseline.
+Use one representative training/control scenario.
 
 ### Narrative Shape
 1. session starts
@@ -13,18 +13,18 @@ A single representative training/control scenario is enough for the 4-week basel
 6. server validates and judges the outcome
 7. result is reviewed through AAR/replay
 
-## Required Scenario Properties
+## Required Properties
 
 - shows command -> validation -> state transition -> judgment
 - shows multi-client visibility
 - can generate meaningful AAR output
-- can survive at least one abnormal network case in demo/test evidence
+- can survive at least one abnormal network case in validation coverage
 
-## Suggested State Flow
+## State Flow
 
 `Initialized -> Detecting -> Tracking -> AssetReady -> CommandIssued -> Engaging -> Judged -> Archived`
 
-## Main Entity Types
+## Entity Types
 
 - `Target`
 - `Asset`
@@ -33,12 +33,13 @@ A single representative training/control scenario is enough for the 4-week basel
 - `Command`
 - `Judgment`
 
-## Viewer Requirements Tied to Scenario
+## Viewer Requirements
 
-The tactical viewer should make the scenario understandable without game-like controls.
-It should show:
+The tactical viewer should make the scenario legible as an observability-first display. It should show:
 - where targets/assets are
 - whether tracking exists
+- how confident tracking currently is
+- what asset status and command lifecycle state are active
 - whether connection/snapshot status is healthy
 - where the AAR playback cursor is in replay mode
 

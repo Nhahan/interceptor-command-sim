@@ -2,7 +2,7 @@
 
 ## Why This Exists
 
-The project should feel like an operable system, not a throwaway demo.
+The project should behave like an operable system.
 
 ## Required Operational Concerns
 
@@ -12,7 +12,7 @@ Provide separate config domains for:
 - scenario
 - logging
 
-Current committed config entry points:
+Current config entry points:
 - `configs/server.example.yaml`
 - `configs/scenario.example.yaml`
 - `configs/logging.example.yaml`
@@ -26,10 +26,16 @@ Minimum expectations:
 - command acceptance/rejection recorded
 - resilience events recorded
 
-Current baseline log output:
+Current log output:
 - runtime writes `logs/session.log`
 - AAR artifacts are written under `assets/sample-aar/`
 - `logs/session.log` now contains one session-summary record plus structured event records
+- the summary log includes backend name, judgment code, and resilience summary
+
+Current live transport operational concerns:
+- TCP command clients disconnect explicitly on EOF and clear stale sender state
+- UDP viewer endpoints register separately from TCP command endpoints
+- viewer heartbeat timeout can raise visible timeout state without contaminating authoritative judgment
 
 ### Session Cleanup
 On shutdown or disconnect:
@@ -51,11 +57,11 @@ The tactical viewer or command console should expose at least:
 - latency
 - packet loss estimate
 - last snapshot timestamp
+- richer track/asset/command/judgment state
 
-## Demonstration Value
+## Operational Signals
 
-Operational evidence is part of the project's message.
-A collaborator should see that the system designer thought about:
+Operational records should make the following concerns obvious:
 - monitoring
 - cleanup
 - reproducibility

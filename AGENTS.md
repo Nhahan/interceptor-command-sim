@@ -1,34 +1,33 @@
 # AGENTS.md
 
-This file is the **root instruction map** for coding agents working in this repository.
-It is intentionally concise: use it as a table of contents, not as a giant manual.
-The detailed system of record lives in `README.md` and `docs/`.
+This file is the root instruction map for agents working in this repository.
+Keep it short. Treat `README.md` and `docs/` as the detailed source of truth.
 
 ## 1) Project identity
 
 - Project: **Interceptor Command Simulation System**
-- Type: **single focused project**
+- Type: **single-system repository**
 - Primary focus: **server-side / real-time systems engineering**
 - Secondary focus: state management, command handling, observability, and control-system thinking
 
-## 2) What this repository is trying to prove
+## 2) Technical objectives
 
-Build a **C++ server-authoritative real-time simulation/control system** that reads like a serious system project, not a consumer game.
+Build a **C++ server-authoritative real-time simulation/control system** focused on command validation, state propagation, observability, and replayability.
 
-The repository should demonstrate:
+The repository provides:
 - server-authoritative state management
 - TCP/UDP responsibility split
 - multi-client command/control + state propagation
 - tick-based simulation flow
 - replayable logging / AAR
 - resilience handling for at least one abnormal network case
-- operability and explanation quality suitable for design review and maintenance
+- operability and maintainable system structure
 
-## 3) Locked scope (do not silently expand)
+## 3) Implementation boundaries
 
-This repo is locked to a **4-week Standard track**.
+Keep the system compact and do not silently expand scope.
 
-### Must implement
+### Core shape
 - **1 server**
 - **2 clients**
   - command console
@@ -40,22 +39,23 @@ This repo is locked to a **4-week Standard track**.
 - **at least 1 resilience case**
   - reconnect, timeout, or UDP loss convergence
 
-### Submission target
-- **GitHub repository + 3–5 minute demo video**
+### Repository contents
+- repository source
+- documentation
+- generated logs and sample outputs
 
 ### Do not expand into
 - multiple parallel project tracks
-- multiple project tracks
-- flashy graphics / effects / game-like HUD
+- flashy graphics / effects / entertainment-oriented HUD patterns
 - direct action controls (WASD, manual aiming)
 - ranking / item / progression systems
 - precise real-world weapons physics or tactics
-- extra scenarios unless the baseline is already complete
+- extra scenarios unless the current scope is already complete
 
-## 4) The 2D viewer is not a game client
+## 4) Viewer role
 
 The tactical viewer exists to make UDP/state propagation and AAR legible.
-It must stay **read-only / observability-first**.
+It stays **read-only / observability-first**.
 
 ### Required viewer elements
 - target / asset position icons
@@ -67,33 +67,32 @@ It must stay **read-only / observability-first**.
 - AAR playback cursor
 
 ### Forbidden viewer drift
-- action gameplay
+- interaction-heavy control loops
 - cinematic effects
 - score / reward / progression UI
-- control schemes that make this look like a player client
+- direct-control schemes; the viewer remains read-only / observability-first
 
-## 5) Current repository stage
+## 5) Current codebase status
 
-This repository is in **execution-prep / early implementation** stage.
+This repository contains an implemented system with deterministic local verification.
 
-At this moment:
-- documentation scaffold exists
-- config examples exist
-- a minimal C++/CMake skeleton is committed
-- a canonical protocol schema header is committed at `common/include/icss/protocol/messages.hpp`
-- a baseline authoritative simulation runtime is committed under `common/include/icss/core/` and `common/src/`
-- payload serialization and config loading are committed
-- baseline regressions cover protocol, payload codec, scenario flow, invalid command rejection, runtime config loading, resilience, and timeout visibility
+Current shape:
+- documented runtime, protocol, and operations boundaries
+- CMake-based configure/build/test flow
+- authoritative runtime under `common/include/icss/core/` and `common/src/`
+- shared protocol schema under `common/include/icss/protocol/`
+- in-process and socket-based transport backends
+- replay, timeout, batching, and logging coverage in tests
 
 Therefore:
-- do **not** invent capabilities beyond the committed skeleton
+- do **not** invent capabilities beyond the current implementation
 - when changing build/test tooling, also update `README.md`, `docs/test-report.md`, and this file in the same change
 
 ## 6) Read these files first
 
-Start here, in order:
+Read in this order:
 1. `README.md`
-2. `docs/week1-checklist.md`
+2. `docs/implementation-checklist.md`
 3. `docs/architecture.md`
 4. `docs/protocol.md`
 5. `docs/scenario.md`
@@ -102,24 +101,23 @@ Start here, in order:
 8. `docs/test-report.md`
 9. `docs/design-faq.md`
 
-Treat those docs as the detailed source of truth.
 If code and docs diverge, fix the divergence instead of working around it silently.
 
 ## 7) Working rules for agents
 
 - Prefer **small, legible, verifiable** changes.
-- Preserve the repository's **single-system story** across code, docs, demo, and AAR artifacts.
+- Preserve the repository's **single-system story** across code, docs, walkthrough material, and AAR artifacts.
 - Keep boundaries explicit:
   - server decides truth
   - clients request / render
   - AAR is derived from server-side history
 - Prefer repository-local facts over chat history.
 - If you add a rule that should persist, encode it in repo docs or tooling rather than relying on conversation memory.
-- If a change affects architecture, protocol, scenario flow, logging, resilience, or demo scope, update the matching doc under `docs/`.
+- If a change affects architecture, protocol, scenario flow, logging, resilience, or walkthrough scope, update the matching doc under `docs/`.
 
 ## 8) Build / test commands
 
-Canonical commands are now:
+Canonical commands:
 
 - Configure: `cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug`
 - Build: `cmake --build build`

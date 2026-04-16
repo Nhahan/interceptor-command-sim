@@ -1,21 +1,41 @@
 # Design FAQ
 
-## Why is this not just a game server?
+## Why keep the runtime control-oriented?
 
-Because the system is framed around command validation, state authority, resilience, and AAR traceability rather than player action, reward loops, or visual entertainment.
+Because the runtime is centered on command validation, state authority, resilience handling, and traceable post-run analysis rather than interaction-heavy presentation.
 
 ## Why server-authoritative?
 
-To make the validation/judgment path explicit and explainable. The server is the only source of truth.
+To keep validation and judgment in one place. The server is the only source of truth.
 
 ## Why TCP and UDP both?
 
-In the current baseline, that split is expressed as a committed protocol schema + payload serialization layer. TCP is reserved for reliability-sensitive control flows, while UDP is reserved for fresh snapshot/telemetry flows. Live socket transport is the next implementation layer, not something that is already claimed as shipped.
+That split appears in both the protocol layer and the transport backend architecture. TCP is reserved for reliability-sensitive control flows, while UDP is reserved for fresh snapshot and telemetry flows. The default runtime stays in-process for deterministic verification, and the separate socket-live backend covers bind/listen plus command/snapshot exchange behavior on the network path.
+
+## Why add a transport abstraction before live sockets?
+
+So the runtime can separate command/snapshot intent from the backend that carries it. The in-process backend keeps local verification deterministic, while the socket-live backend exposes the network path without forcing the entire runtime onto sockets by default.
+
+## Why add viewer heartbeat handling?
+
+So transport-level liveness is observable independently from authoritative command/judgment state. A viewer timeout should affect connection/resilience state, not mission outcome.
+
+## Why separate framing from payload serialization?
+
+So the logical schema remains independent from how bytes move over the wire. The same payload can travel in a JSON line or a length-prefixed binary frame without redefining the underlying command structure.
+
+## Why add snapshot batching/filtering?
+
+So a late-joining or slower viewer can catch up quickly when only the latest state matters.
 
 ## Why include AAR?
 
-Because the project should show not just execution, but also explainability and post-run traceability.
+Because post-run traceability is part of the system contract, not an afterthought.
 
 ## Why use a minimal 2D viewer?
 
-To make state propagation and telemetry legible without drifting into game-like UX.
+To make state propagation and telemetry legible without drifting into interaction-heavy or entertainment-first UX.
+
+## Why show richer state panels?
+
+So the viewer can expose track confidence, asset status, command lifecycle, judgment state, and replay position without forcing operators to reconstruct system state from raw logs alone.

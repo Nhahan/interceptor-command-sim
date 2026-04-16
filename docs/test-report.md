@@ -1,8 +1,8 @@
 # Test Report
 
-## Verification Goal
+## Goal
 
-Prove that the project demonstrates the intended server/system software qualities, not just a scripted happy path.
+Verify that the system matches its intended transport, runtime, and resilience boundaries.
 
 ## Canonical Commands
 
@@ -24,35 +24,46 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
-## Current Verification Scope
+## Coverage
 
-At the current stage, verification proves:
+Current verification covers:
 - the CMake project configures successfully
-- the baseline executables build successfully
+- the primary executables build successfully
 - the shared protocol schema compiles and passes smoke checks
 - concrete payload serialization/parsing round-trips successfully
-- the baseline scenario flow passes end-to-end regression
+- JSON and binary frame codecs round-trip successfully
+- transport backend dispatch behavior is verified
+- the scenario flow passes end-to-end regression
 - invalid command ordering is rejected and logged
-- runtime config loading is verified against committed example configs
+- runtime config loading is verified against the example config set
+- runtime artifact paths are verified against configurable repo roots
 - runtime session logging is verified against generated structured log output
+- replay cursor stepping is verified against viewer output
 - resilience/replay rendering behavior passes smoke verification
+- live viewer heartbeat timeout behavior is verified against the socket backend
+- live snapshot batching/filtering is verified against the socket backend
 
-## Latest Verified Result
+## Latest Result
 
 - configure: passed
 - build: passed
-- test: passed (`9/9` tests)
+- test: passed (`14/14` tests)
 - runtime smoke: passed (`icss_server`, `icss_command_console`, `icss_tactical_viewer`)
 - verified targets:
   - `protocol_smoke`
   - `payload_codec_smoke`
+  - `frame_codec_smoke`
+  - `transport_backend_smoke`
   - `scenario_flow`
   - `validation_rejects_invalid_flow`
   - `runtime_config_smoke`
   - `runtime_artifact_paths_smoke`
   - `session_log_smoke`
+  - `replay_cursor_smoke`
   - `resilience_smoke`
   - `timeout_smoke`
+  - `socket_live_viewer_timeout_smoke`
+  - `socket_live_snapshot_batching_smoke`
 
 ## Acceptance Checks
 
@@ -61,33 +72,32 @@ At the current stage, verification proves:
 - [ ] command validation occurs on server
 - [ ] final judgment is produced by server
 
-### 2. Multi-Client Evidence
+### 2. Multi-Client Coverage
 - [ ] command console participates
 - [ ] tactical viewer receives state/telemetry updates
 - [ ] roles are meaningfully separated
 
-### 3. Protocol Evidence
-- [ ] TCP responsibilities demonstrated
-- [ ] UDP snapshot/telemetry responsibilities demonstrated
+### 3. Protocol Coverage
+- [ ] TCP responsibilities exercised
+- [ ] UDP snapshot/telemetry responsibilities exercised
 - [ ] transport split documented clearly
 
-### 4. Resilience Evidence
-- [ ] at least one abnormal case is demonstrated
+### 4. Resilience Coverage
+- [ ] at least one abnormal case is exercised
 - [ ] logs show the abnormal case clearly
 - [ ] system behavior after the abnormal case is understandable
 
-### 5. AAR Evidence
+### 5. AAR Coverage
 - [ ] one sample session can be replayed/reconstructed
 - [ ] event timeline includes key command/judgment points
 
-### 6. Operational Evidence
+### 6. Operational Coverage
 - [ ] config separation exists
 - [ ] logs have meaningful structure
 - [ ] session cleanup/end-state is visible
 
-## Evidence Links
+## Related Outputs
 
-- demo video: pending
 - sample AAR: `assets/sample-aar/session-summary.md`
 - logs: pending
 - screenshots: pending

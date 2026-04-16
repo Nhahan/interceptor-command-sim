@@ -1,19 +1,20 @@
 # Protocol Design
 
-## Design Goal
+## Goal
 
-Keep the protocol small, explainable, and aligned with the system's message: **reliable command handling + timely state propagation**.
+Keep the protocol compact, explicit, and aligned with the runtime boundary: **reliable command handling + timely state propagation**.
 
 ## Canonical Schema Source
 
-The committed source of truth for the baseline message schema is:
+The source of truth for the message schema is:
 
 - `common/include/icss/protocol/messages.hpp`
 - `common/include/icss/protocol/payloads.hpp`
 - `common/include/icss/protocol/serialization.hpp`
+- `common/include/icss/net/transport.hpp`
 
-Use this document as the explanation layer and the header as the implementation anchor.
-If they diverge, fix both in the same change.
+Use this document as the explanation layer and the headers as the implementation anchor.
+If they diverge, update both in the same change.
 
 ## Transport Split
 
@@ -37,6 +38,7 @@ If they diverge, fix both in the same change.
 | `command_ack` | acknowledge accepted or processed command flow |
 | `judgment_event` | emit critical server-side judgment result |
 | `aar_request` | request replay/AAR output |
+| `aar_response` | return replay/AAR summary metadata over TCP |
 
 ## UDP Message Kinds (`UdpMessageKind`)
 
@@ -46,10 +48,11 @@ If they diverge, fix both in the same change.
 | `entity_state` | target/asset state summary |
 | `tracking_summary` | tracking-specific state summary |
 | `telemetry` | tick/latency/packet-loss/last-snapshot telemetry |
+| `viewer_heartbeat` | viewer liveness heartbeat over UDP |
 
 ## Event Types (`EventType`)
 
-Committed baseline event categories:
+Current event categories:
 - `session_started`
 - `session_ended`
 - `client_joined`
@@ -62,34 +65,46 @@ Committed baseline event categories:
 - `judgment_produced`
 - `resilience_triggered`
 
-## Baseline Shared Structures
+## Shared Structures
 
-Committed baseline headers/records:
+Current headers/records:
 - `SessionEnvelope`
 - `SnapshotHeader`
 - `TelemetrySample`
 - `EventRecordHeader`
 
-## Concrete Payload Types
+## Payload Types
 
-Committed payload structs:
+Current payload structs:
 - `SessionCreatePayload`
+- `SessionJoinPayload`
+- `ScenarioStartPayload`
+- `ScenarioStopPayload`
 - `TrackRequestPayload`
 - `AssetActivatePayload`
 - `CommandIssuePayload`
 - `JudgmentPayload`
+- `CommandAckPayload`
+- `AarResponsePayload`
 - `SnapshotPayload`
 - `TelemetryPayload`
+- `ViewerHeartbeatPayload`
 - `AarRequestPayload`
 
-## Baseline Serialization Format
+`SnapshotPayload` carries richer state fields for:
+- track confidence
+- asset status
+- command lifecycle status
+- judgment readiness/code
 
-The current baseline uses a **deterministic textual wire preview format** for payload serialization.
+## Serialization Format
+
+The current implementation uses a **deterministic textual wire preview format** for payload serialization.
 
 Format rules:
 - `key=value` pairs
 - `;` as field separator
-- simple scalar-only baseline values
+- simple scalar-only values
 - intended for schema verification and documentation alignment, not final production wire format
 
 Example:
@@ -98,12 +113,36 @@ Example:
 kind=command_issue;session_id=1001;sender_id=101;sequence=7;asset_id=asset-interceptor;target_id=target-alpha
 ```
 
-## Baseline Validation Behavior
+## Framing Layer
 
-The authoritative runtime now records rejected command attempts as `command_rejected` events.
-This matters because command validation is part of the system boundary, not just a UI concern.
+The implementation separates payload serialization from transport framing:
+- `JsonLine` framing for JSON envelope lines
+- `Binary` framing for length-prefixed transport frames
 
-## Baseline Reliability Strategy
+The live TCP path exercises binary framing in regression coverage. Framing stays transport-selectable.
+
+## Transport Abstraction
+
+The implementation separates runtime behavior from transport backend selection through `TransportBackend`.
+
+Backend kinds:
+- `in_process` — active backend used by the runtime and client previews
+- `socket_live` — bind/listen-capable backend for the live transport direction, kept separate from the deterministic in-process runtime
+
+Current live backend scope:
+- accepts a TCP command connection
+- receives UDP viewer registration datagrams
+- processes framed command payloads over TCP
+- emits UDP snapshot/telemetry datagrams to the registered viewer endpoint
+- handles `scenario_stop` and `aar_request` over TCP
+- tracks viewer heartbeat datagrams and raises timeout visibility when the heartbeat window expires
+- applies batching/filtering controls when multiple snapshots are pending for a late-joining viewer
+
+## Validation Behavior
+
+The authoritative runtime records rejected command attempts as `command_rejected` events. Validation is part of the system boundary, not a UI detail.
+
+## Reliability Strategy
 
 ### TCP
 - strict request/response or event acknowledgement semantics for critical operations
@@ -111,12 +150,12 @@ This matters because command validation is part of the system boundary, not just
 ### UDP
 - latest snapshot wins
 - sequence number and snapshot timestamp included
-- no complex retransmission requirement in baseline
+- no complex retransmission requirement in the current scope
 - recovery target: converge on the next valid snapshot
 
-## Resilience Path to Implement
+## Resilience Path
 
-At least one of the following must be fully demonstrated:
+At least one of the following must be fully exercised:
 - reconnect + resync
 - timeout handling
 - UDP snapshot loss convergence
@@ -134,5 +173,5 @@ At least one of the following must be fully demonstrated:
 Be able to explain:
 1. why not everything is TCP
 2. why the viewer does not own truth
-3. why snapshot convergence is enough for the baseline
+3. why snapshot convergence is sufficient for the current scope
 4. how protocol structure helps replay/AAR

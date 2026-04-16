@@ -1,28 +1,30 @@
-# Tactical Viewer Plan
+# Tactical Viewer
 
-Purpose:
+Role:
 - minimal 2D tactical/state viewer
-- render positions/status without game-like controls
+- render positions/status as an observability-first display
 - display telemetry and event panel
 - support AAR playback cursor visualization
 
-Required baseline elements:
+Required elements:
 - target / asset position icons
 - tracking status
+- tracking confidence
 - connection status
 - tick / latency / packet loss telemetry
 - last snapshot timestamp
 - event log panel
 - AAR playback cursor
+- asset status / command lifecycle / judgment state
 
 Non-goals:
-- direct gameplay controls
+- direct-control interaction loops
 - cinematic effects
 - score / reward UI
 
-Committed entrypoint:
+Entrypoint:
 - `clients/tactical-viewer/src/main.cpp`
 
-Current baseline behavior:
+Current behavior:
 - renders an ASCII tactical frame
 - shows telemetry, connection state, recent events, and AAR cursor position
