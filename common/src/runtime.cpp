@@ -2,8 +2,39 @@
 
 #include <filesystem>
 #include <fstream>
+#include <string>
+#include <string_view>
 
 namespace icss::core {
+namespace {
+
+std::string escape_json(std::string_view input) {
+    std::string escaped;
+    escaped.reserve(input.size());
+    for (char ch : input) {
+        const auto uch = static_cast<unsigned char>(ch);
+        switch (ch) {
+        case '\\': escaped += "\\\\"; break;
+        case '"': escaped += "\\\""; break;
+        case '\n': escaped += "\\n"; break;
+        case '\r': escaped += "\\r"; break;
+        case '\t': escaped += "\\t"; break;
+        default:
+            if (uch < 0x20U) {
+                constexpr char kHex[] = "0123456789ABCDEF";
+                escaped += "\\u00";
+                escaped += kHex[(uch >> 4U) & 0x0FU];
+                escaped += kHex[uch & 0x0FU];
+            } else {
+                escaped += ch;
+            }
+            break;
+        }
+    }
+    return escaped;
+}
+
+}  // namespace
 
 BaselineRuntime::BaselineRuntime(RuntimeConfig config)
     : config_(std::move(config)) {}
@@ -24,10 +55,29 @@ RuntimeResult BaselineRuntime::run() const {
 
     std::filesystem::create_directories(log_file.parent_path());
     std::ofstream log(log_file);
-    log << "level=" << config_.logging.level << '\n';
-    log << "session_id=" << summary.session_id << '\n';
-    log << "phase=" << to_string(summary.phase) << '\n';
-    log << "resilience=" << summary.resilience_case << '\n';
+    log << "{\"record_type\":\"session_summary\",\"level\":\"" << escape_json(config_.logging.level)
+        << "\",\"session_id\":" << summary.session_id
+        << ",\"phase\":\"" << escape_json(to_string(summary.phase))
+        << "\",\"snapshot_count\":" << summary.snapshot_count
+        << ",\"event_count\":" << summary.event_count
+        << ",\"resilience\":\"" << escape_json(summary.resilience_case) << "\"}\n";
+    for (const auto& event : session.events()) {
+        log << "{\"record_type\":\"event\""
+            << ",\"tick\":" << event.header.tick
+            << ",\"timestamp_ms\":" << event.header.timestamp_ms
+            << ",\"event_type\":\"" << icss::protocol::to_string(event.header.event_type) << "\""
+            << ",\"source\":\"" << escape_json(event.source) << "\""
+            << ",\"summary\":\"" << escape_json(event.summary) << "\""
+            << ",\"details\":\"" << escape_json(event.details) << "\""
+            << ",\"entity_ids\":[";
+        for (std::size_t index = 0; index < event.entity_ids.size(); ++index) {
+            log << "\"" << escape_json(event.entity_ids[index]) << "\"";
+            if (index + 1 != event.entity_ids.size()) {
+                log << ",";
+            }
+        }
+        log << "]}\n";
+    }
 
     return {config_, summary};
 }

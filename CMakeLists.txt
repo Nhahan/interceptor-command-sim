@@ -71,6 +71,10 @@ add_executable(icss_runtime_artifact_paths_smoke tests/scenario/src/runtime_arti
 target_link_libraries(icss_runtime_artifact_paths_smoke PRIVATE icss_core)
 target_common(icss_runtime_artifact_paths_smoke)
 
+add_executable(icss_session_log_smoke tests/scenario/src/session_log_smoke.cpp)
+target_link_libraries(icss_session_log_smoke PRIVATE icss_core)
+target_common(icss_session_log_smoke)
+
 add_executable(icss_resilience_smoke tests/resilience/src/resilience_smoke.cpp)
 target_link_libraries(icss_resilience_smoke PRIVATE icss_core)
 target_common(icss_resilience_smoke)
@@ -86,6 +90,7 @@ if(BUILD_TESTING)
     add_test(NAME validation_rejects_invalid_flow COMMAND icss_validation_rejects_invalid_flow)
     add_test(NAME runtime_config_smoke COMMAND icss_runtime_config_smoke)
     add_test(NAME runtime_artifact_paths_smoke COMMAND icss_runtime_artifact_paths_smoke)
+    add_test(NAME session_log_smoke COMMAND icss_session_log_smoke)
     add_test(NAME resilience_smoke COMMAND icss_resilience_smoke)
     add_test(NAME timeout_smoke COMMAND icss_timeout_smoke)
 endif()
