@@ -121,6 +121,7 @@ ctest --test-dir build --output-on-failure
 - `tests/scenario/src/validation_rejects_invalid_flow.cpp` — invalid command-order regression
 - `tests/scenario/src/runtime_config_smoke.cpp` — config loading regression
 - `tests/scenario/src/runtime_artifact_paths_smoke.cpp` — artifact path regression
+- `tests/scenario/src/session_log_smoke.cpp` — structured session log regression
 - `tests/resilience/src/resilience_smoke.cpp` — reconnect/rendering resilience regression
 - `tests/resilience/src/timeout_smoke.cpp` — timeout visibility regression
 

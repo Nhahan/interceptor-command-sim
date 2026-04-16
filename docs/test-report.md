@@ -34,13 +34,14 @@ At the current stage, verification proves:
 - the baseline scenario flow passes end-to-end regression
 - invalid command ordering is rejected and logged
 - runtime config loading is verified against committed example configs
+- runtime session logging is verified against generated structured log output
 - resilience/replay rendering behavior passes smoke verification
 
 ## Latest Verified Result
 
 - configure: passed
 - build: passed
-- test: passed (`8/8` tests)
+- test: passed (`9/9` tests)
 - runtime smoke: passed (`icss_server`, `icss_command_console`, `icss_tactical_viewer`)
 - verified targets:
   - `protocol_smoke`
@@ -49,6 +50,7 @@ At the current stage, verification proves:
   - `validation_rejects_invalid_flow`
   - `runtime_config_smoke`
   - `runtime_artifact_paths_smoke`
+  - `session_log_smoke`
   - `resilience_smoke`
   - `timeout_smoke`
 

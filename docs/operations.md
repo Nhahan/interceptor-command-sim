@@ -29,6 +29,7 @@ Minimum expectations:
 Current baseline log output:
 - runtime writes `logs/session.log`
 - AAR artifacts are written under `assets/sample-aar/`
+- `logs/session.log` now contains one session-summary record plus structured event records
 
 ### Session Cleanup
 On shutdown or disconnect:
