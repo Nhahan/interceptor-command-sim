@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.20)
 
 project(interceptor_command_sim
     VERSION 0.1.0
-    DESCRIPTION "Server-authoritative real-time simulation/control portfolio scaffold"
+    DESCRIPTION "Server-authoritative real-time simulation/control baseline"
     LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
@@ -25,7 +25,10 @@ add_library(icss_protocol INTERFACE)
 target_include_directories(icss_protocol INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/common/include)
 
 add_library(icss_core
+    common/src/config.cpp
     common/src/ascii_tactical_view.cpp
+    common/src/runtime.cpp
+    common/src/serialization.cpp
     common/src/simulation.cpp)
 target_link_libraries(icss_core PUBLIC icss_protocol)
 target_include_directories(icss_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/common/include)
@@ -48,6 +51,10 @@ add_executable(icss_protocol_smoke tests/protocol/src/protocol_smoke.cpp)
 target_link_libraries(icss_protocol_smoke PRIVATE icss_protocol)
 target_common(icss_protocol_smoke)
 
+add_executable(icss_payload_codec_smoke tests/protocol/src/payload_codec_smoke.cpp)
+target_link_libraries(icss_payload_codec_smoke PRIVATE icss_core)
+target_common(icss_payload_codec_smoke)
+
 add_executable(icss_scenario_flow tests/scenario/src/scenario_flow.cpp)
 target_link_libraries(icss_scenario_flow PRIVATE icss_core)
 target_common(icss_scenario_flow)
@@ -56,13 +63,29 @@ add_executable(icss_validation_rejects_invalid_flow tests/scenario/src/validatio
 target_link_libraries(icss_validation_rejects_invalid_flow PRIVATE icss_core)
 target_common(icss_validation_rejects_invalid_flow)
 
+add_executable(icss_runtime_config_smoke tests/scenario/src/runtime_config_smoke.cpp)
+target_link_libraries(icss_runtime_config_smoke PRIVATE icss_core)
+target_common(icss_runtime_config_smoke)
+
+add_executable(icss_runtime_artifact_paths_smoke tests/scenario/src/runtime_artifact_paths_smoke.cpp)
+target_link_libraries(icss_runtime_artifact_paths_smoke PRIVATE icss_core)
+target_common(icss_runtime_artifact_paths_smoke)
+
 add_executable(icss_resilience_smoke tests/resilience/src/resilience_smoke.cpp)
 target_link_libraries(icss_resilience_smoke PRIVATE icss_core)
 target_common(icss_resilience_smoke)
 
+add_executable(icss_timeout_smoke tests/resilience/src/timeout_smoke.cpp)
+target_link_libraries(icss_timeout_smoke PRIVATE icss_core)
+target_common(icss_timeout_smoke)
+
 if(BUILD_TESTING)
     add_test(NAME protocol_smoke COMMAND icss_protocol_smoke)
+    add_test(NAME payload_codec_smoke COMMAND icss_payload_codec_smoke)
     add_test(NAME scenario_flow COMMAND icss_scenario_flow)
     add_test(NAME validation_rejects_invalid_flow COMMAND icss_validation_rejects_invalid_flow)
+    add_test(NAME runtime_config_smoke COMMAND icss_runtime_config_smoke)
+    add_test(NAME runtime_artifact_paths_smoke COMMAND icss_runtime_artifact_paths_smoke)
     add_test(NAME resilience_smoke COMMAND icss_resilience_smoke)
+    add_test(NAME timeout_smoke COMMAND icss_timeout_smoke)
 endif()

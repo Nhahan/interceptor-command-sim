@@ -1,6 +1,5 @@
 #include "icss/core/simulation.hpp"
 
-#include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
@@ -27,8 +26,8 @@ std::string escape_json(std::string_view input) {
 
 }  // namespace
 
-SimulationSession::SimulationSession(std::uint32_t session_id)
-    : session_id_(session_id) {}
+SimulationSession::SimulationSession(std::uint32_t session_id, int tick_rate_hz, int telemetry_interval_ms)
+    : session_id_(session_id), tick_rate_hz_(tick_rate_hz), telemetry_interval_ms_(telemetry_interval_ms) {}
 
 void SimulationSession::connect_client(ClientRole role, std::uint32_t sender_id) {
     auto& state = client(role);
@@ -66,6 +65,18 @@ void SimulationSession::disconnect_client(ClientRole role, std::string reason) {
                {},
                "Client disconnected",
                std::move(reason));
+}
+
+void SimulationSession::timeout_client(ClientRole role, std::string reason) {
+    auto& state = client(role);
+    state.connection = ConnectionState::TimedOut;
+    timeout_exercised_ = true;
+    push_event(protocol::EventType::ResilienceTriggered,
+               "simulation_server",
+               {},
+               "Client timeout exercised",
+               std::move(reason));
+    record_snapshot();
 }
 
 CommandResult SimulationSession::start_scenario() {
@@ -205,10 +216,18 @@ Snapshot SimulationSession::latest_snapshot() const {
 
 SessionSummary SimulationSession::build_summary() const {
     std::string resilience_case = "none";
-    if (reconnect_exercised_ && packet_gap_exercised_) {
+    if (reconnect_exercised_ && packet_gap_exercised_ && timeout_exercised_) {
+        resilience_case = "reconnect_and_resync,udp_snapshot_gap_convergence,timeout_visibility";
+    } else if (reconnect_exercised_ && packet_gap_exercised_) {
         resilience_case = "reconnect_and_resync,udp_snapshot_gap_convergence";
+    } else if (reconnect_exercised_ && timeout_exercised_) {
+        resilience_case = "reconnect_and_resync,timeout_visibility";
+    } else if (packet_gap_exercised_ && timeout_exercised_) {
+        resilience_case = "udp_snapshot_gap_convergence,timeout_visibility";
     } else if (reconnect_exercised_) {
         resilience_case = "reconnect_and_resync";
+    } else if (timeout_exercised_) {
+        resilience_case = "timeout_visibility";
     } else if (packet_gap_exercised_) {
         resilience_case = "udp_snapshot_gap_convergence";
     }
@@ -271,9 +290,9 @@ void SimulationSession::write_example_output(const std::filesystem::path& output
     out << "```\n";
 }
 
-std::uint64_t SimulationSession::now_ms() const {
-    using namespace std::chrono;
-    return duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
+std::uint64_t SimulationSession::next_timestamp_ms() {
+    clock_ms_ += static_cast<std::uint64_t>(telemetry_interval_ms_);
+    return clock_ms_;
 }
 
 ClientState& SimulationSession::client(ClientRole role) {
@@ -289,12 +308,12 @@ void SimulationSession::push_event(protocol::EventType type,
                                    std::vector<std::string> entity_ids,
                                    std::string summary,
                                    std::string details) {
-    events_.push_back({{tick_, now_ms(), type}, std::move(source), std::move(entity_ids), std::move(summary), std::move(details)});
+    events_.push_back({{tick_, next_timestamp_ms(), type}, std::move(source), std::move(entity_ids), std::move(summary), std::move(details)});
 }
 
 void SimulationSession::record_snapshot(float packet_loss_pct) {
     ++sequence_;
-    const auto timestamp = now_ms();
+    const auto timestamp = next_timestamp_ms();
     command_console_.last_seen_tick = tick_;
     tactical_viewer_.last_seen_tick = tick_;
     if (tactical_viewer_.connection == ConnectionState::Reconnected) {
@@ -310,7 +329,7 @@ void SimulationSession::record_snapshot(float packet_loss_pct) {
         command_issued_,
         judgment_ready_,
         tactical_viewer_.connection,
-        {tick_, 12U + static_cast<std::uint32_t>(tick_), packet_loss_pct, timestamp},
+        {tick_, static_cast<std::uint32_t>((telemetry_interval_ms_ / 10) + tick_rate_hz_ + static_cast<int>(tick_)), packet_loss_pct, timestamp},
     });
 }
 

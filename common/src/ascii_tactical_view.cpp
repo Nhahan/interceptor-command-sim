@@ -35,15 +35,23 @@ std::string render_tactical_frame(const icss::core::Snapshot& snapshot,
     for (const auto& row : grid) {
         out << row << '\n';
     }
-    out << "phase: tracking=" << (snapshot.tracking_active ? "on" : "off")
+    out << "Entities:\n";
+    out << "- target=" << snapshot.target.id << " @ (" << snapshot.target.position.x << ", " << snapshot.target.position.y
+        << ") active=" << (snapshot.target.active ? "yes" : "no") << '\n';
+    out << "- asset=" << snapshot.asset.id << " @ (" << snapshot.asset.position.x << ", " << snapshot.asset.position.y
+        << ") active=" << (snapshot.asset.active ? "yes" : "no") << '\n';
+    out << "State:\n";
+    out << "- tracking=" << (snapshot.tracking_active ? "on" : "off")
         << ", asset_ready=" << (snapshot.asset_ready ? "yes" : "no")
         << ", judgment_ready=" << (snapshot.judgment_ready ? "yes" : "no") << '\n';
-    out << "connection=" << icss::core::to_string(snapshot.viewer_connection)
+    out << "Telemetry:\n";
+    out << "- connection=" << icss::core::to_string(snapshot.viewer_connection)
         << ", tick=" << snapshot.telemetry.tick
         << ", latency_ms=" << snapshot.telemetry.latency_ms
         << ", packet_loss=" << snapshot.telemetry.packet_loss_pct
         << ", last_snapshot_ms=" << snapshot.telemetry.last_snapshot_timestamp_ms << '\n';
-    out << "AAR cursor index=" << aar_cursor_index << "\n";
+    out << "AAR:\n";
+    out << "- cursor_index=" << aar_cursor_index << "\n";
     out << "Recent events:\n";
     for (const auto& event : recent_events) {
         out << "- [tick " << event.header.tick << "] " << event.summary << " ("
