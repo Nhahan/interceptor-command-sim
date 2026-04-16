@@ -2,7 +2,7 @@
 
 ## Why This Exists
 
-The portfolio should feel like an operable system, not a throwaway demo.
+The project should feel like an operable system, not a throwaway demo.
 
 ## Required Operational Concerns
 
@@ -12,6 +12,12 @@ Provide separate config domains for:
 - scenario
 - logging
 
+Current committed config entry points:
+- `configs/server.example.yaml`
+- `configs/scenario.example.yaml`
+- `configs/logging.example.yaml`
+- loader: `common/src/config.cpp`
+
 ### Logging
 Minimum expectations:
 - structured enough to reconstruct timeline
@@ -19,6 +25,10 @@ Minimum expectations:
 - session lifecycle events recorded
 - command acceptance/rejection recorded
 - resilience events recorded
+
+Current baseline log output:
+- runtime writes `logs/session.log`
+- AAR artifacts are written under `assets/sample-aar/`
 
 ### Session Cleanup
 On shutdown or disconnect:
@@ -41,10 +51,10 @@ The tactical viewer or command console should expose at least:
 - packet loss estimate
 - last snapshot timestamp
 
-## Demo/Interview Value
+## Demonstration Value
 
-Operational evidence is part of the portfolio's message.
-A reviewer should see that the system designer thought about:
+Operational evidence is part of the project's message.
+A collaborator should see that the system designer thought about:
 - monitoring
 - cleanup
 - reproducibility

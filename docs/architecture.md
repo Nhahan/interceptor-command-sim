@@ -2,7 +2,7 @@
 
 ## Objective
 
-Define a server-authoritative real-time simulation architecture that is easy to explain in an interview and small enough to finish in 4 weeks.
+Define a server-authoritative real-time simulation architecture that is easy to explain in a design review and small enough to finish in 4 weeks.
 
 ## Core Components
 
@@ -24,9 +24,13 @@ Suggested internal modules:
 - `logging/` — event emission
 - `aar/` — replay/AAR generation
 - `config/` — loading/validation of runtime configuration
+- `runtime/` — orchestration that binds config, simulation, logs, and artifact paths
 
 Current committed anchor points:
 - shared protocol schema: `common/include/icss/protocol/messages.hpp`
+- payload structs/serialization: `common/include/icss/protocol/payloads.hpp`, `common/include/icss/protocol/serialization.hpp`, `common/src/serialization.cpp`
+- runtime config loader: `common/include/icss/core/config.hpp`, `common/src/config.cpp`
+- reusable runtime orchestration: `common/include/icss/core/runtime.hpp`, `common/src/runtime.cpp`
 - simulation API: `common/include/icss/core/simulation.hpp`
 - simulation runtime: `common/src/simulation.cpp`
 - ASCII tactical viewer renderer: `common/src/ascii_tactical_view.cpp`
@@ -66,6 +70,8 @@ Each tick should conceptually do:
 5. publish snapshot/telemetry
 6. persist replay/AAR-relevant records
 
+The current baseline uses a **deterministic in-process clock** so that generated AAR/example artifacts and regression tests remain stable across runs.
+
 ## Boundary Rules
 
 ### In Scope for the 4-week baseline
@@ -82,7 +88,7 @@ Each tick should conceptually do:
 
 ## Evidence of Good Architecture
 
-A reviewer should be able to answer these questions quickly:
+A collaborator should be able to answer these questions quickly:
 - Why is the server authoritative?
 - Why are TCP and UDP split?
 - Where is replay/AAR generated from?

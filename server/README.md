@@ -15,6 +15,8 @@ Committed entrypoint:
 - `server/src/main.cpp`
 
 Current baseline behavior:
+- loads runtime config from the committed example config set
 - runs the authoritative demo session
 - writes AAR artifacts to `assets/sample-aar/`
+- writes runtime logs to `logs/session.log`
 - writes a viewer-oriented sample output to `examples/sample-output.md`

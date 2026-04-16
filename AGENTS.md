@@ -7,13 +7,13 @@ The detailed system of record lives in `README.md` and `docs/`.
 ## 1) Project identity
 
 - Project: **Interceptor Command Simulation System**
-- Type: **single flagship portfolio project**
-- Primary positioning: **server SW / real-time systems SW**
-- Secondary positioning: adjacent fit for C4/ISR/unmanned-style systems through state management, command handling, observability, and control-system thinking
+- Type: **single focused project**
+- Primary focus: **server-side / real-time systems engineering**
+- Secondary focus: state management, command handling, observability, and control-system thinking
 
 ## 2) What this repository is trying to prove
 
-Build a **C++ server-authoritative real-time simulation/control system** that reads like a battlefield-system style portfolio, not a consumer game.
+Build a **C++ server-authoritative real-time simulation/control system** that reads like a serious system project, not a consumer game.
 
 The repository should demonstrate:
 - server-authoritative state management
@@ -22,7 +22,7 @@ The repository should demonstrate:
 - tick-based simulation flow
 - replayable logging / AAR
 - resilience handling for at least one abnormal network case
-- operability and explanation quality suitable for interviews
+- operability and explanation quality suitable for design review and maintenance
 
 ## 3) Locked scope (do not silently expand)
 
@@ -44,7 +44,8 @@ This repo is locked to a **4-week Standard track**.
 - **GitHub repository + 3–5 minute demo video**
 
 ### Do not expand into
-- multiple portfolio projects
+- multiple parallel project tracks
+- multiple project tracks
 - flashy graphics / effects / game-like HUD
 - direct action controls (WASD, manual aiming)
 - ranking / item / progression systems
@@ -81,7 +82,8 @@ At this moment:
 - a minimal C++/CMake skeleton is committed
 - a canonical protocol schema header is committed at `common/include/icss/protocol/messages.hpp`
 - a baseline authoritative simulation runtime is committed under `common/include/icss/core/` and `common/src/`
-- baseline regressions cover protocol, scenario flow, invalid command rejection, and resilience
+- payload serialization and config loading are committed
+- baseline regressions cover protocol, payload codec, scenario flow, invalid command rejection, runtime config loading, resilience, and timeout visibility
 
 Therefore:
 - do **not** invent capabilities beyond the committed skeleton
@@ -98,7 +100,7 @@ Start here, in order:
 6. `docs/operations.md`
 7. `docs/aar.md`
 8. `docs/test-report.md`
-9. `docs/interview-guide.md`
+9. `docs/design-faq.md`
 
 Treat those docs as the detailed source of truth.
 If code and docs diverge, fix the divergence instead of working around it silently.
@@ -129,3 +131,8 @@ If these commands change, update this file, `README.md`, and `docs/test-report.m
 
 If `server/` and `clients/` begin to need materially different rules, add nested `AGENTS.md` files there.
 Keep the root file short and let subdirectory files carry local detail.
+
+## 10) Internal-only notes
+
+Use `docs/internal/` for private local notes that should not ship in the public repository.
+That directory is intentionally gitignored.

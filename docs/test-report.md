@@ -2,7 +2,7 @@
 
 ## Verification Goal
 
-Prove that the portfolio demonstrates the intended server/system software qualities, not just a scripted happy path.
+Prove that the project demonstrates the intended server/system software qualities, not just a scripted happy path.
 
 ## Canonical Commands
 
@@ -30,21 +30,27 @@ At the current stage, verification proves:
 - the CMake project configures successfully
 - the baseline executables build successfully
 - the shared protocol schema compiles and passes smoke checks
+- concrete payload serialization/parsing round-trips successfully
 - the baseline scenario flow passes end-to-end regression
 - invalid command ordering is rejected and logged
+- runtime config loading is verified against committed example configs
 - resilience/replay rendering behavior passes smoke verification
 
 ## Latest Verified Result
 
 - configure: passed
 - build: passed
-- test: passed (`4/4` tests)
+- test: passed (`8/8` tests)
 - runtime smoke: passed (`icss_server`, `icss_command_console`, `icss_tactical_viewer`)
 - verified targets:
   - `protocol_smoke`
+  - `payload_codec_smoke`
   - `scenario_flow`
   - `validation_rejects_invalid_flow`
+  - `runtime_config_smoke`
+  - `runtime_artifact_paths_smoke`
   - `resilience_smoke`
+  - `timeout_smoke`
 
 ## Acceptance Checks
 

@@ -45,4 +45,4 @@ During replay mode, the viewer should show:
 
 ## Evidence Target
 
-The portfolio should be able to show one artifact under `assets/sample-aar/` that a reviewer can inspect without running the full system.
+The project should be able to show one artifact under `assets/sample-aar/` that a collaborator can inspect without running the full system.

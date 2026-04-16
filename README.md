@@ -4,7 +4,7 @@
 
 ## Project Overview
 
-Interceptor Command Simulation System is a **single flagship portfolio project** for a LIG넥스원-oriented application.
+Interceptor Command Simulation System is a **focused real-time simulation/control project**.
 
 The goal is **not** to present a consumer game. The goal is to present a **battlefield-system style real-time simulation/control system** that demonstrates:
 - C++ real-time server/software engineering
@@ -13,7 +13,7 @@ The goal is **not** to present a consumer game. The goal is to present a **battl
 - multi-client command/viewer handling
 - resilience under abnormal network conditions
 - replayable logging / AAR (After Action Review)
-- operability and explanation quality suitable for interviews
+- operability and explanation quality suitable for design review and maintenance
 
 ## Repository Status
 
@@ -25,14 +25,16 @@ This repository is currently in **execution-prep / early implementation** stage.
 - a minimal C++/CMake skeleton is committed
 - a shared protocol schema header is committed at `common/include/icss/protocol/messages.hpp`
 - local configure/build/test verification has passed for the current skeleton
+- payload serialization, config loading, and reusable runtime separation are committed
+- regression coverage now includes protocol, payload codec, scenario flow, invalid command rejection, runtime config loading, resilience smoke, and timeout visibility
 
 This is still an early implementation baseline, but the repository now supports configure/build/test verification.
 The current runtime is **in-process** and uses a committed protocol schema to model TCP/UDP responsibilities; live socket transport has not been added yet.
 
-## Positioning
+## Project Focus
 
-- **Primary positioning:** server SW / real-time systems SW
-- **Secondary message:** adjacent fit for C4/ISR/unmanned-style systems through state management, command handling, situation propagation, and operability thinking
+- **Primary focus:** server-side / real-time systems engineering
+- **Secondary focus:** state management, command handling, situation propagation, and operability thinking
 
 ## Locked 4-Week Baseline
 
@@ -62,7 +64,7 @@ The current runtime is **in-process** and uses a committed protocol schema to mo
 - direct action controls such as WASD/manual aiming
 - progression systems (items, ranking, leveling)
 - precise real-world weapons physics or tactics
-- multi-project portfolio spread
+- multi-project spread
 
 ## Deliverables
 - GitHub repository
@@ -78,7 +80,7 @@ The current runtime is **in-process** and uses a committed protocol schema to mo
 - `docs/operations.md` — logging, configuration, resilience, cleanup
 - `docs/aar.md` — event schema and replay/AAR design
 - `docs/test-report.md` — verification plan and evidence ledger
-- `docs/interview-guide.md` — interview-facing messaging and Q&A
+- `docs/design-faq.md` — public design rationale and common questions
 - `docs/demo-script.md` — recommended demo flow
 - `docs/week1-checklist.md` — immediate Week 1 execution checklist
 
@@ -106,15 +108,21 @@ ctest --test-dir build --output-on-failure
 
 - `CMakeLists.txt` — root build/test entrypoint
 - `common/include/icss/protocol/messages.hpp` — shared protocol/message schema
+- `common/include/icss/protocol/payloads.hpp` — concrete payload structs
+- `common/include/icss/protocol/serialization.hpp` — textual payload serialization/parse helpers
 - `common/include/icss/core/` — shared session/domain types and simulation API
-- `common/src/` — simulation runtime, AAR writer, ASCII tactical viewer renderer
+- `common/src/` — config loader, runtime orchestration, simulation runtime, AAR writer, ASCII tactical viewer renderer
 - `server/src/main.cpp` — baseline authoritative demo entrypoint
 - `clients/command-console/src/main.cpp` — command console baseline flow
 - `clients/tactical-viewer/src/main.cpp` — minimal 2D tactical viewer baseline
 - `tests/protocol/src/protocol_smoke.cpp` — protocol smoke verification
+- `tests/protocol/src/payload_codec_smoke.cpp` — payload serialization regression
 - `tests/scenario/src/scenario_flow.cpp` — end-to-end baseline scenario regression
 - `tests/scenario/src/validation_rejects_invalid_flow.cpp` — invalid command-order regression
+- `tests/scenario/src/runtime_config_smoke.cpp` — config loading regression
+- `tests/scenario/src/runtime_artifact_paths_smoke.cpp` — artifact path regression
 - `tests/resilience/src/resilience_smoke.cpp` — reconnect/rendering resilience regression
+- `tests/resilience/src/timeout_smoke.cpp` — timeout visibility regression
 
 ## High-Level Repo Layout
 

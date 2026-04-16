@@ -39,3 +39,12 @@ This checklist is for **locking implementation decisions on top of the committed
 - [ ] Gate B draft passed
 - [ ] no uncontrolled feature creep
 - [ ] Week 2 implementation can start without reopening architecture direction
+
+## Completed Baseline Work Since This Checklist Was Written
+
+- canonical CMake configure/build/test commands committed
+- protocol message schema committed
+- payload serialization committed
+- runtime config loading committed
+- reusable runtime separation committed
+- baseline regression tests committed
