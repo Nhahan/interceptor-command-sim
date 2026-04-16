@@ -2,7 +2,7 @@
   "session_id": "1001",
   "events": [
     {
-      "timestamp_ms": 1776327673124,
+      "timestamp_ms": 1776327000200,
       "tick": 0,
       "event_type": "client_joined",
       "source": "command_console",
@@ -11,7 +11,7 @@
       "details": "Client registered before scenario activity."
     },
     {
-      "timestamp_ms": 1776327673124,
+      "timestamp_ms": 1776327000400,
       "tick": 0,
       "event_type": "client_joined",
       "source": "tactical_viewer",
@@ -20,7 +20,7 @@
       "details": "Client registered before scenario activity."
     },
     {
-      "timestamp_ms": 1776327673124,
+      "timestamp_ms": 1776327000600,
       "tick": 0,
       "event_type": "session_started",
       "source": "simulation_server",
@@ -29,7 +29,7 @@
       "details": "The authoritative loop is now in detecting state."
     },
     {
-      "timestamp_ms": 1776327673124,
+      "timestamp_ms": 1776327001000,
       "tick": 0,
       "event_type": "track_updated",
       "source": "command_console",
@@ -38,7 +38,7 @@
       "details": "Target is now actively tracked by the server."
     },
     {
-      "timestamp_ms": 1776327673124,
+      "timestamp_ms": 1776327001600,
       "tick": 1,
       "event_type": "asset_updated",
       "source": "command_console",
@@ -47,7 +47,7 @@
       "details": "Interceptor asset is ready for command issue."
     },
     {
-      "timestamp_ms": 1776327673124,
+      "timestamp_ms": 1776327002000,
       "tick": 1,
       "event_type": "client_left",
       "source": "tactical_viewer",
@@ -56,7 +56,7 @@
       "details": "viewer reconnect exercised for resilience evidence"
     },
     {
-      "timestamp_ms": 1776327673124,
+      "timestamp_ms": 1776327002200,
       "tick": 1,
       "event_type": "client_reconnected",
       "source": "tactical_viewer",
@@ -65,7 +65,7 @@
       "details": "Client resumed control-plane visibility and should resync on the next snapshot."
     },
     {
-      "timestamp_ms": 1776327673124,
+      "timestamp_ms": 1776327002400,
       "tick": 1,
       "event_type": "resilience_triggered",
       "source": "simulation_server",
@@ -74,7 +74,7 @@
       "details": "The baseline resilience case uses reconnect + latest-snapshot convergence."
     },
     {
-      "timestamp_ms": 1776327673124,
+      "timestamp_ms": 1776327002600,
       "tick": 1,
       "event_type": "command_accepted",
       "source": "command_console",
@@ -83,7 +83,7 @@
       "details": "Authoritative server accepted the operator command for judgment."
     },
     {
-      "timestamp_ms": 1776327673124,
+      "timestamp_ms": 1776327003000,
       "tick": 2,
       "event_type": "resilience_triggered",
       "source": "simulation_server",
@@ -92,7 +92,7 @@
       "details": "Viewer should converge on the next valid snapshot rather than require retransmission."
     },
     {
-      "timestamp_ms": 1776327673124,
+      "timestamp_ms": 1776327003400,
       "tick": 3,
       "event_type": "judgment_produced",
       "source": "simulation_server",
@@ -101,7 +101,7 @@
       "details": "Server-authoritative judgment marked the intercept attempt as successful."
     },
     {
-      "timestamp_ms": 1776327673124,
+      "timestamp_ms": 1776327003800,
       "tick": 3,
       "event_type": "session_ended",
       "source": "simulation_server",

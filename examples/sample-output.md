@@ -10,9 +10,15 @@
 ............
 ....T.......
 ............
-phase: tracking=on, asset_ready=yes, judgment_ready=yes
-connection=connected, tick=3, latency_ms=15, packet_loss=0, last_snapshot_ms=1776327673124
-AAR cursor index=11
+Entities:
+- target=target-alpha @ (4, 6) active=yes
+- asset=asset-interceptor @ (8, 2) active=yes
+State:
+- tracking=on, asset_ready=yes, judgment_ready=yes
+Telemetry:
+- connection=connected, tick=3, latency_ms=43, packet_loss=0, last_snapshot_ms=1776327004000
+AAR:
+- cursor_index=11
 Recent events:
 - [tick 1] Command accepted (command_accepted)
 - [tick 2] Snapshot gap exercised (resilience_triggered)
