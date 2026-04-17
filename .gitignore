@@ -5,6 +5,7 @@
 
 # OMX / local planning artifacts
 .omx/
+.oraculum/
 /docs/internal/
 
 # Build outputs
