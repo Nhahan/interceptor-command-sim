@@ -4,7 +4,7 @@
 #include <string>
 
 #include "icss/core/runtime.hpp"
-#include "tests/support/minijson.hpp"
+#include "icss/support/minijson.hpp"
 #include "tests/support/temp_repo.hpp"
 
 namespace {

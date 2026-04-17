@@ -185,6 +185,13 @@ int main() {
     const auto start_ack = parse_command_ack(start_frame.payload);
     assert(start_ack.accepted);
 
+    send_binary_frame(tcp_client.fd, "scenario_start", serialize(ScenarioStartPayload{{1001U, 101U, 22U}, live_config.scenario.name}));
+    const auto duplicate_start_frame = wait_for_binary_frame(*live, tcp_client.fd);
+    assert(duplicate_start_frame.kind == "command_ack");
+    const auto duplicate_start_ack = parse_command_ack(duplicate_start_frame.payload);
+    assert(!duplicate_start_ack.accepted);
+    assert(duplicate_start_ack.reason.find("initialized state") != std::string::npos);
+
     const auto heartbeat_wire_1 = serialize(ViewerHeartbeatPayload{{1001U, 201U, 2U}, 1U});
     assert(::sendto(udp_viewer.fd,
                     heartbeat_wire_1.data(),
@@ -245,26 +252,47 @@ int main() {
     const auto stop_ack = parse_command_ack(stop_frame.payload);
     assert(stop_ack.accepted);
 
-    send_binary_frame(tcp_client.fd, "aar_request", serialize(AarRequestPayload{{1001U, 101U, 8U}, 11U}));
+    send_binary_frame(tcp_client.fd, "scenario_stop", serialize(ScenarioStopPayload{{1001U, 101U, 23U}, "duplicate scenario stop"}));
+    const auto duplicate_stop_frame = wait_for_binary_frame(*live, tcp_client.fd);
+    assert(duplicate_stop_frame.kind == "command_ack");
+    const auto duplicate_stop_ack = parse_command_ack(duplicate_stop_frame.payload);
+    assert(!duplicate_stop_ack.accepted);
+    assert(duplicate_stop_ack.reason.find("active scenario is running") != std::string::npos);
+
+    send_binary_frame(tcp_client.fd, "asset_activate", serialize(AssetActivatePayload{{1001U, 101U, 24U}, "asset-interceptor"}));
+    const auto post_stop_asset_frame = wait_for_binary_frame(*live, tcp_client.fd);
+    assert(post_stop_asset_frame.kind == "command_ack");
+    const auto post_stop_asset_ack = parse_command_ack(post_stop_asset_frame.payload);
+    assert(!post_stop_asset_ack.accepted);
+    assert(post_stop_asset_ack.reason.find("only valid while tracking") != std::string::npos);
+
+    send_binary_frame(tcp_client.fd, "command_issue", serialize(CommandIssuePayload{{1001U, 101U, 25U}, "asset-interceptor", "target-alpha"}));
+    const auto post_stop_command_frame = wait_for_binary_frame(*live, tcp_client.fd);
+    assert(post_stop_command_frame.kind == "command_ack");
+    const auto post_stop_command_ack = parse_command_ack(post_stop_command_frame.payload);
+    assert(!post_stop_command_ack.accepted);
+    assert(post_stop_command_ack.reason.find("only valid while asset_ready") != std::string::npos);
+
+    send_binary_frame(tcp_client.fd, "aar_request", serialize(AarRequestPayload{{1001U, 101U, 8U}, 999U}));
     const auto aar_frame = wait_for_binary_frame(*live, tcp_client.fd);
     assert(aar_frame.kind == "aar_response");
     const auto aar_response = parse_aar_response(aar_frame.payload);
     assert(aar_response.total_events >= 9U);
     assert(aar_response.replay_cursor_index == aar_response.total_events - 1U);
     assert(aar_response.control == "absolute");
-    assert(aar_response.requested_index == 11U);
+    assert(aar_response.requested_index == 999U);
     assert(aar_response.clamped);
     assert(aar_response.judgment_code == "intercept_success");
     assert(!aar_response.event_type.empty());
     assert(!aar_response.event_summary.empty());
 
-    send_binary_frame(tcp_client.fd, "aar_request", serialize(AarRequestPayload{{1001U, 101U, 9U}, 11U, "step_backward"}));
+    send_binary_frame(tcp_client.fd, "aar_request", serialize(AarRequestPayload{{1001U, 101U, 9U}, 999U, "step_backward"}));
     const auto aar_prev_frame = wait_for_binary_frame(*live, tcp_client.fd);
     assert(aar_prev_frame.kind == "aar_response");
     const auto aar_prev = parse_aar_response(aar_prev_frame.payload);
     assert(aar_prev.replay_cursor_index + 1 == aar_response.replay_cursor_index);
     assert(aar_prev.control == "step_backward");
-    assert(aar_prev.requested_index == 11U);
+    assert(aar_prev.requested_index == 999U);
     assert(!aar_prev.clamped);
 
     send_binary_frame(tcp_client.fd, "aar_request", serialize(AarRequestPayload{{1001U, 101U, 10U}, 0U, "step_forward"}));

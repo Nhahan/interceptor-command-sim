@@ -26,6 +26,7 @@ add_library(icss_protocol INTERFACE)
 target_include_directories(icss_protocol INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/common/include)
 
 add_library(icss_core
+    common/src/artifact_readers.cpp
     common/src/config.cpp
     common/src/frame_codec.cpp
     common/src/ascii_tactical_view.cpp
@@ -49,6 +50,10 @@ target_common(icss_command_console)
 add_executable(icss_tactical_viewer clients/tactical-viewer/src/main.cpp)
 target_link_libraries(icss_tactical_viewer PRIVATE icss_core)
 target_common(icss_tactical_viewer)
+
+add_executable(icss_artifact_summary tools/src/artifact_summary.cpp)
+target_link_libraries(icss_artifact_summary PRIVATE icss_core)
+target_common(icss_artifact_summary)
 
 add_executable(icss_protocol_smoke tests/protocol/src/protocol_smoke.cpp)
 target_link_libraries(icss_protocol_smoke PRIVATE icss_protocol)
@@ -78,6 +83,10 @@ add_executable(icss_server_process_live_json_smoke tests/protocol/src/server_pro
 target_link_libraries(icss_server_process_live_json_smoke PRIVATE icss_core)
 target_common(icss_server_process_live_json_smoke)
 
+add_executable(icss_server_process_live_override_precedence_smoke tests/protocol/src/server_process_live_override_precedence_smoke.cpp)
+target_link_libraries(icss_server_process_live_override_precedence_smoke PRIVATE icss_core)
+target_common(icss_server_process_live_override_precedence_smoke)
+
 add_executable(icss_server_process_live_run_forever_smoke tests/protocol/src/server_process_live_run_forever_smoke.cpp)
 target_link_libraries(icss_server_process_live_run_forever_smoke PRIVATE icss_core)
 target_common(icss_server_process_live_run_forever_smoke)
@@ -102,9 +111,21 @@ add_executable(icss_server_cli_override_precedence_smoke tests/scenario/src/serv
 target_link_libraries(icss_server_cli_override_precedence_smoke PRIVATE icss_core)
 target_common(icss_server_cli_override_precedence_smoke)
 
+add_executable(icss_artifact_reader_smoke tests/scenario/src/artifact_reader_smoke.cpp)
+target_link_libraries(icss_artifact_reader_smoke PRIVATE icss_core)
+target_common(icss_artifact_reader_smoke)
+
+add_executable(icss_artifact_summary_cli_smoke tests/scenario/src/artifact_summary_cli_smoke.cpp)
+target_link_libraries(icss_artifact_summary_cli_smoke PRIVATE icss_core)
+target_common(icss_artifact_summary_cli_smoke)
+
 add_executable(icss_runtime_artifact_paths_smoke tests/scenario/src/runtime_artifact_paths_smoke.cpp)
 target_link_libraries(icss_runtime_artifact_paths_smoke PRIVATE icss_core)
 target_common(icss_runtime_artifact_paths_smoke)
+
+add_executable(icss_runtime_artifact_determinism_smoke tests/scenario/src/runtime_artifact_determinism_smoke.cpp)
+target_link_libraries(icss_runtime_artifact_determinism_smoke PRIVATE icss_core)
+target_common(icss_runtime_artifact_determinism_smoke)
 
 add_executable(icss_session_log_smoke tests/scenario/src/session_log_smoke.cpp)
 target_link_libraries(icss_session_log_smoke PRIVATE icss_core)
@@ -138,13 +159,17 @@ if(BUILD_TESTING)
     add_test(NAME socket_live_single_session_policy_smoke COMMAND icss_socket_live_single_session_policy_smoke)
     add_test(NAME server_process_live_smoke COMMAND icss_server_process_live_smoke)
     add_test(NAME server_process_live_json_smoke COMMAND icss_server_process_live_json_smoke)
+    add_test(NAME server_process_live_override_precedence_smoke COMMAND icss_server_process_live_override_precedence_smoke)
     add_test(NAME server_process_live_run_forever_smoke COMMAND icss_server_process_live_run_forever_smoke)
     add_test(NAME scenario_flow COMMAND icss_scenario_flow)
     add_test(NAME validation_rejects_invalid_flow COMMAND icss_validation_rejects_invalid_flow)
     add_test(NAME runtime_config_smoke COMMAND icss_runtime_config_smoke)
     add_test(NAME runtime_config_invalid_values_smoke COMMAND icss_runtime_config_invalid_values_smoke)
     add_test(NAME server_cli_override_precedence_smoke COMMAND icss_server_cli_override_precedence_smoke)
+    add_test(NAME artifact_reader_smoke COMMAND icss_artifact_reader_smoke)
+    add_test(NAME artifact_summary_cli_smoke COMMAND icss_artifact_summary_cli_smoke)
     add_test(NAME runtime_artifact_paths_smoke COMMAND icss_runtime_artifact_paths_smoke)
+    add_test(NAME runtime_artifact_determinism_smoke COMMAND icss_runtime_artifact_determinism_smoke)
     add_test(NAME session_log_smoke COMMAND icss_session_log_smoke)
     add_test(NAME replay_cursor_smoke COMMAND icss_replay_cursor_smoke)
     add_test(NAME resilience_smoke COMMAND icss_resilience_smoke)

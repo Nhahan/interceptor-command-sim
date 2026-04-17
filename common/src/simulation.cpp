@@ -136,6 +136,11 @@ CommandResult SimulationSession::request_track() {
 }
 
 CommandResult SimulationSession::activate_asset() {
+    if (phase_ != SessionPhase::Tracking) {
+        return reject_command("Asset activation rejected",
+                              "asset activation is only valid while tracking",
+                              {asset_.id});
+    }
     if (!track_.active) {
         return reject_command("Asset activation rejected",
                               "asset activation requires an active track",
@@ -154,6 +159,11 @@ CommandResult SimulationSession::activate_asset() {
 }
 
 CommandResult SimulationSession::issue_command() {
+    if (phase_ != SessionPhase::AssetReady) {
+        return reject_command("Command rejected",
+                              "command issue is only valid while asset_ready",
+                              {asset_.id, target_.id});
+    }
     if (asset_status_ != AssetStatus::Ready) {
         return reject_command("Command rejected",
                               "command issue requires asset_ready state",
@@ -446,9 +456,11 @@ CommandResult SimulationSession::reject_command(std::string summary,
                std::move(entity_ids),
                std::move(summary),
                reason);
-    command_status_ = CommandLifecycle::Rejected;
-    judgment_.code = JudgmentCode::InvalidTransition;
-    judgment_.summary = reason;
+    if (!judgment_.ready) {
+        command_status_ = CommandLifecycle::Rejected;
+        judgment_.code = JudgmentCode::InvalidTransition;
+        judgment_.summary = reason;
+    }
     return {false, std::move(reason), protocol::TcpMessageKind::CommandAck};
 }
 

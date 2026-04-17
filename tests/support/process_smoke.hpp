@@ -311,12 +311,18 @@ inline std::vector<std::string> recv_udp_messages(int fd, std::size_t max_messag
 
 struct ServerLaunchOptions {
     std::filesystem::path repo_root;
+    std::string bind_host {"127.0.0.1"};
     std::string tcp_frame_format {"binary"};
     bool run_forever {false};
+    bool udp_send_latest_only {false};
     std::uint64_t tick_limit {40};
     std::uint64_t tick_sleep_ms {20};
+    std::uint64_t tick_rate_hz {20};
+    std::uint64_t telemetry_interval_ms {200};
     std::uint64_t heartbeat_interval_ms {1000};
     std::uint64_t heartbeat_timeout_ms {10000};
+    std::uint64_t udp_max_batch_snapshots {2};
+    std::uint64_t max_clients {8};
     std::uint16_t tcp_port {0};
     std::uint16_t udp_port {0};
 };
@@ -335,37 +341,44 @@ inline ChildProcess spawn_server_process(const ServerLaunchOptions& options) {
         const std::string server_path = std::filesystem::path{ICSS_REPO_ROOT} / "build/icss_server";
         const std::string tick_limit = std::to_string(options.tick_limit);
         const std::string tick_sleep_ms = std::to_string(options.tick_sleep_ms);
+        const std::string tick_rate_hz = std::to_string(options.tick_rate_hz);
+        const std::string telemetry_interval_ms = std::to_string(options.telemetry_interval_ms);
         const std::string heartbeat_interval_ms = std::to_string(options.heartbeat_interval_ms);
         const std::string heartbeat_timeout_ms = std::to_string(options.heartbeat_timeout_ms);
+        const std::string udp_max_batch_snapshots = std::to_string(options.udp_max_batch_snapshots);
+        const std::string max_clients = std::to_string(options.max_clients);
         const std::string tcp_port = std::to_string(options.tcp_port);
         const std::string udp_port = std::to_string(options.udp_port);
+        std::vector<std::string> argv_storage {
+            server_path,
+            "--backend", "socket_live",
+            "--repo-root", options.repo_root.string(),
+            "--bind-host", options.bind_host,
+            "--tcp-port", tcp_port,
+            "--udp-port", udp_port,
+            "--tick-sleep-ms", tick_sleep_ms,
+            "--tick-rate-hz", tick_rate_hz,
+            "--telemetry-interval-ms", telemetry_interval_ms,
+            "--heartbeat-interval-ms", heartbeat_interval_ms,
+            "--heartbeat-timeout-ms", heartbeat_timeout_ms,
+            "--udp-max-batch-snapshots", udp_max_batch_snapshots,
+            "--udp-send-latest-only", options.udp_send_latest_only ? "true" : "false",
+            "--max-clients", max_clients,
+            "--tcp-frame-format", options.tcp_frame_format,
+        };
         if (options.run_forever) {
-            execl(server_path.c_str(),
-                  server_path.c_str(),
-                  "--backend", "socket_live",
-                  "--repo-root", options.repo_root.c_str(),
-                  "--tcp-port", tcp_port.c_str(),
-                  "--udp-port", udp_port.c_str(),
-                  "--run-forever",
-                  "--tick-sleep-ms", tick_sleep_ms.c_str(),
-                  "--heartbeat-interval-ms", heartbeat_interval_ms.c_str(),
-                  "--heartbeat-timeout-ms", heartbeat_timeout_ms.c_str(),
-                  "--tcp-frame-format", options.tcp_frame_format.c_str(),
-                  static_cast<char*>(nullptr));
+            argv_storage.emplace_back("--run-forever");
         } else {
-            execl(server_path.c_str(),
-                  server_path.c_str(),
-                  "--backend", "socket_live",
-                  "--repo-root", options.repo_root.c_str(),
-                  "--tcp-port", tcp_port.c_str(),
-                  "--udp-port", udp_port.c_str(),
-                  "--tick-limit", tick_limit.c_str(),
-                  "--tick-sleep-ms", tick_sleep_ms.c_str(),
-                  "--heartbeat-interval-ms", heartbeat_interval_ms.c_str(),
-                  "--heartbeat-timeout-ms", heartbeat_timeout_ms.c_str(),
-                  "--tcp-frame-format", options.tcp_frame_format.c_str(),
-                  static_cast<char*>(nullptr));
+            argv_storage.emplace_back("--tick-limit");
+            argv_storage.emplace_back(tick_limit);
         }
+        std::vector<char*> argv;
+        argv.reserve(argv_storage.size() + 1);
+        for (auto& value : argv_storage) {
+            argv.push_back(value.data());
+        }
+        argv.push_back(nullptr);
+        execv(server_path.c_str(), argv.data());
         std::perror("exec icss_server failed");
         std::_Exit(127);
     }

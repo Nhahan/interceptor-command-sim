@@ -19,11 +19,34 @@ int main() {
     const auto invalid_asset = session.activate_asset();
     assert(!invalid_asset.accepted);
 
+    const auto started = session.start_scenario();
+    assert(started.accepted);
+
+    const auto duplicate_start = session.start_scenario();
+    assert(!duplicate_start.accepted);
+
+    const auto track = session.request_track();
+    assert(track.accepted);
+
+    const auto asset = session.activate_asset();
+    assert(asset.accepted);
+
+    session.archive_session();
+
+    const auto post_archive_track = session.request_track();
+    assert(!post_archive_track.accepted);
+
+    const auto post_archive_asset = session.activate_asset();
+    assert(!post_archive_asset.accepted);
+
+    const auto post_archive_command = session.issue_command();
+    assert(!post_archive_command.accepted);
+
     const auto& events = session.events();
     const auto rejected_count = std::count_if(events.begin(), events.end(), [](const EventRecord& event) {
         return event.header.event_type == EventType::CommandRejected;
     });
 
-    assert(rejected_count >= 2);
+    assert(rejected_count >= 5);
     return 0;
 }
