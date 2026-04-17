@@ -273,6 +273,12 @@ std::uint16_t bound_port(int fd) {
     return ntohs(addr.sin_port);
 }
 
+bool same_endpoint(const sockaddr_in& lhs, const sockaddr_in& rhs) {
+    return lhs.sin_family == rhs.sin_family
+        && lhs.sin_port == rhs.sin_port
+        && lhs.sin_addr.s_addr == rhs.sin_addr.s_addr;
+}
+
 SocketHandle bind_tcp_listener(const icss::core::ServerConfig& config) {
     const int fd = ::socket(AF_INET, SOCK_STREAM, 0);
     if (fd < 0) {
@@ -353,18 +359,17 @@ public:
                 command_sender_id_ = 0U;
             }
         } else {
-            viewer_endpoint_.reset();
-            pending_udp_messages_.clear();
-            if (viewer_sender_id_ != 0U) {
+            const auto sender_id = viewer_sender_id_;
+            clear_viewer_binding();
+            if (sender_id != 0U) {
                 session_.disconnect_client(role, std::move(reason));
-                viewer_sender_id_ = 0U;
             }
         }
     }
     void timeout_client(icss::core::ClientRole role, std::string reason) override {
         session_.timeout_client(role, std::move(reason));
         if (role == icss::core::ClientRole::TacticalViewer) {
-            viewer_endpoint_.reset();
+            clear_viewer_binding();
         }
         send_pending_snapshots();
     }
@@ -402,6 +407,13 @@ public:
     }
 
 private:
+    struct AarResolution {
+        icss::view::ReplayCursor cursor {};
+        std::string control {"absolute"};
+        std::uint64_t requested_index {0};
+        bool clamped {false};
+    };
+
     struct ViewerBinding {
         std::uint32_t sender_id {};
         sockaddr_in endpoint {};
@@ -498,7 +510,7 @@ private:
     }
 
     void send_aar_response(const icss::protocol::SessionEnvelope& request_envelope,
-                           const icss::view::ReplayCursor& cursor) {
+                           const AarResolution& resolution) {
         if (!command_client_.has_value()) {
             return;
         }
@@ -507,16 +519,19 @@ private:
         std::string event_type = "none";
         std::string event_summary = "no event";
         if (!events.empty()) {
-            const auto& event = events[cursor.index];
+            const auto& event = events[resolution.cursor.index];
             event_type = std::string(icss::protocol::to_string(event.header.event_type));
             event_summary = event.summary;
         }
         const icss::protocol::AarResponsePayload payload {
             {request_envelope.session_id, icss::core::kServerSenderId, ++server_sequence_},
-            cursor.index,
+            resolution.cursor.index,
+            resolution.control,
+            resolution.requested_index,
+            resolution.clamped,
             icss::core::to_string(summary.judgment_code),
             summary.resilience_case,
-            cursor.total,
+            resolution.cursor.total,
             std::move(event_type),
             std::move(event_summary),
         };
@@ -536,20 +551,27 @@ private:
     }
 
     void accept_tcp_client() {
-        if (command_client_.has_value()) {
+        while (true) {
+            sockaddr_in addr {};
+            socklen_t len = sizeof(addr);
+            const int fd = ::accept(tcp_listener_.get(), reinterpret_cast<sockaddr*>(&addr), &len);
+            if (fd < 0) {
+                if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                    return;
+                }
+                throw std::runtime_error(std::string("tcp accept failed: ") + std::strerror(errno));
+            }
+            set_nonblocking(fd);
+            if (command_client_.has_value()) {
+                ::close(fd);
+                session_.record_transport_rejection(
+                    "Connection rejected",
+                    "socket_live allows only one active command console connection");
+                continue;
+            }
+            command_client_.emplace(fd);
             return;
         }
-        sockaddr_in addr {};
-        socklen_t len = sizeof(addr);
-        const int fd = ::accept(tcp_listener_.get(), reinterpret_cast<sockaddr*>(&addr), &len);
-        if (fd < 0) {
-            if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                return;
-            }
-            throw std::runtime_error(std::string("tcp accept failed: ") + std::strerror(errno));
-        }
-        set_nonblocking(fd);
-        command_client_.emplace(fd);
     }
 
     void receive_tcp_messages() {
@@ -615,6 +637,11 @@ private:
             if (payload.envelope.session_id != kDefaultSessionId) {
                 send_ack(payload.envelope, reject_payload("Session join rejected",
                                                          "session_join payload session_id mismatch"));
+                return;
+            }
+            if (command_sender_id_ != 0U && payload.envelope.sender_id != command_sender_id_) {
+                send_ack(payload.envelope, reject_payload("Session join rejected",
+                                                         "socket_live allows only one active command console"));
                 return;
             }
             command_sender_id_ = payload.envelope.sender_id;
@@ -721,31 +748,57 @@ private:
             return;
         }
         if (kind == "aar_request") {
-            const auto payload = icss::protocol::parse_aar_request(payload_wire);
+            icss::protocol::AarRequestPayload payload;
+            try {
+                payload = icss::protocol::parse_aar_request(payload_wire);
+            } catch (const std::exception& error) {
+                queue_tcp_frame("command_ack",
+                                icss::protocol::serialize(icss::protocol::CommandAckPayload{
+                                    {kDefaultSessionId, icss::core::kServerSenderId, ++server_sequence_},
+                                    false,
+                                    std::string{"aar_request rejected: "} + error.what(),
+                                }));
+                return;
+            }
             if (const auto invalid = validate_command_envelope(payload.envelope)) {
                 send_ack(payload.envelope, *invalid);
                 return;
             }
-            replay_cursor_ = resolve_replay_cursor(payload);
-            send_aar_response(payload.envelope, replay_cursor_);
+            const auto resolution = resolve_replay_cursor(payload);
+            replay_cursor_ = resolution.cursor;
+            send_aar_response(payload.envelope, resolution);
             return;
         }
         throw std::runtime_error("unsupported tcp payload kind: " + kind);
     }
 
-    icss::view::ReplayCursor resolve_replay_cursor(const icss::protocol::AarRequestPayload& payload) const {
+    AarResolution resolve_replay_cursor(const icss::protocol::AarRequestPayload& payload) const {
         const auto total = session_.events().size();
-        auto cursor = icss::view::make_replay_cursor(total, replay_cursor_.total == 0 ? payload.replay_cursor_index : replay_cursor_.index);
+        const bool use_existing_cursor = replay_cursor_.total == total && total != 0;
+        const auto seed = use_existing_cursor
+            ? replay_cursor_
+            : icss::view::make_replay_cursor(total, payload.replay_cursor_index);
+        AarResolution resolution {};
+        resolution.control = payload.control;
+        resolution.requested_index = payload.replay_cursor_index;
         if (payload.control == "absolute") {
-            return icss::view::jump_to(cursor, payload.replay_cursor_index);
+            resolution.cursor = icss::view::jump_to(seed, payload.replay_cursor_index);
+            resolution.clamped = total != 0 && payload.replay_cursor_index >= total;
+            return resolution;
         }
         if (payload.control == "step_forward") {
-            return icss::view::step_forward(cursor);
+            resolution.cursor = icss::view::step_forward(seed);
+            resolution.clamped = (resolution.cursor.index == seed.index);
+            return resolution;
         }
         if (payload.control == "step_backward") {
-            return icss::view::step_backward(cursor);
+            resolution.cursor = icss::view::step_backward(seed);
+            resolution.clamped = (resolution.cursor.index == seed.index);
+            return resolution;
         }
-        throw std::runtime_error("unsupported aar_request control");
+        resolution.cursor = seed;
+        resolution.clamped = true;
+        return resolution;
     }
 
     void receive_udp_datagrams() {
@@ -800,9 +853,22 @@ private:
             if (payload.envelope.session_id != kDefaultSessionId) {
                 continue;
             }
+            if (viewer_endpoint_.has_value() && viewer_sender_id_ != 0U &&
+                payload.envelope.sender_id != viewer_sender_id_) {
+                session_.record_transport_rejection(
+                    "Viewer registration rejected",
+                    "socket_live allows only one active tactical viewer");
+                continue;
+            }
+            if (viewer_endpoint_.has_value() && viewer_sender_id_ == payload.envelope.sender_id &&
+                same_endpoint(*viewer_endpoint_, addr)) {
+                last_viewer_heartbeat_tick_ = logical_tick_;
+                continue;
+            }
             viewer_sender_id_ = payload.envelope.sender_id;
             viewer_endpoint_ = addr;
             last_viewer_heartbeat_tick_ = logical_tick_;
+            reset_viewer_delivery_cursor();
             session_.connect_client(icss::core::ClientRole::TacticalViewer, viewer_sender_id_);
             send_pending_snapshots();
         }
@@ -846,6 +912,27 @@ private:
             ++last_snapshot_sent_index_;
             ++queued;
         }
+    }
+
+    void clear_viewer_binding() {
+        viewer_endpoint_.reset();
+        last_viewer_heartbeat_tick_.reset();
+        pending_udp_messages_.clear();
+        viewer_sender_id_ = 0U;
+        last_snapshot_sent_index_ = 0U;
+    }
+
+    void reset_viewer_delivery_cursor() {
+        const auto& snapshots = session_.snapshots();
+        if (snapshots.empty()) {
+            last_snapshot_sent_index_ = 0U;
+            return;
+        }
+        const auto batch_limit = std::max(1, config_.server.udp_max_batch_snapshots);
+        const auto rewind_count = config_.server.udp_send_latest_only
+            ? std::size_t{1}
+            : std::min<std::size_t>(snapshots.size(), static_cast<std::size_t>(batch_limit));
+        last_snapshot_sent_index_ = snapshots.size() - rewind_count;
     }
 
     icss::core::RuntimeConfig config_;

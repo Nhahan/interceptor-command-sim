@@ -1,6 +1,7 @@
 #include "icss/view/ascii_tactical_view.hpp"
 
 #include <algorithm>
+#include <iomanip>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -19,6 +20,22 @@ void place(std::vector<std::string>& grid, int x, int y, char glyph) {
     if (y >= 0 && y < static_cast<int>(grid.size()) && x >= 0 && x < static_cast<int>(grid[y].size())) {
         grid[y][x] = glyph;
     }
+}
+
+std::string freshness_label(const icss::core::Snapshot& snapshot) {
+    switch (snapshot.viewer_connection) {
+    case icss::core::ConnectionState::TimedOut:
+    case icss::core::ConnectionState::Disconnected:
+        return "stale";
+    case icss::core::ConnectionState::Reconnected:
+        return "resync";
+    case icss::core::ConnectionState::Connected:
+        if (snapshot.telemetry.packet_loss_pct > 0.0F) {
+            return "degraded";
+        }
+        return "fresh";
+    }
+    return "unknown";
 }
 
 }  // namespace
@@ -48,13 +65,19 @@ std::string render_tactical_frame(const icss::core::Snapshot& snapshot,
         << ", judgment=" << icss::core::to_string(snapshot.judgment.code) << '\n';
     out << "Telemetry:\n";
     out << "- connection=" << icss::core::to_string(snapshot.viewer_connection)
+        << ", freshness=" << freshness_label(snapshot)
+        << ", snapshot_sequence=" << snapshot.header.snapshot_sequence
         << ", tick=" << snapshot.telemetry.tick
         << ", latency_ms=" << snapshot.telemetry.latency_ms
-        << ", packet_loss=" << snapshot.telemetry.packet_loss_pct
+        << ", packet_loss_pct=" << std::fixed << std::setprecision(1) << snapshot.telemetry.packet_loss_pct
         << ", last_snapshot_ms=" << snapshot.telemetry.last_snapshot_timestamp_ms << '\n';
     out << "AAR:\n";
     out << "- cursor_index=" << cursor.index << "/" << cursor.total << "\n";
     out << "Recent events:\n";
+    if (recent_events.empty()) {
+        out << "- none\n";
+        return out.str();
+    }
     for (const auto& event : recent_events) {
         out << "- [tick " << event.header.tick << "] " << event.summary << " ("
             << icss::protocol::to_string(event.header.event_type) << ")\n";

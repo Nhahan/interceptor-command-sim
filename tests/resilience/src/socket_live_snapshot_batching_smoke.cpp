@@ -110,9 +110,23 @@ int main() {
     for (int i = 0; i < 5; ++i) {
         live->poll_once();
     }
+    const auto join_messages = recv_udp_messages(udp_viewer.fd, 4);
     live->archive_session();
 
     const auto messages = wait_for_udp_messages(*live, udp_viewer.fd, 4);
+    const auto count_kind = [](const std::vector<std::string>& batch, std::string_view prefix) {
+        std::size_t count = 0;
+        for (const auto& wire : batch) {
+            if (wire.rfind(prefix, 0) == 0) {
+                ++count;
+            }
+        }
+        return count;
+    };
+
+    assert(count_kind(join_messages, "kind=world_snapshot") <= static_cast<std::size_t>(config.server.udp_max_batch_snapshots));
+    assert(count_kind(join_messages, "kind=telemetry") <= static_cast<std::size_t>(config.server.udp_max_batch_snapshots));
+
     std::size_t snapshot_count = 0;
     std::size_t telemetry_count = 0;
     std::uint64_t snapshot_sequence = 0;

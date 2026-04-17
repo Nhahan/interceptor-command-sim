@@ -206,6 +206,10 @@ bool is_valid_judgment_code(std::string_view value) {
     return value == "pending" || value == "intercept_success" || value == "invalid_transition" || value == "timeout_observed";
 }
 
+bool is_valid_aar_control(std::string_view value) {
+    return value == "absolute" || value == "step_forward" || value == "step_backward";
+}
+
 }  // namespace
 
 std::string serialize(const SessionCreatePayload& payload) {
@@ -316,6 +320,9 @@ std::string serialize(const AarResponsePayload& payload) {
         {"sender_id", as_string(payload.envelope.sender_id)},
         {"sequence", as_string(payload.envelope.sequence)},
         {"replay_cursor_index", as_string(payload.replay_cursor_index)},
+        {"control", payload.control},
+        {"requested_index", as_string(payload.requested_index)},
+        {"clamped", as_string(payload.clamped)},
         {"judgment_code", payload.judgment_code},
         {"resilience_case", payload.resilience_case},
         {"total_events", as_string(static_cast<std::uint64_t>(payload.total_events))},
@@ -443,6 +450,9 @@ AarResponsePayload parse_aar_response(std::string_view wire) {
     const auto fields = parse_fields(wire);
     require_kind(fields, "aar_response");
     return {parse_envelope(fields), parse_u64(require(fields, "replay_cursor_index")),
+            require_enum_string(fields, "control", is_valid_aar_control),
+            parse_u64(require(fields, "requested_index")),
+            parse_bool(require(fields, "clamped")),
             require_enum_string(fields, "judgment_code", is_valid_judgment_code),
             require(fields, "resilience_case"),
             parse_u64(require(fields, "total_events")),
@@ -476,7 +486,8 @@ TelemetryPayload parse_telemetry(std::string_view wire) {
 AarRequestPayload parse_aar_request(std::string_view wire) {
     const auto fields = parse_fields(wire);
     require_kind(fields, "aar_request");
-    return {parse_envelope(fields), parse_u64(require(fields, "replay_cursor_index")), require(fields, "control")};
+    return {parse_envelope(fields), parse_u64(require(fields, "replay_cursor_index")),
+            require_enum_string(fields, "control", is_valid_aar_control)};
 }
 
 ViewerHeartbeatPayload parse_viewer_heartbeat(std::string_view wire) {

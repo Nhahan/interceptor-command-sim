@@ -90,6 +90,9 @@ int main() {
     const AarResponsePayload aar_response {
         {1001U, 1U, 11U},
         8U,
+        "absolute",
+        11U,
+        true,
         "intercept_success",
         "reconnect_and_resync",
         12U,
@@ -99,9 +102,22 @@ int main() {
     const auto aar_response_wire = serialize(aar_response);
     const auto parsed_aar_response = parse_aar_response(aar_response_wire);
     assert(parsed_aar_response.replay_cursor_index == 8U);
+    assert(parsed_aar_response.control == "absolute");
+    assert(parsed_aar_response.requested_index == 11U);
+    assert(parsed_aar_response.clamped);
     assert(parsed_aar_response.judgment_code == "intercept_success");
     assert(parsed_aar_response.total_events == 12U);
     assert(parsed_aar_response.event_type == "judgment_produced");
+
+    const AarRequestPayload aar_request {
+        {1001U, 101U, 13U},
+        7U,
+        "step_backward",
+    };
+    const auto aar_request_wire = serialize(aar_request);
+    const auto parsed_aar_request = parse_aar_request(aar_request_wire);
+    assert(parsed_aar_request.replay_cursor_index == 7U);
+    assert(parsed_aar_request.control == "step_backward");
 
     const ViewerHeartbeatPayload heartbeat {
         {1001U, 201U, 12U},
@@ -118,6 +134,15 @@ int main() {
         rejected_wrong_kind = true;
     }
     assert(rejected_wrong_kind);
+
+    bool rejected_bad_aar_control = false;
+    try {
+        static_cast<void>(parse_aar_request(
+            "kind=aar_request;session_id=1001;sender_id=101;sequence=14;replay_cursor_index=4;control=rewind"));
+    } catch (const std::runtime_error&) {
+        rejected_bad_aar_control = true;
+    }
+    assert(rejected_bad_aar_control);
 
     return 0;
 }

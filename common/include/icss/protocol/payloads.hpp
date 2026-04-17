@@ -62,6 +62,9 @@ struct CommandAckPayload {
 struct AarResponsePayload {
     SessionEnvelope envelope {};
     std::uint64_t replay_cursor_index {};
+    std::string control {"absolute"};
+    std::uint64_t requested_index {};
+    bool clamped {false};
     std::string judgment_code;
     std::string resilience_case;
     std::uint64_t total_events {};

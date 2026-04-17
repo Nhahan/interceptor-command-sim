@@ -240,6 +240,9 @@ int main() {
     const auto aar_response = parse_aar_response(aar_frame.payload);
     assert(aar_response.total_events >= 9U);
     assert(aar_response.replay_cursor_index == aar_response.total_events - 1U);
+    assert(aar_response.control == "absolute");
+    assert(aar_response.requested_index == 11U);
+    assert(aar_response.clamped);
     assert(aar_response.judgment_code == "intercept_success");
     assert(!aar_response.event_type.empty());
     assert(!aar_response.event_summary.empty());
@@ -249,8 +252,36 @@ int main() {
     assert(aar_prev_frame.kind == "aar_response");
     const auto aar_prev = parse_aar_response(aar_prev_frame.payload);
     assert(aar_prev.replay_cursor_index + 1 == aar_response.replay_cursor_index);
+    assert(aar_prev.control == "step_backward");
+    assert(aar_prev.requested_index == 11U);
+    assert(!aar_prev.clamped);
 
-    send_binary_frame(tcp_client.fd, "session_leave", serialize(SessionLeavePayload{{1001U, 101U, 10U}, "operator leaving session"}));
+    send_binary_frame(tcp_client.fd, "aar_request", serialize(AarRequestPayload{{1001U, 101U, 10U}, 0U, "step_forward"}));
+    const auto aar_next_frame = wait_for_binary_frame(*live, tcp_client.fd);
+    assert(aar_next_frame.kind == "aar_response");
+    const auto aar_next = parse_aar_response(aar_next_frame.payload);
+    assert(aar_next.replay_cursor_index == aar_response.replay_cursor_index);
+    assert(aar_next.control == "step_forward");
+    assert(!aar_next.clamped);
+
+    send_binary_frame(tcp_client.fd, "aar_request", serialize(AarRequestPayload{{1001U, 101U, 11U}, 0U, "step_forward"}));
+    const auto aar_next_clamped_frame = wait_for_binary_frame(*live, tcp_client.fd);
+    assert(aar_next_clamped_frame.kind == "aar_response");
+    const auto aar_next_clamped = parse_aar_response(aar_next_clamped_frame.payload);
+    assert(aar_next_clamped.replay_cursor_index == aar_next.replay_cursor_index);
+    assert(aar_next_clamped.control == "step_forward");
+    assert(aar_next_clamped.clamped);
+
+    send_binary_frame(tcp_client.fd,
+                      "aar_request",
+                      "kind=aar_request;session_id=1001;sender_id=101;sequence=12;replay_cursor_index=0;control=rewind");
+    const auto bad_aar_frame = wait_for_binary_frame(*live, tcp_client.fd);
+    assert(bad_aar_frame.kind == "command_ack");
+    const auto bad_aar_ack = parse_command_ack(bad_aar_frame.payload);
+    assert(!bad_aar_ack.accepted);
+    assert(bad_aar_ack.reason.find("aar_request rejected") != std::string::npos);
+
+    send_binary_frame(tcp_client.fd, "session_leave", serialize(SessionLeavePayload{{1001U, 101U, 13U}, "operator leaving session"}));
     const auto leave_frame = wait_for_binary_frame(*live, tcp_client.fd);
     assert(leave_frame.kind == "command_ack");
     const auto leave_ack = parse_command_ack(leave_frame.payload);

@@ -66,6 +66,10 @@ add_executable(icss_transport_backend_smoke tests/protocol/src/transport_backend
 target_link_libraries(icss_transport_backend_smoke PRIVATE icss_core)
 target_common(icss_transport_backend_smoke)
 
+add_executable(icss_socket_live_single_session_policy_smoke tests/protocol/src/socket_live_single_session_policy_smoke.cpp)
+target_link_libraries(icss_socket_live_single_session_policy_smoke PRIVATE icss_core)
+target_common(icss_socket_live_single_session_policy_smoke)
+
 add_executable(icss_scenario_flow tests/scenario/src/scenario_flow.cpp)
 target_link_libraries(icss_scenario_flow PRIVATE icss_core)
 target_common(icss_scenario_flow)
@@ -111,6 +115,7 @@ if(BUILD_TESTING)
     add_test(NAME payload_codec_smoke COMMAND icss_payload_codec_smoke)
     add_test(NAME frame_codec_smoke COMMAND icss_frame_codec_smoke)
     add_test(NAME transport_backend_smoke COMMAND icss_transport_backend_smoke)
+    add_test(NAME socket_live_single_session_policy_smoke COMMAND icss_socket_live_single_session_policy_smoke)
     add_test(NAME scenario_flow COMMAND icss_scenario_flow)
     add_test(NAME validation_rejects_invalid_flow COMMAND icss_validation_rejects_invalid_flow)
     add_test(NAME runtime_config_smoke COMMAND icss_runtime_config_smoke)

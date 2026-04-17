@@ -3,6 +3,7 @@
 #include <string>
 
 #include "icss/core/simulation.hpp"
+#include "icss/view/ascii_tactical_view.hpp"
 
 int main() {
     using namespace icss::core;
@@ -23,5 +24,11 @@ int main() {
     assert(session.latest_snapshot().viewer_connection == ConnectionState::TimedOut);
     assert(session.build_summary().resilience_case == "timeout_visibility");
     assert(session.build_summary().judgment_code == JudgmentCode::Pending);
+    const auto frame = icss::view::render_tactical_frame(
+        session.latest_snapshot(),
+        events,
+        icss::view::make_replay_cursor(events.size(), events.empty() ? 0 : events.size() - 1));
+    assert(frame.find("connection=timed_out") != std::string::npos);
+    assert(frame.find("freshness=stale") != std::string::npos);
     return 0;
 }
