@@ -130,6 +130,12 @@ ctest --test-dir build --output-on-failure
 ./build/icss_server --backend socket_live --tick-rate-hz 30 --telemetry-interval-ms 150 --heartbeat-interval-ms 600 --heartbeat-timeout-ms 1800 --udp-max-batch-snapshots 1 --udp-send-latest-only true --max-clients 4
 ```
 
+### Artifact Summary
+
+```bash
+./build/icss_artifact_summary
+```
+
 ## Code Paths
 
 - `CMakeLists.txt` — root build/test entrypoint

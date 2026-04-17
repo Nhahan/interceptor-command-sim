@@ -24,6 +24,12 @@ Use one representative training/control scenario.
 
 `Initialized -> Detecting -> Tracking -> AssetReady -> CommandIssued -> Engaging -> Judged -> Archived`
 
+The runtime rejects out-of-order control steps:
+- `scenario_start` is only valid from `Initialized`
+- `asset_activate` is only valid from `Tracking`
+- `command_issue` is only valid from `AssetReady`
+- post-archive control requests remain rejected while AAR stays available
+
 ## Entity Types
 
 - `Target`

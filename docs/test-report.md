@@ -33,6 +33,7 @@ Current verification covers:
 - invalid runtime/config values are rejected before execution
 - server CLI overrides are validated and reflected in startup output
 - CLI override precedence over file config is verified
+- process-level live smoke verifies CLI override precedence against file config
 - startup output exposes backend, bind, heartbeat, and delivery settings
 - startup output exposes connection-state and latest-event summaries
 - the executable `socket_live` server path is exercised through a process-level live smoke
@@ -49,9 +50,11 @@ Current verification covers:
 - AAR control semantics are verified
 - the scenario flow passes end-to-end regression
 - invalid command ordering is rejected and logged
+- duplicate start/stop and post-archive control requests are rejected and logged
 - runtime config loading is verified against the example config set
 - runtime artifact paths are verified against configurable repo roots
 - runtime artifacts and logs expose stable schema/version metadata
+- baseline artifact generation is deterministic across repeated runs
 - session summary is emitted in both Markdown and JSON forms
 - runtime session logging is verified against generated structured log output
 - replay cursor stepping is verified against viewer output
@@ -65,7 +68,7 @@ Current verification covers:
 
 - configure: passed
 - build: passed
-- test: passed (`28/28` tests)
+- test: passed (`33/33` tests)
 - runtime smoke: passed (`icss_server`, `icss_command_console`, `icss_tactical_viewer`)
 - cli smoke: passed (`server_inprocess_cli_smoke`, `server_socket_live_cli_smoke`)
 - idle cli smoke: passed (`server_socket_live_idle_cli_smoke`)
@@ -82,6 +85,7 @@ Current verification covers:
   - `runtime_config_invalid_values_smoke`
   - `server_cli_override_precedence_smoke`
   - `runtime_artifact_paths_smoke`
+  - `runtime_artifact_determinism_smoke`
   - `session_log_smoke`
   - `replay_cursor_smoke`
   - `resilience_smoke`
@@ -93,6 +97,7 @@ Current verification covers:
   - `server_socket_live_idle_cli_smoke`
   - `server_process_live_smoke`
   - `server_process_live_json_smoke`
+  - `server_process_live_override_precedence_smoke`
   - `server_process_live_run_forever_smoke`
   - `server_invalid_backend_cli`
   - `server_invalid_frame_format_cli`
