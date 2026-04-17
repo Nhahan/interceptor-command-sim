@@ -39,6 +39,7 @@ Show command/control flow, state propagation, one resilience case, and AAR outpu
 ### 3:20–4:20 — AAR
 - open replay/AAR artifact
 - point to timeline, event log, and judgment outputs
+- point to freshness and latest snapshot metadata in the generated summaries
 
 ### Closing
 - reiterate why the architecture was chosen

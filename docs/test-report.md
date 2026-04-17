@@ -43,6 +43,7 @@ Current verification covers:
 - replay cursor stepping is verified against viewer output
 - resilience/replay rendering behavior passes smoke verification
 - live viewer heartbeat timeout behavior is verified against the socket backend
+- live viewer freshness transitions are verified against the socket backend
 - live snapshot batching/filtering is verified against the socket backend
 
 ## Latest Result

@@ -58,3 +58,4 @@ The live `aar_response` should report:
 ## Output Target
 
 Keep at least one inspectable artifact under `assets/sample-aar/`.
+The session summary should expose latest snapshot metadata, freshness state, and a short recent-event section.

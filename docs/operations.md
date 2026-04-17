@@ -63,6 +63,12 @@ The tactical viewer or command console should expose at least:
 - last snapshot timestamp
 - richer track/asset/command/judgment state
 
+Recommended freshness labels:
+- `fresh` for current snapshots
+- `degraded` when packet loss is visible but the stream is still current
+- `resync` immediately after viewer reconnection
+- `stale` when the viewer has timed out or fallen out of date
+
 ## Operational Signals
 
 Operational records should make the following concerns obvious:
