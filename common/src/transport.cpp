@@ -56,8 +56,22 @@ icss::protocol::SnapshotPayload to_snapshot_payload(const icss::core::Snapshot& 
     return {
         snapshot.envelope,
         snapshot.header,
+        icss::core::to_string(snapshot.phase),
+        snapshot.world_width,
+        snapshot.world_height,
         snapshot.target.id,
+        snapshot.target.active,
+        snapshot.target.position.x,
+        snapshot.target.position.y,
+        snapshot.target_velocity_x,
+        snapshot.target_velocity_y,
         snapshot.asset.id,
+        snapshot.asset.active,
+        snapshot.asset.position.x,
+        snapshot.asset.position.y,
+        snapshot.interceptor_speed_per_tick,
+        snapshot.intercept_radius,
+        snapshot.engagement_timeout_ticks,
         snapshot.track.active,
         snapshot.track.confidence_pct,
         icss::core::to_string(snapshot.asset_status),
@@ -67,18 +81,31 @@ icss::protocol::SnapshotPayload to_snapshot_payload(const icss::core::Snapshot& 
     };
 }
 
-icss::protocol::TelemetryPayload to_telemetry_payload(const icss::core::Snapshot& snapshot) {
+icss::protocol::TelemetryPayload to_telemetry_payload(const icss::core::Snapshot& snapshot,
+                                                      const std::vector<icss::core::EventRecord>& events) {
+    std::uint64_t event_tick = 0;
+    std::string event_type = "none";
+    std::string event_summary = "no server event";
+    if (!events.empty()) {
+        const auto& event = events.back();
+        event_tick = event.header.tick;
+        event_type = std::string(icss::protocol::to_string(event.header.event_type));
+        event_summary = event.summary;
+    }
     return {
         snapshot.envelope,
         snapshot.telemetry,
         icss::core::to_string(snapshot.viewer_connection),
+        event_tick,
+        std::move(event_type),
+        std::move(event_summary),
     };
 }
 
 class InProcessTransport final : public TransportBackend {
 public:
     explicit InProcessTransport(const icss::core::RuntimeConfig& config)
-        : session_(kDefaultSessionId, config.server.tick_rate_hz, config.scenario.telemetry_interval_ms),
+        : session_(kDefaultSessionId, config.server.tick_rate_hz, config.scenario.telemetry_interval_ms, config.scenario),
           info_{"in_process", false,
                 static_cast<std::uint16_t>(config.server.tcp_port),
                 static_cast<std::uint16_t>(config.server.udp_port)} {}
@@ -111,6 +138,9 @@ public:
 
     icss::core::CommandResult start_scenario() override {
         return session_.start_scenario();
+    }
+    icss::core::CommandResult reset_session(std::string reason) override {
+        return session_.reset_session(std::move(reason));
     }
 
     icss::core::CommandResult dispatch(const icss::protocol::TrackRequestPayload& payload) override {
@@ -339,7 +369,7 @@ class SocketLiveTransport final : public TransportBackend {
 public:
     explicit SocketLiveTransport(const icss::core::RuntimeConfig& config)
         : config_(config),
-          session_(kDefaultSessionId, config.server.tick_rate_hz, config.scenario.telemetry_interval_ms),
+          session_(kDefaultSessionId, config.server.tick_rate_hz, config.scenario.telemetry_interval_ms, config.scenario),
           tcp_listener_(bind_tcp_listener(config.server)),
           udp_socket_(bind_udp_socket(config.server)),
           tcp_frame_format_(parse_frame_format(config.server.tcp_frame_format)),
@@ -389,6 +419,7 @@ public:
     }
 
     icss::core::CommandResult start_scenario() override { return unsupported(); }
+    icss::core::CommandResult reset_session(std::string) override { return unsupported(); }
     icss::core::CommandResult dispatch(const icss::protocol::TrackRequestPayload&) override { return unsupported(); }
     icss::core::CommandResult dispatch(const icss::protocol::AssetActivatePayload&) override { return unsupported(); }
     icss::core::CommandResult dispatch(const icss::protocol::CommandIssuePayload&) override { return unsupported(); }
@@ -698,6 +729,27 @@ private:
                                                          "scenario_start payload does not match configured scenario"));
                 return;
             }
+            auto scenario = config_.scenario;
+            scenario.world_width = payload.world_width;
+            scenario.world_height = payload.world_height;
+            scenario.target_start_x = payload.target_start_x;
+            scenario.target_start_y = payload.target_start_y;
+            scenario.target_velocity_x = payload.target_velocity_x;
+            scenario.target_velocity_y = payload.target_velocity_y;
+            scenario.interceptor_start_x = payload.interceptor_start_x;
+            scenario.interceptor_start_y = payload.interceptor_start_y;
+            scenario.interceptor_speed_per_tick = payload.interceptor_speed_per_tick;
+            scenario.intercept_radius = payload.intercept_radius;
+            scenario.engagement_timeout_ticks = payload.engagement_timeout_ticks;
+            auto candidate = config_;
+            candidate.scenario = scenario;
+            try {
+                icss::core::validate_runtime_config(candidate);
+            } catch (const std::exception& error) {
+                send_ack(payload.envelope, reject_payload("Scenario start rejected", error.what()));
+                return;
+            }
+            session_.configure_scenario(std::move(scenario));
             const auto result = session_.start_scenario();
             send_ack(payload.envelope, result);
             send_pending_snapshots();
@@ -718,6 +770,19 @@ private:
             }
             session_.archive_session();
             send_ack(payload.envelope, {true, payload.reason, icss::protocol::TcpMessageKind::CommandAck});
+            send_pending_snapshots();
+            return;
+        }
+        if (kind == "scenario_reset") {
+            const auto payload = icss::protocol::parse_scenario_reset(payload_wire);
+            if (const auto invalid = validate_command_envelope(payload.envelope)) {
+                send_ack(payload.envelope, *invalid);
+                return;
+            }
+            const auto result = session_.reset_session(payload.reason);
+            replay_cursor_ = {};
+            reset_viewer_delivery_cursor();
+            send_ack(payload.envelope, result);
             send_pending_snapshots();
             return;
         }
@@ -925,7 +990,7 @@ private:
             pending_udp_messages_.clear();
             const auto& snapshot = snapshots.back();
             queue_udp_datagram(icss::protocol::serialize(to_snapshot_payload(snapshot)), *viewer_endpoint_);
-            queue_udp_datagram(icss::protocol::serialize(to_telemetry_payload(snapshot)), *viewer_endpoint_);
+            queue_udp_datagram(icss::protocol::serialize(to_telemetry_payload(snapshot, session_.events())), *viewer_endpoint_);
             last_snapshot_sent_index_ = snapshots.size();
             return;
         }
@@ -935,7 +1000,7 @@ private:
                queued < std::max(1, config_.server.udp_max_batch_snapshots)) {
             const auto& snapshot = snapshots[last_snapshot_sent_index_];
             queue_udp_datagram(icss::protocol::serialize(to_snapshot_payload(snapshot)), *viewer_endpoint_);
-            queue_udp_datagram(icss::protocol::serialize(to_telemetry_payload(snapshot)), *viewer_endpoint_);
+            queue_udp_datagram(icss::protocol::serialize(to_telemetry_payload(snapshot, session_.events())), *viewer_endpoint_);
             ++last_snapshot_sent_index_;
             ++queued;
         }
@@ -996,6 +1061,7 @@ public:
     void timeout_client(icss::core::ClientRole, std::string) override {}
 
     icss::core::CommandResult start_scenario() override { return unsupported(); }
+    icss::core::CommandResult reset_session(std::string) override { return unsupported(); }
     icss::core::CommandResult dispatch(const icss::protocol::TrackRequestPayload&) override { return unsupported(); }
     icss::core::CommandResult dispatch(const icss::protocol::AssetActivatePayload&) override { return unsupported(); }
     icss::core::CommandResult dispatch(const icss::protocol::CommandIssuePayload&) override { return unsupported(); }

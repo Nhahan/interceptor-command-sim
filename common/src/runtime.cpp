@@ -58,8 +58,9 @@ RuntimeResult BaselineRuntime::run() const {
     transport->disconnect_client(ClientRole::TacticalViewer, "viewer reconnect exercised for resilience evidence");
     transport->connect_client(ClientRole::TacticalViewer, 201U);
     transport->dispatch(icss::protocol::CommandIssuePayload{{1001U, 101U, 3U}, "asset-interceptor", "target-alpha"});
-    transport->advance_tick();
-    transport->advance_tick();
+    for (int i = 0; i < config_.scenario.engagement_timeout_ticks && !transport->latest_snapshot().judgment.ready; ++i) {
+        transport->advance_tick();
+    }
     transport->archive_session();
 
     const auto summary = transport->summary();
@@ -80,7 +81,7 @@ RuntimeConfig default_runtime_config(const std::filesystem::path& repo_root) {
 }
 
 SimulationSession run_baseline_demo(const RuntimeConfig& config) {
-    SimulationSession session(1001, config.server.tick_rate_hz, config.scenario.telemetry_interval_ms);
+    SimulationSession session(1001, config.server.tick_rate_hz, config.scenario.telemetry_interval_ms, config.scenario);
     session.connect_client(ClientRole::CommandConsole, 101U);
     session.connect_client(ClientRole::TacticalViewer, 201U);
     session.start_scenario();
@@ -90,8 +91,9 @@ SimulationSession run_baseline_demo(const RuntimeConfig& config) {
     session.disconnect_client(ClientRole::TacticalViewer, "viewer reconnect exercised for resilience evidence");
     session.connect_client(ClientRole::TacticalViewer, 201U);
     session.issue_command();
-    session.advance_tick();
-    session.advance_tick();
+    for (int i = 0; i < config.scenario.engagement_timeout_ticks && !session.latest_snapshot().judgment.ready; ++i) {
+        session.advance_tick();
+    }
     session.archive_session();
     return session;
 }

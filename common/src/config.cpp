@@ -128,6 +128,17 @@ ScenarioConfig load_scenario_config(const std::filesystem::path& file) {
         else if (starts_with(line, "assets:")) config.assets = parse_int(value_after_colon(line));
         else if (starts_with(line, "enable_replay:")) config.enable_replay = parse_bool(value_after_colon(line));
         else if (starts_with(line, "telemetry_interval_ms:")) config.telemetry_interval_ms = parse_int(value_after_colon(line));
+        else if (starts_with(line, "world_width:")) config.world_width = parse_int(value_after_colon(line));
+        else if (starts_with(line, "world_height:")) config.world_height = parse_int(value_after_colon(line));
+        else if (starts_with(line, "target_start_x:")) config.target_start_x = parse_int(value_after_colon(line));
+        else if (starts_with(line, "target_start_y:")) config.target_start_y = parse_int(value_after_colon(line));
+        else if (starts_with(line, "target_velocity_x:")) config.target_velocity_x = parse_int(value_after_colon(line));
+        else if (starts_with(line, "target_velocity_y:")) config.target_velocity_y = parse_int(value_after_colon(line));
+        else if (starts_with(line, "interceptor_start_x:")) config.interceptor_start_x = parse_int(value_after_colon(line));
+        else if (starts_with(line, "interceptor_start_y:")) config.interceptor_start_y = parse_int(value_after_colon(line));
+        else if (starts_with(line, "interceptor_speed_per_tick:")) config.interceptor_speed_per_tick = parse_int(value_after_colon(line));
+        else if (starts_with(line, "intercept_radius:")) config.intercept_radius = parse_int(value_after_colon(line));
+        else if (starts_with(line, "engagement_timeout_ticks:")) config.engagement_timeout_ticks = parse_int(value_after_colon(line));
     }
     return config;
 }
@@ -178,6 +189,23 @@ void validate_runtime_config(const RuntimeConfig& config) {
     require_positive("scenario.targets", config.scenario.targets);
     require_positive("scenario.assets", config.scenario.assets);
     require_positive("scenario.telemetry_interval_ms", config.scenario.telemetry_interval_ms);
+    require_positive("scenario.world_width", config.scenario.world_width);
+    require_positive("scenario.world_height", config.scenario.world_height);
+    require_positive("scenario.interceptor_speed_per_tick", config.scenario.interceptor_speed_per_tick);
+    require_positive("scenario.intercept_radius", config.scenario.intercept_radius);
+    require_positive("scenario.engagement_timeout_ticks", config.scenario.engagement_timeout_ticks);
+    if (config.scenario.target_start_x < 0 || config.scenario.target_start_x >= config.scenario.world_width) {
+        throw std::runtime_error("scenario.target_start_x must fit inside world_width");
+    }
+    if (config.scenario.target_start_y < 0 || config.scenario.target_start_y >= config.scenario.world_height) {
+        throw std::runtime_error("scenario.target_start_y must fit inside world_height");
+    }
+    if (config.scenario.interceptor_start_x < 0 || config.scenario.interceptor_start_x >= config.scenario.world_width) {
+        throw std::runtime_error("scenario.interceptor_start_x must fit inside world_width");
+    }
+    if (config.scenario.interceptor_start_y < 0 || config.scenario.interceptor_start_y >= config.scenario.world_height) {
+        throw std::runtime_error("scenario.interceptor_start_y must fit inside world_height");
+    }
 
     if (config.logging.outputs.empty()) {
         throw std::runtime_error("logging.outputs must not be empty");

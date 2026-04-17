@@ -70,7 +70,7 @@ icss::protocol::FramedMessage wait_for_binary_frame(icss::net::TransportBackend&
 
 std::vector<std::string> recv_udp_messages(int fd, std::size_t max_messages) {
     std::vector<std::string> messages;
-    char buffer[512];
+    char buffer[4096];
     sockaddr_in from {};
     socklen_t len = sizeof(from);
     for (std::size_t i = 0; i < max_messages; ++i) {
@@ -106,8 +106,9 @@ int main() {
     assert(inproc->dispatch(TrackRequestPayload{{1001U, 101U, 1U}, "target-alpha"}).accepted);
     assert(inproc->dispatch(AssetActivatePayload{{1001U, 101U, 2U}, "asset-interceptor"}).accepted);
     assert(inproc->dispatch(CommandIssuePayload{{1001U, 101U, 3U}, "asset-interceptor", "target-alpha"}).accepted);
-    inproc->advance_tick();
-    inproc->advance_tick();
+    for (int i = 0; i < config.scenario.engagement_timeout_ticks && !inproc->latest_snapshot().judgment.ready; ++i) {
+        inproc->advance_tick();
+    }
     inproc->archive_session();
     const auto inproc_summary = inproc->summary();
     assert(inproc_summary.judgment_ready);
@@ -273,20 +274,39 @@ int main() {
     assert(!post_stop_command_ack.accepted);
     assert(post_stop_command_ack.reason.find("only valid while asset_ready") != std::string::npos);
 
-    send_binary_frame(tcp_client.fd, "aar_request", serialize(AarRequestPayload{{1001U, 101U, 8U}, 999U}));
+    send_binary_frame(tcp_client.fd, "scenario_reset", serialize(ScenarioResetPayload{{1001U, 101U, 26U}, "reset after archive"}));
+    const auto reset_frame = wait_for_binary_frame(*live, tcp_client.fd);
+    assert(reset_frame.kind == "command_ack");
+    const auto reset_ack = parse_command_ack(reset_frame.payload);
+    assert(reset_ack.accepted);
+    assert(reset_ack.reason.find("reset") != std::string::npos);
+
+    send_binary_frame(tcp_client.fd, "scenario_start", serialize(ScenarioStartPayload{{1001U, 101U, 27U}, live_config.scenario.name}));
+    const auto restart_frame = wait_for_binary_frame(*live, tcp_client.fd);
+    assert(restart_frame.kind == "command_ack");
+    const auto restart_ack = parse_command_ack(restart_frame.payload);
+    assert(restart_ack.accepted);
+
+    send_binary_frame(tcp_client.fd, "track_request", serialize(TrackRequestPayload{{1001U, 101U, 28U}, "target-alpha"}));
+    const auto restart_track_frame = wait_for_binary_frame(*live, tcp_client.fd);
+    assert(restart_track_frame.kind == "command_ack");
+    const auto restart_track_ack = parse_command_ack(restart_track_frame.payload);
+    assert(restart_track_ack.accepted);
+
+    send_binary_frame(tcp_client.fd, "aar_request", serialize(AarRequestPayload{{1001U, 101U, 29U}, 999U}));
     const auto aar_frame = wait_for_binary_frame(*live, tcp_client.fd);
     assert(aar_frame.kind == "aar_response");
     const auto aar_response = parse_aar_response(aar_frame.payload);
-    assert(aar_response.total_events >= 9U);
+    assert(aar_response.total_events >= 1U);
     assert(aar_response.replay_cursor_index == aar_response.total_events - 1U);
     assert(aar_response.control == "absolute");
     assert(aar_response.requested_index == 999U);
     assert(aar_response.clamped);
-    assert(aar_response.judgment_code == "intercept_success");
+    assert(aar_response.judgment_code == "pending");
     assert(!aar_response.event_type.empty());
     assert(!aar_response.event_summary.empty());
 
-    send_binary_frame(tcp_client.fd, "aar_request", serialize(AarRequestPayload{{1001U, 101U, 9U}, 999U, "step_backward"}));
+    send_binary_frame(tcp_client.fd, "aar_request", serialize(AarRequestPayload{{1001U, 101U, 30U}, 999U, "step_backward"}));
     const auto aar_prev_frame = wait_for_binary_frame(*live, tcp_client.fd);
     assert(aar_prev_frame.kind == "aar_response");
     const auto aar_prev = parse_aar_response(aar_prev_frame.payload);
@@ -295,7 +315,7 @@ int main() {
     assert(aar_prev.requested_index == 999U);
     assert(!aar_prev.clamped);
 
-    send_binary_frame(tcp_client.fd, "aar_request", serialize(AarRequestPayload{{1001U, 101U, 10U}, 0U, "step_forward"}));
+    send_binary_frame(tcp_client.fd, "aar_request", serialize(AarRequestPayload{{1001U, 101U, 31U}, 0U, "step_forward"}));
     const auto aar_next_frame = wait_for_binary_frame(*live, tcp_client.fd);
     assert(aar_next_frame.kind == "aar_response");
     const auto aar_next = parse_aar_response(aar_next_frame.payload);
@@ -303,7 +323,7 @@ int main() {
     assert(aar_next.control == "step_forward");
     assert(!aar_next.clamped);
 
-    send_binary_frame(tcp_client.fd, "aar_request", serialize(AarRequestPayload{{1001U, 101U, 11U}, 0U, "step_forward"}));
+    send_binary_frame(tcp_client.fd, "aar_request", serialize(AarRequestPayload{{1001U, 101U, 32U}, 0U, "step_forward"}));
     const auto aar_next_clamped_frame = wait_for_binary_frame(*live, tcp_client.fd);
     assert(aar_next_clamped_frame.kind == "aar_response");
     const auto aar_next_clamped = parse_aar_response(aar_next_clamped_frame.payload);
@@ -313,14 +333,14 @@ int main() {
 
     send_binary_frame(tcp_client.fd,
                       "aar_request",
-                      "kind=aar_request;session_id=1001;sender_id=101;sequence=12;replay_cursor_index=0;control=rewind");
+                      "kind=aar_request;session_id=1001;sender_id=101;sequence=33;replay_cursor_index=0;control=rewind");
     const auto bad_aar_frame = wait_for_binary_frame(*live, tcp_client.fd);
     assert(bad_aar_frame.kind == "command_ack");
     const auto bad_aar_ack = parse_command_ack(bad_aar_frame.payload);
     assert(!bad_aar_ack.accepted);
     assert(bad_aar_ack.reason.find("aar_request rejected") != std::string::npos);
 
-    send_binary_frame(tcp_client.fd, "session_leave", serialize(SessionLeavePayload{{1001U, 101U, 13U}, "operator leaving session"}));
+    send_binary_frame(tcp_client.fd, "session_leave", serialize(SessionLeavePayload{{1001U, 101U, 34U}, "operator leaving session"}));
     const auto leave_frame = wait_for_binary_frame(*live, tcp_client.fd);
     assert(leave_frame.kind == "command_ack");
     const auto leave_ack = parse_command_ack(leave_frame.payload);

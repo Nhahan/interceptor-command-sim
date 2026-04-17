@@ -35,7 +35,7 @@ void set_timeout(int fd) {
 
 std::vector<std::string> recv_udp_messages(int fd, std::size_t max_messages) {
     std::vector<std::string> messages;
-    char buffer[512];
+    char buffer[4096];
     sockaddr_in from {};
     socklen_t len = sizeof(from);
     for (std::size_t i = 0; i < max_messages; ++i) {

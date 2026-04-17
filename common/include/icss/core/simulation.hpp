@@ -2,8 +2,10 @@
 
 #include <filesystem>
 #include <string>
+#include <optional>
 #include <vector>
 
+#include "icss/core/config.hpp"
 #include "icss/core/types.hpp"
 
 namespace icss::core {
@@ -12,13 +14,16 @@ class SimulationSession {
 public:
     explicit SimulationSession(std::uint32_t session_id = 1001,
                                int tick_rate_hz = 20,
-                               int telemetry_interval_ms = 200);
+                               int telemetry_interval_ms = 200,
+                               ScenarioConfig scenario = {});
 
     void connect_client(ClientRole role, std::uint32_t sender_id);
     void disconnect_client(ClientRole role, std::string reason);
     void timeout_client(ClientRole role, std::string reason);
 
     CommandResult start_scenario();
+    CommandResult reset_session(std::string reason);
+    void configure_scenario(ScenarioConfig scenario);
     CommandResult request_track();
     CommandResult activate_asset();
     CommandResult issue_command();
@@ -58,8 +63,9 @@ private:
     std::uint64_t clock_ms_ {1'776'327'000'000ULL};
     int tick_rate_hz_ {20};
     int telemetry_interval_ms_ {200};
-    EntityState target_ {"target-alpha", {1, 7}, false};
-    EntityState asset_ {"asset-interceptor", {8, 2}, false};
+    ScenarioConfig scenario_;
+    EntityState target_ {"target-alpha", {3, 13}, false};
+    EntityState asset_ {"asset-interceptor", {10, 2}, false};
     ClientState command_console_ {ClientRole::CommandConsole, ConnectionState::Disconnected, 0, 0};
     ClientState tactical_viewer_ {ClientRole::TacticalViewer, ConnectionState::Disconnected, 0, 0};
     TrackState track_;
@@ -69,6 +75,7 @@ private:
     bool reconnect_exercised_ {false};
     bool timeout_exercised_ {false};
     bool packet_gap_exercised_ {false};
+    std::optional<std::uint64_t> engagement_started_tick_;
     std::vector<EventRecord> events_;
     std::vector<Snapshot> snapshots_;
 };

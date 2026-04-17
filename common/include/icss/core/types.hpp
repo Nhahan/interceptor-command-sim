@@ -94,8 +94,16 @@ struct CommandResult {
 struct Snapshot {
     protocol::SessionEnvelope envelope {};
     protocol::SnapshotHeader header {};
+    SessionPhase phase {SessionPhase::Initialized};
+    int world_width {576};
+    int world_height {384};
     EntityState target;
     EntityState asset;
+    int target_velocity_x {0};
+    int target_velocity_y {0};
+    int interceptor_speed_per_tick {0};
+    int intercept_radius {0};
+    int engagement_timeout_ticks {0};
     TrackState track;
     AssetStatus asset_status {AssetStatus::Idle};
     CommandLifecycle command_status {CommandLifecycle::None};

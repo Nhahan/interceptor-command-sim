@@ -22,8 +22,9 @@ int main() {
     transport->advance_tick();
     transport->dispatch(icss::protocol::AssetActivatePayload{{1001U, 101U, 2U}, "asset-interceptor"});
     transport->dispatch(icss::protocol::CommandIssuePayload{{1001U, 101U, 3U}, "asset-interceptor", "target-alpha"});
-    transport->advance_tick();
-    transport->advance_tick();
+    for (int i = 0; i < 12 && !transport->latest_snapshot().judgment.ready; ++i) {
+        transport->advance_tick();
+    }
     transport->archive_session();
 
     const auto events = transport->events();
@@ -36,8 +37,22 @@ int main() {
     const icss::protocol::SnapshotPayload snapshot_payload {
         snapshot.envelope,
         snapshot.header,
+        to_string(snapshot.phase),
+        snapshot.world_width,
+        snapshot.world_height,
         snapshot.target.id,
+        snapshot.target.active,
+        snapshot.target.position.x,
+        snapshot.target.position.y,
+        snapshot.target_velocity_x,
+        snapshot.target_velocity_y,
         snapshot.asset.id,
+        snapshot.asset.active,
+        snapshot.asset.position.x,
+        snapshot.asset.position.y,
+        snapshot.interceptor_speed_per_tick,
+        snapshot.intercept_radius,
+        snapshot.engagement_timeout_ticks,
         snapshot.track.active,
         snapshot.track.confidence_pct,
         to_string(snapshot.asset_status),
@@ -49,6 +64,9 @@ int main() {
         snapshot.envelope,
         snapshot.telemetry,
         to_string(snapshot.viewer_connection),
+        recent.empty() ? 0U : recent.back().header.tick,
+        recent.empty() ? "none" : std::string(icss::protocol::to_string(recent.back().header.event_type)),
+        recent.empty() ? "no server event" : recent.back().summary,
     };
 
     std::cout << "backend=" << transport->backend_name() << '\n';

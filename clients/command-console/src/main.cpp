@@ -1,14 +1,260 @@
+#include <chrono>
 #include <filesystem>
 #include <iostream>
+#include <stdexcept>
+#include <string>
+#include <string_view>
+#include <thread>
 #include <vector>
 
 #include "icss/core/runtime.hpp"
 #include "icss/net/transport.hpp"
+#include "icss/protocol/frame_codec.hpp"
 #include "icss/protocol/messages.hpp"
 #include "icss/protocol/payloads.hpp"
 #include "icss/protocol/serialization.hpp"
 
-int main() {
+#if !defined(_WIN32)
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <sys/time.h>
+#include <unistd.h>
+#endif
+
+namespace {
+
+struct ConsoleOptions {
+    std::string backend {"in_process"};
+    std::string host {"127.0.0.1"};
+    std::uint16_t tcp_port {4000};
+    std::string tcp_frame_format {"json"};
+    std::uint32_t session_id {1001U};
+    std::uint32_t sender_id {101U};
+    std::string scenario_name {"basic_intercept_training"};
+};
+
+ConsoleOptions parse_args(int argc, char** argv) {
+    ConsoleOptions options;
+    for (int i = 1; i < argc; ++i) {
+        const std::string_view arg = argv[i];
+        auto require_value = [&](std::string_view label) -> std::string {
+            if (i + 1 >= argc) {
+                throw std::runtime_error("missing value for " + std::string(label));
+            }
+            return argv[++i];
+        };
+        if (arg == "--backend") {
+            options.backend = require_value(arg);
+            continue;
+        }
+        if (arg == "--host") {
+            options.host = require_value(arg);
+            continue;
+        }
+        if (arg == "--tcp-port") {
+            options.tcp_port = static_cast<std::uint16_t>(std::stoul(require_value(arg)));
+            continue;
+        }
+        if (arg == "--tcp-frame-format") {
+            options.tcp_frame_format = require_value(arg);
+            continue;
+        }
+        if (arg == "--session-id") {
+            options.session_id = static_cast<std::uint32_t>(std::stoul(require_value(arg)));
+            continue;
+        }
+        if (arg == "--sender-id") {
+            options.sender_id = static_cast<std::uint32_t>(std::stoul(require_value(arg)));
+            continue;
+        }
+        if (arg == "--scenario-name") {
+            options.scenario_name = require_value(arg);
+            continue;
+        }
+        if (arg == "--help") {
+            std::cout
+                << "usage: icss_command_console [--backend in_process|socket_live] [--host HOST] [--tcp-port PORT]\n"
+                << "                           [--tcp-frame-format json|binary] [--session-id ID] [--sender-id ID]\n"
+                << "                           [--scenario-name NAME]\n";
+            std::exit(0);
+        }
+        throw std::runtime_error("unknown argument: " + std::string(arg));
+    }
+    return options;
+}
+
+#if !defined(_WIN32)
+enum class FrameMode {
+    Json,
+    Binary,
+};
+
+FrameMode parse_frame_mode(std::string_view value) {
+    if (value == "json") {
+        return FrameMode::Json;
+    }
+    if (value == "binary") {
+        return FrameMode::Binary;
+    }
+    throw std::runtime_error("unsupported tcp frame format: " + std::string(value));
+}
+
+class TcpSocket {
+public:
+    TcpSocket(const std::string& host, std::uint16_t port) {
+        fd_ = ::socket(AF_INET, SOCK_STREAM, 0);
+        if (fd_ < 0) {
+            throw std::runtime_error("failed to create tcp socket");
+        }
+        timeval timeout {};
+        timeout.tv_sec = 1;
+        timeout.tv_usec = 0;
+        ::setsockopt(fd_, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+        ::setsockopt(fd_, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
+
+        sockaddr_in addr {};
+        addr.sin_family = AF_INET;
+        addr.sin_port = htons(port);
+        if (::inet_pton(AF_INET, host.c_str(), &addr.sin_addr) != 1) {
+            throw std::runtime_error("invalid host address");
+        }
+        if (::connect(fd_, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) != 0) {
+            throw std::runtime_error("failed to connect to socket_live server");
+        }
+    }
+
+    ~TcpSocket() {
+        if (fd_ >= 0) {
+            ::close(fd_);
+        }
+    }
+
+    [[nodiscard]] int fd() const { return fd_; }
+
+private:
+    int fd_ {-1};
+};
+
+void send_frame(int fd, FrameMode mode, std::string_view kind, std::string_view payload) {
+    if (mode == FrameMode::Json) {
+        const auto line = icss::protocol::encode_json_frame(kind, payload) + "\n";
+        if (::send(fd, line.data(), line.size(), 0) < 0) {
+            throw std::runtime_error("failed to send json frame");
+        }
+        return;
+    }
+    const auto frame = icss::protocol::encode_binary_frame(kind, payload);
+    if (::send(fd, frame.data(), frame.size(), 0) < 0) {
+        throw std::runtime_error("failed to send binary frame");
+    }
+}
+
+icss::protocol::FramedMessage recv_frame(int fd, FrameMode mode) {
+    if (mode == FrameMode::Json) {
+        std::string line;
+        char ch = '\0';
+        while (true) {
+            const auto received = ::recv(fd, &ch, 1, 0);
+            if (received <= 0) {
+                throw std::runtime_error("failed to receive json frame");
+            }
+            if (ch == '\n') {
+                return icss::protocol::decode_json_frame(line);
+            }
+            line.push_back(ch);
+        }
+    }
+
+    std::string buffer;
+    char chunk[512];
+    while (true) {
+        const auto received = ::recv(fd, chunk, sizeof(chunk), 0);
+        if (received <= 0) {
+            throw std::runtime_error("failed to receive binary frame");
+        }
+        buffer.append(chunk, static_cast<std::size_t>(received));
+        icss::protocol::FramedMessage frame;
+        if (icss::protocol::try_decode_binary_frame(buffer, frame)) {
+            return frame;
+        }
+    }
+}
+
+void print_ack(std::string_view kind, const icss::protocol::CommandAckPayload& ack) {
+    std::cout << kind << ": " << (ack.accepted ? "accepted" : "rejected")
+              << " | reason=" << ack.reason << '\n';
+}
+
+int run_socket_live(const ConsoleOptions& options) {
+    const auto frame_mode = parse_frame_mode(options.tcp_frame_format);
+    TcpSocket socket(options.host, options.tcp_port);
+    std::uint64_t sequence = 1;
+
+    const auto send_and_expect_ack = [&](std::string_view kind, std::string payload) {
+        send_frame(socket.fd(), frame_mode, kind, payload);
+        const auto frame = recv_frame(socket.fd(), frame_mode);
+        if (frame.kind != "command_ack") {
+            throw std::runtime_error("expected command_ack after " + std::string(kind));
+        }
+        const auto ack = icss::protocol::parse_command_ack(frame.payload);
+        print_ack(kind, ack);
+        return ack;
+    };
+
+    std::cout << "Command console live mode\n";
+    std::cout << "backend=socket_live, host=" << options.host << ", tcp_port=" << options.tcp_port
+              << ", frame_format=" << options.tcp_frame_format << '\n';
+
+    send_and_expect_ack(
+        "session_join",
+        icss::protocol::serialize(icss::protocol::SessionJoinPayload{{options.session_id, options.sender_id, sequence++}, "command_console"}));
+    send_and_expect_ack(
+        "scenario_start",
+        icss::protocol::serialize(icss::protocol::ScenarioStartPayload{{options.session_id, options.sender_id, sequence++}, options.scenario_name}));
+    send_and_expect_ack(
+        "track_request",
+        icss::protocol::serialize(icss::protocol::TrackRequestPayload{{options.session_id, options.sender_id, sequence++}, "target-alpha"}));
+    send_and_expect_ack(
+        "asset_activate",
+        icss::protocol::serialize(icss::protocol::AssetActivatePayload{{options.session_id, options.sender_id, sequence++}, "asset-interceptor"}));
+    send_and_expect_ack(
+        "command_issue",
+        icss::protocol::serialize(icss::protocol::CommandIssuePayload{{options.session_id, options.sender_id, sequence++}, "asset-interceptor", "target-alpha"}));
+
+    icss::protocol::AarResponsePayload aar;
+    bool aar_ready = false;
+    for (int attempt = 0; attempt < 20; ++attempt) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        send_frame(socket.fd(),
+                   frame_mode,
+                   "aar_request",
+                   icss::protocol::serialize(icss::protocol::AarRequestPayload{{options.session_id, options.sender_id, sequence++}, 999U, "absolute"}));
+        const auto aar_frame = recv_frame(socket.fd(), frame_mode);
+        if (aar_frame.kind != "aar_response") {
+            throw std::runtime_error("expected aar_response after aar_request");
+        }
+        aar = icss::protocol::parse_aar_response(aar_frame.payload);
+        if (aar.judgment_code != "pending") {
+            aar_ready = true;
+            break;
+        }
+    }
+    if (!aar_ready) {
+        throw std::runtime_error("aar did not reach a terminal judgment before timeout");
+    }
+    std::cout << "aar_response: cursor=" << aar.replay_cursor_index << "/" << aar.total_events
+              << " | judgment_code=" << aar.judgment_code
+              << " | event_type=" << aar.event_type << '\n';
+
+    send_and_expect_ack(
+        "scenario_stop",
+        icss::protocol::serialize(icss::protocol::ScenarioStopPayload{{options.session_id, options.sender_id, sequence++}, "command console completed scripted flow"}));
+    return 0;
+}
+#endif
+
+int run_in_process() {
     namespace fs = std::filesystem;
     using namespace icss::core;
     using namespace icss::net;
@@ -43,4 +289,24 @@ int main() {
     std::cout << "wire_preview.command_issue=" << serialize(preview) << '\n';
     std::cout << "wire_preview.aar_request=" << serialize(aar_preview) << '\n';
     return 0;
+}
+
+}  // namespace
+
+int main(int argc, char** argv) {
+    try {
+        const auto options = parse_args(argc, argv);
+        if (options.backend == "in_process") {
+            return run_in_process();
+        }
+#if !defined(_WIN32)
+        if (options.backend == "socket_live") {
+            return run_socket_live(options);
+        }
+#endif
+        throw std::runtime_error("unsupported backend: " + options.backend);
+    } catch (const std::exception& error) {
+        std::cerr << error.what() << '\n';
+        return 1;
+    }
 }

@@ -42,11 +42,20 @@ int main() {
     const auto post_archive_command = session.issue_command();
     assert(!post_archive_command.accepted);
 
-    const auto& events = session.events();
-    const auto rejected_count = std::count_if(events.begin(), events.end(), [](const EventRecord& event) {
+    const auto& pre_reset_events = session.events();
+    const auto rejected_count = std::count_if(pre_reset_events.begin(), pre_reset_events.end(), [](const EventRecord& event) {
         return event.header.event_type == EventType::CommandRejected;
     });
+    assert(rejected_count >= 4);
 
-    assert(rejected_count >= 5);
+    const auto reset = session.reset_session("reset after archive");
+    assert(reset.accepted);
+    const auto restart = session.start_scenario();
+    assert(restart.accepted);
+
+    const auto& events = session.events();
+    assert(events.size() >= 1);
+    assert(events.back().header.event_type == EventType::SessionStarted);
+    assert(session.phase() == SessionPhase::Detecting);
     return 0;
 }

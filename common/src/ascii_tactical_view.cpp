@@ -9,8 +9,8 @@
 namespace icss::view {
 namespace {
 
-constexpr int kWidth = 12;
-constexpr int kHeight = 8;
+constexpr int kWidth = 24;
+constexpr int kHeight = 16;
 
 std::vector<std::string> make_grid() {
     return std::vector<std::string>(kHeight, std::string(kWidth, '.'));
@@ -20,6 +20,14 @@ void place(std::vector<std::string>& grid, int x, int y, char glyph) {
     if (y >= 0 && y < static_cast<int>(grid.size()) && x >= 0 && x < static_cast<int>(grid[y].size())) {
         grid[y][x] = glyph;
     }
+}
+
+int scale_axis(int value, int world_limit, int grid_limit) {
+    if (grid_limit <= 1 || world_limit <= 1) {
+        return 0;
+    }
+    const auto clamped = std::clamp(value, 0, world_limit - 1);
+    return static_cast<int>((static_cast<long long>(clamped) * (grid_limit - 1)) / (world_limit - 1));
 }
 
 std::string freshness_label_impl(const icss::core::Snapshot& snapshot) {
@@ -48,8 +56,14 @@ std::string render_tactical_frame(const icss::core::Snapshot& snapshot,
                                   const std::vector<icss::core::EventRecord>& recent_events,
                                   ReplayCursor cursor) {
     auto grid = make_grid();
-    place(grid, snapshot.target.position.x, snapshot.target.position.y, 'T');
-    place(grid, snapshot.asset.position.x, snapshot.asset.position.y, 'A');
+    place(grid,
+          scale_axis(snapshot.target.position.x, snapshot.world_width, kWidth),
+          scale_axis(snapshot.target.position.y, snapshot.world_height, kHeight),
+          'T');
+    place(grid,
+          scale_axis(snapshot.asset.position.x, snapshot.world_width, kWidth),
+          scale_axis(snapshot.asset.position.y, snapshot.world_height, kHeight),
+          'A');
 
     std::ostringstream out;
     out << "=== Tactical Viewer ===\n";
@@ -59,12 +73,13 @@ std::string render_tactical_frame(const icss::core::Snapshot& snapshot,
     out << "Entities:\n";
     out << "- target=" << snapshot.target.id << " @ (" << snapshot.target.position.x << ", " << snapshot.target.position.y
         << ") active=" << (snapshot.target.active ? "yes" : "no") << '\n';
-    out << "- asset=" << snapshot.asset.id << " @ (" << snapshot.asset.position.x << ", " << snapshot.asset.position.y
+    out << "- interceptor=" << snapshot.asset.id << " @ (" << snapshot.asset.position.x << ", " << snapshot.asset.position.y
         << ") active=" << (snapshot.asset.active ? "yes" : "no") << '\n';
     out << "State:\n";
-    out << "- tracking=" << (snapshot.track.active ? "on" : "off")
+    out << "- phase=" << icss::core::to_string(snapshot.phase)
+        << ", tracking=" << (snapshot.track.active ? "on" : "off")
         << " (confidence=" << snapshot.track.confidence_pct << "%)"
-        << ", asset_status=" << icss::core::to_string(snapshot.asset_status)
+        << ", interceptor_status=" << icss::core::to_string(snapshot.asset_status)
         << ", command_status=" << icss::core::to_string(snapshot.command_status)
         << ", judgment=" << icss::core::to_string(snapshot.judgment.code) << '\n';
     out << "Telemetry:\n";

@@ -17,6 +17,7 @@ enum class TcpMessageKind : std::uint8_t {
     SessionLeave,
     ScenarioStart,
     ScenarioStop,
+    ScenarioReset,
     TrackRequest,
     AssetActivate,
     CommandIssue,
@@ -73,12 +74,13 @@ struct EventRecordHeader {
     EventType event_type {EventType::SessionStarted};
 };
 
-inline constexpr std::array<TcpMessageKind, 12> kTcpMessageKinds {
+inline constexpr std::array<TcpMessageKind, 13> kTcpMessageKinds {
     TcpMessageKind::SessionCreate,
     TcpMessageKind::SessionJoin,
     TcpMessageKind::SessionLeave,
     TcpMessageKind::ScenarioStart,
     TcpMessageKind::ScenarioStop,
+    TcpMessageKind::ScenarioReset,
     TcpMessageKind::TrackRequest,
     TcpMessageKind::AssetActivate,
     TcpMessageKind::CommandIssue,
@@ -125,6 +127,7 @@ inline constexpr std::string_view to_string(TcpMessageKind value) {
     case TcpMessageKind::SessionLeave: return "session_leave";
     case TcpMessageKind::ScenarioStart: return "scenario_start";
     case TcpMessageKind::ScenarioStop: return "scenario_stop";
+    case TcpMessageKind::ScenarioReset: return "scenario_reset";
     case TcpMessageKind::TrackRequest: return "track_request";
     case TcpMessageKind::AssetActivate: return "asset_activate";
     case TcpMessageKind::CommandIssue: return "command_issue";

@@ -15,6 +15,13 @@ int main() {
     assert(config.server.heartbeat_timeout_ms == 3000);
     assert(config.scenario.name == "basic_intercept_training");
     assert(config.scenario.telemetry_interval_ms == 200);
+    assert(config.scenario.world_width == 576);
+    assert(config.scenario.world_height == 384);
+    assert(config.scenario.target_velocity_x == 5);
+    assert(config.scenario.target_velocity_y == -3);
+    assert(config.scenario.interceptor_speed_per_tick == 14);
+    assert(config.scenario.intercept_radius == 12);
+    assert(config.scenario.engagement_timeout_ticks == 26);
     assert(config.logging.level == "info");
     assert(config.logging.aar_enabled);
     assert(config.logging.aar_output_dir == fs::path{"assets/sample-aar"});

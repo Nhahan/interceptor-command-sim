@@ -79,6 +79,14 @@ FieldMap parse_fields(std::string_view wire) {
     return fields;
 }
 
+std::string require_or(const FieldMap& fields, std::string_view key, std::string fallback) {
+    const auto it = fields.find(std::string(key));
+    if (it == fields.end()) {
+        return fallback;
+    }
+    return it->second;
+}
+
 std::string join_fields(std::initializer_list<std::pair<std::string_view, std::string>> fields) {
     std::string wire;
     bool first = true;
@@ -99,6 +107,10 @@ std::string as_string(std::uint64_t value) {
 }
 
 std::string as_string(std::uint32_t value) {
+    return std::to_string(value);
+}
+
+std::string as_string(std::int64_t value) {
     return std::to_string(value);
 }
 
@@ -128,6 +140,17 @@ std::uint32_t parse_u32(std::string_view text) {
     const auto result = std::from_chars(begin, end, value);
     if (result.ec != std::errc {}) {
         throw std::runtime_error("invalid uint32 field");
+    }
+    return value;
+}
+
+std::int64_t parse_i64(std::string_view text) {
+    std::int64_t value {};
+    const auto* begin = text.data();
+    const auto* end = text.data() + text.size();
+    const auto result = std::from_chars(begin, end, value);
+    if (result.ec != std::errc {}) {
+        throw std::runtime_error("invalid int64 field");
     }
     return value;
 }
@@ -198,6 +221,17 @@ bool is_valid_asset_status(std::string_view value) {
     return value == "idle" || value == "ready" || value == "engaging" || value == "complete";
 }
 
+bool is_valid_session_phase(std::string_view value) {
+    return value == "initialized"
+        || value == "detecting"
+        || value == "tracking"
+        || value == "asset_ready"
+        || value == "command_issued"
+        || value == "engaging"
+        || value == "judged"
+        || value == "archived";
+}
+
 bool is_valid_command_status(std::string_view value) {
     return value == "none" || value == "accepted" || value == "executing" || value == "completed" || value == "rejected";
 }
@@ -247,12 +281,33 @@ std::string serialize(const ScenarioStartPayload& payload) {
         {"sender_id", as_string(payload.envelope.sender_id)},
         {"sequence", as_string(payload.envelope.sequence)},
         {"scenario_name", payload.scenario_name},
+        {"world_width", as_string(static_cast<std::int64_t>(payload.world_width))},
+        {"world_height", as_string(static_cast<std::int64_t>(payload.world_height))},
+        {"target_start_x", as_string(static_cast<std::int64_t>(payload.target_start_x))},
+        {"target_start_y", as_string(static_cast<std::int64_t>(payload.target_start_y))},
+        {"target_velocity_x", as_string(static_cast<std::int64_t>(payload.target_velocity_x))},
+        {"target_velocity_y", as_string(static_cast<std::int64_t>(payload.target_velocity_y))},
+        {"interceptor_start_x", as_string(static_cast<std::int64_t>(payload.interceptor_start_x))},
+        {"interceptor_start_y", as_string(static_cast<std::int64_t>(payload.interceptor_start_y))},
+        {"interceptor_speed_per_tick", as_string(static_cast<std::int64_t>(payload.interceptor_speed_per_tick))},
+        {"intercept_radius", as_string(static_cast<std::int64_t>(payload.intercept_radius))},
+        {"engagement_timeout_ticks", as_string(static_cast<std::int64_t>(payload.engagement_timeout_ticks))},
     });
 }
 
 std::string serialize(const ScenarioStopPayload& payload) {
     return join_fields({
         {"kind", "scenario_stop"},
+        {"session_id", as_string(payload.envelope.session_id)},
+        {"sender_id", as_string(payload.envelope.sender_id)},
+        {"sequence", as_string(payload.envelope.sequence)},
+        {"reason", payload.reason},
+    });
+}
+
+std::string serialize(const ScenarioResetPayload& payload) {
+    return join_fields({
+        {"kind", "scenario_reset"},
         {"session_id", as_string(payload.envelope.session_id)},
         {"sender_id", as_string(payload.envelope.sender_id)},
         {"sequence", as_string(payload.envelope.sequence)},
@@ -340,8 +395,22 @@ std::string serialize(const SnapshotPayload& payload) {
         {"tick", as_string(payload.header.tick)},
         {"timestamp_ms", as_string(payload.header.timestamp_ms)},
         {"snapshot_sequence", as_string(payload.header.snapshot_sequence)},
+        {"phase", payload.phase},
+        {"world_width", as_string(static_cast<std::int64_t>(payload.world_width))},
+        {"world_height", as_string(static_cast<std::int64_t>(payload.world_height))},
         {"target_id", payload.target_id},
+        {"target_active", as_string(payload.target_active)},
+        {"target_x", as_string(static_cast<std::int64_t>(payload.target_x))},
+        {"target_y", as_string(static_cast<std::int64_t>(payload.target_y))},
+        {"target_velocity_x", as_string(static_cast<std::int64_t>(payload.target_velocity_x))},
+        {"target_velocity_y", as_string(static_cast<std::int64_t>(payload.target_velocity_y))},
         {"asset_id", payload.asset_id},
+        {"asset_active", as_string(payload.asset_active)},
+        {"asset_x", as_string(static_cast<std::int64_t>(payload.asset_x))},
+        {"asset_y", as_string(static_cast<std::int64_t>(payload.asset_y))},
+        {"interceptor_speed_per_tick", as_string(static_cast<std::int64_t>(payload.interceptor_speed_per_tick))},
+        {"intercept_radius", as_string(static_cast<std::int64_t>(payload.intercept_radius))},
+        {"engagement_timeout_ticks", as_string(static_cast<std::int64_t>(payload.engagement_timeout_ticks))},
         {"tracking_active", as_string(payload.tracking_active)},
         {"track_confidence_pct", as_string(static_cast<std::uint32_t>(payload.track_confidence_pct))},
         {"asset_status", payload.asset_status},
@@ -362,6 +431,9 @@ std::string serialize(const TelemetryPayload& payload) {
         {"packet_loss_pct", as_string(payload.sample.packet_loss_pct)},
         {"last_snapshot_timestamp_ms", as_string(payload.sample.last_snapshot_timestamp_ms)},
         {"connection_state", payload.connection_state},
+        {"event_tick", as_string(payload.event_tick)},
+        {"event_type", payload.event_type},
+        {"event_summary", payload.event_summary},
     });
 }
 
@@ -407,12 +479,32 @@ SessionLeavePayload parse_session_leave(std::string_view wire) {
 ScenarioStartPayload parse_scenario_start(std::string_view wire) {
     const auto fields = parse_fields(wire);
     require_kind(fields, "scenario_start");
-    return {parse_envelope(fields), require(fields, "scenario_name")};
+    return {
+        parse_envelope(fields),
+        require(fields, "scenario_name"),
+        static_cast<int>(parse_i64(require_or(fields, "world_width", "576"))),
+        static_cast<int>(parse_i64(require_or(fields, "world_height", "384"))),
+        static_cast<int>(parse_i64(require_or(fields, "target_start_x", "80"))),
+        static_cast<int>(parse_i64(require_or(fields, "target_start_y", "300"))),
+        static_cast<int>(parse_i64(require_or(fields, "target_velocity_x", "5"))),
+        static_cast<int>(parse_i64(require_or(fields, "target_velocity_y", "-3"))),
+        static_cast<int>(parse_i64(require_or(fields, "interceptor_start_x", "160"))),
+        static_cast<int>(parse_i64(require_or(fields, "interceptor_start_y", "60"))),
+        static_cast<int>(parse_i64(require_or(fields, "interceptor_speed_per_tick", "14"))),
+        static_cast<int>(parse_i64(require_or(fields, "intercept_radius", "12"))),
+        static_cast<int>(parse_i64(require_or(fields, "engagement_timeout_ticks", "26"))),
+    };
 }
 
 ScenarioStopPayload parse_scenario_stop(std::string_view wire) {
     const auto fields = parse_fields(wire);
     require_kind(fields, "scenario_stop");
+    return {parse_envelope(fields), require(fields, "reason")};
+}
+
+ScenarioResetPayload parse_scenario_reset(std::string_view wire) {
+    const auto fields = parse_fields(wire);
+    require_kind(fields, "scenario_reset");
     return {parse_envelope(fields), require(fields, "reason")};
 }
 
@@ -466,8 +558,22 @@ SnapshotPayload parse_snapshot(std::string_view wire) {
     return {
         parse_envelope(fields),
         parse_snapshot_header(fields),
+        require_enum_string(fields, "phase", is_valid_session_phase),
+        static_cast<int>(parse_i64(require_or(fields, "world_width", "576"))),
+        static_cast<int>(parse_i64(require_or(fields, "world_height", "384"))),
         require(fields, "target_id"),
+        parse_bool(require(fields, "target_active")),
+        static_cast<int>(parse_i64(require(fields, "target_x"))),
+        static_cast<int>(parse_i64(require(fields, "target_y"))),
+        static_cast<int>(parse_i64(require_or(fields, "target_velocity_x", "0"))),
+        static_cast<int>(parse_i64(require_or(fields, "target_velocity_y", "0"))),
         require(fields, "asset_id"),
+        parse_bool(require(fields, "asset_active")),
+        static_cast<int>(parse_i64(require(fields, "asset_x"))),
+        static_cast<int>(parse_i64(require(fields, "asset_y"))),
+        static_cast<int>(parse_i64(require_or(fields, "interceptor_speed_per_tick", "0"))),
+        static_cast<int>(parse_i64(require_or(fields, "intercept_radius", "0"))),
+        static_cast<int>(parse_i64(require_or(fields, "engagement_timeout_ticks", "0"))),
         parse_bool(require(fields, "tracking_active")),
         static_cast<int>(parse_u32(require(fields, "track_confidence_pct"))),
         require_enum_string(fields, "asset_status", is_valid_asset_status),
@@ -480,7 +586,14 @@ SnapshotPayload parse_snapshot(std::string_view wire) {
 TelemetryPayload parse_telemetry(std::string_view wire) {
     const auto fields = parse_fields(wire);
     require_kind(fields, "telemetry");
-    return {parse_envelope(fields), parse_telemetry_sample(fields), require(fields, "connection_state")};
+    return {
+        parse_envelope(fields),
+        parse_telemetry_sample(fields),
+        require(fields, "connection_state"),
+        parse_u64(require(fields, "event_tick")),
+        require(fields, "event_type"),
+        require(fields, "event_summary"),
+    };
 }
 
 AarRequestPayload parse_aar_request(std::string_view wire) {

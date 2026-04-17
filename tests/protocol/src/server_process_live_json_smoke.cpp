@@ -191,7 +191,7 @@ icss::protocol::FramedMessage wait_for_json_frame(int fd, int attempts = 20) {
 
 std::vector<std::string> recv_udp_messages(int fd, std::size_t max_messages, int attempts = 20) {
     std::vector<std::string> messages;
-    char buffer[512];
+    char buffer[4096];
     sockaddr_in from {};
     socklen_t len = sizeof(from);
     for (int attempt = 0; attempt < attempts && messages.empty(); ++attempt) {

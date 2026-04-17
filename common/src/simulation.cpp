@@ -1,5 +1,7 @@
 #include "icss/core/simulation.hpp"
 
+#include <algorithm>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
@@ -38,10 +40,38 @@ std::vector<EventRecord> recent_events_for_artifact(const std::vector<EventRecor
     return recent;
 }
 
+void bounce_position_axis(int& position, int& velocity, int limit) {
+    if (limit <= 1 || velocity == 0) {
+        position = std::clamp(position, 0, std::max(0, limit - 1));
+        return;
+    }
+    position += velocity;
+    if (position < 0) {
+        position = -position;
+        velocity *= -1;
+    } else if (position >= limit) {
+        position = (limit - 1) - (position - (limit - 1));
+        velocity *= -1;
+    }
+    position = std::clamp(position, 0, limit - 1);
+}
+
+int manhattan_distance(const Vec2& lhs, const Vec2& rhs) {
+    return std::abs(lhs.x - rhs.x) + std::abs(lhs.y - rhs.y);
+}
+
 }  // namespace
 
-SimulationSession::SimulationSession(std::uint32_t session_id, int tick_rate_hz, int telemetry_interval_ms)
-    : session_id_(session_id), tick_rate_hz_(tick_rate_hz), telemetry_interval_ms_(telemetry_interval_ms) {}
+SimulationSession::SimulationSession(std::uint32_t session_id,
+                                     int tick_rate_hz,
+                                     int telemetry_interval_ms,
+                                     ScenarioConfig scenario)
+    : session_id_(session_id),
+      tick_rate_hz_(tick_rate_hz),
+      telemetry_interval_ms_(telemetry_interval_ms),
+      scenario_(std::move(scenario)),
+      target_({"target-alpha", {scenario_.target_start_x, scenario_.target_start_y}, false}),
+      asset_({"asset-interceptor", {scenario_.interceptor_start_x, scenario_.interceptor_start_y}, false}) {}
 
 void SimulationSession::connect_client(ClientRole role, std::uint32_t sender_id) {
     auto& state = client(role);
@@ -117,6 +147,48 @@ CommandResult SimulationSession::start_scenario() {
     return {true, "scenario started", protocol::TcpMessageKind::ScenarioStart};
 }
 
+void SimulationSession::configure_scenario(ScenarioConfig scenario) {
+    scenario_ = std::move(scenario);
+    target_.position = {scenario_.target_start_x, scenario_.target_start_y};
+    target_.active = false;
+    asset_.position = {scenario_.interceptor_start_x, scenario_.interceptor_start_y};
+    asset_.active = false;
+    track_ = {};
+    asset_status_ = AssetStatus::Idle;
+    command_status_ = CommandLifecycle::None;
+    judgment_ = {};
+    engagement_started_tick_.reset();
+}
+
+CommandResult SimulationSession::reset_session(std::string) {
+    tick_ = 0;
+    sequence_ = 0;
+    clock_ms_ = 1'776'327'000'000ULL;
+    phase_ = SessionPhase::Initialized;
+    target_ = {"target-alpha", {scenario_.target_start_x, scenario_.target_start_y}, false};
+    asset_ = {"asset-interceptor", {scenario_.interceptor_start_x, scenario_.interceptor_start_y}, false};
+    track_ = {};
+    asset_status_ = AssetStatus::Idle;
+    command_status_ = CommandLifecycle::None;
+    judgment_ = {};
+    engagement_started_tick_.reset();
+    reconnect_exercised_ = false;
+    timeout_exercised_ = false;
+    packet_gap_exercised_ = false;
+    events_.clear();
+    snapshots_.clear();
+    if (command_console_.connection == ConnectionState::Reconnected) {
+        command_console_.connection = ConnectionState::Connected;
+    }
+    if (tactical_viewer_.connection == ConnectionState::Reconnected) {
+        tactical_viewer_.connection = ConnectionState::Connected;
+    }
+    command_console_.last_seen_tick = 0;
+    tactical_viewer_.last_seen_tick = 0;
+    record_snapshot();
+    return {true, "session reset to initialized state", protocol::TcpMessageKind::CommandAck};
+}
+
 CommandResult SimulationSession::request_track() {
     if (phase_ != SessionPhase::Detecting) {
         return reject_command("Track request rejected",
@@ -137,13 +209,13 @@ CommandResult SimulationSession::request_track() {
 
 CommandResult SimulationSession::activate_asset() {
     if (phase_ != SessionPhase::Tracking) {
-        return reject_command("Asset activation rejected",
-                              "asset activation is only valid while tracking",
+        return reject_command("Interceptor activation rejected",
+                              "interceptor activation is only valid while tracking",
                               {asset_.id});
     }
     if (!track_.active) {
-        return reject_command("Asset activation rejected",
-                              "asset activation requires an active track",
+        return reject_command("Interceptor activation rejected",
+                              "interceptor activation requires an active track",
                               {asset_.id});
     }
     asset_status_ = AssetStatus::Ready;
@@ -152,10 +224,10 @@ CommandResult SimulationSession::activate_asset() {
     push_event(protocol::EventType::AssetUpdated,
                "command_console",
                {asset_.id},
-               "Asset activation accepted",
-               "Interceptor asset is ready for command issue.");
+               "Interceptor activation accepted",
+               "Interceptor is ready for command issue.");
     record_snapshot();
-    return {true, "asset ready", protocol::TcpMessageKind::AssetActivate};
+    return {true, "interceptor ready", protocol::TcpMessageKind::AssetActivate};
 }
 
 CommandResult SimulationSession::issue_command() {
@@ -171,6 +243,7 @@ CommandResult SimulationSession::issue_command() {
     }
     command_status_ = CommandLifecycle::Accepted;
     phase_ = SessionPhase::CommandIssued;
+    engagement_started_tick_ = tick_;
     push_event(protocol::EventType::CommandAccepted,
                "command_console",
                {asset_.id, target_.id},
@@ -190,26 +263,63 @@ void SimulationSession::advance_tick() {
     ++tick_;
 
     if (target_.active) {
-        target_.position.x += 1;
-        target_.position.y -= (tick_ % 2 == 0 ? 1 : 0);
+        bounce_position_axis(target_.position.x, scenario_.target_velocity_x, scenario_.world_width);
+        bounce_position_axis(target_.position.y, scenario_.target_velocity_y, scenario_.world_height);
     }
 
     if (command_status_ == CommandLifecycle::Accepted && phase_ == SessionPhase::CommandIssued) {
         phase_ = SessionPhase::Engaging;
         asset_status_ = AssetStatus::Engaging;
         command_status_ = CommandLifecycle::Executing;
-    } else if (command_status_ == CommandLifecycle::Executing && phase_ == SessionPhase::Engaging) {
-        judgment_.ready = true;
-        judgment_.code = JudgmentCode::InterceptSuccess;
-        judgment_.summary = "authoritative intercept judgment complete";
-        phase_ = SessionPhase::Judged;
-        asset_status_ = AssetStatus::Complete;
-        command_status_ = CommandLifecycle::Completed;
-        push_event(protocol::EventType::JudgmentProduced,
-                   "simulation_server",
-                   {asset_.id, target_.id},
-                   "Judgment produced",
-                   "Server-authoritative judgment marked the intercept attempt as successful.");
+    }
+
+    if (phase_ == SessionPhase::Engaging && asset_.active) {
+        int remaining = scenario_.interceptor_speed_per_tick;
+        while (remaining > 0) {
+            const auto dx = target_.position.x - asset_.position.x;
+            const auto dy = target_.position.y - asset_.position.y;
+            if (dx == 0 && dy == 0) {
+                break;
+            }
+            if (std::abs(dx) >= std::abs(dy) && dx != 0) {
+                asset_.position.x += (dx > 0 ? 1 : -1);
+            } else if (dy != 0) {
+                asset_.position.y += (dy > 0 ? 1 : -1);
+            }
+            --remaining;
+        }
+    }
+
+    if (command_status_ == CommandLifecycle::Executing && phase_ == SessionPhase::Engaging) {
+        const auto distance = manhattan_distance(asset_.position, target_.position);
+        const auto engagement_ticks = engagement_started_tick_.has_value() ? tick_ - *engagement_started_tick_ : 0;
+        if (distance <= scenario_.intercept_radius) {
+            judgment_.ready = true;
+            judgment_.code = JudgmentCode::InterceptSuccess;
+            judgment_.summary = "authoritative intercept judgment complete";
+            phase_ = SessionPhase::Judged;
+            asset_status_ = AssetStatus::Complete;
+            command_status_ = CommandLifecycle::Completed;
+            engagement_started_tick_.reset();
+            push_event(protocol::EventType::JudgmentProduced,
+                       "simulation_server",
+                       {asset_.id, target_.id},
+                       "Judgment produced",
+                       "Server-authoritative judgment marked the intercept attempt as successful.");
+        } else if (engagement_ticks >= static_cast<std::uint64_t>(scenario_.engagement_timeout_ticks)) {
+            judgment_.ready = true;
+            judgment_.code = JudgmentCode::TimeoutObserved;
+            judgment_.summary = "authoritative intercept timeout observed";
+            phase_ = SessionPhase::Judged;
+            asset_status_ = AssetStatus::Complete;
+            command_status_ = CommandLifecycle::Completed;
+            engagement_started_tick_.reset();
+            push_event(protocol::EventType::JudgmentProduced,
+                       "simulation_server",
+                       {asset_.id, target_.id},
+                       "Judgment produced",
+                       "Server-authoritative judgment marked the intercept attempt as timed out before intercept.");
+        }
     }
 
     float packet_loss = 0.0F;
@@ -434,8 +544,16 @@ void SimulationSession::record_snapshot(float packet_loss_pct) {
     snapshots_.push_back({
         {session_id_, kServerSenderId, sequence_},
         {tick_, timestamp, sequence_},
+        phase_,
+        scenario_.world_width,
+        scenario_.world_height,
         target_,
         asset_,
+        scenario_.target_velocity_x,
+        scenario_.target_velocity_y,
+        scenario_.interceptor_speed_per_tick,
+        scenario_.intercept_radius,
+        scenario_.engagement_timeout_ticks,
         track_,
         asset_status_,
         command_status_,
@@ -475,8 +593,9 @@ SimulationSession run_baseline_demo() {
     session.disconnect_client(ClientRole::TacticalViewer, "viewer reconnect exercised for resilience evidence");
     session.connect_client(ClientRole::TacticalViewer, 201U);
     session.issue_command();
-    session.advance_tick();
-    session.advance_tick();
+    for (int i = 0; i < 12 && !session.latest_snapshot().judgment.ready; ++i) {
+        session.advance_tick();
+    }
     session.archive_session();
     return session;
 }

@@ -24,15 +24,23 @@ int main() {
     const auto parsed_leave = parse_session_leave(leave_wire);
     assert(parsed_leave.reason == "operator requested leave");
 
-    const ScenarioStartPayload start_payload {{1001U, 101U, 3U}, "basic_intercept_training"};
+    const ScenarioStartPayload start_payload {{1001U, 101U, 3U}, "basic_intercept_training", 576, 384, 80, 300, 5, -3, 160, 60, 14, 12, 26};
     const auto start_wire = serialize(start_payload);
     const auto parsed_start = parse_scenario_start(start_wire);
     assert(parsed_start.scenario_name == "basic_intercept_training");
+    assert(parsed_start.world_width == 576);
+    assert(parsed_start.target_velocity_y == -3);
+    assert(parsed_start.interceptor_speed_per_tick == 14);
 
     const ScenarioStopPayload stop_payload {{1001U, 101U, 4U}, "scenario stop requested"};
     const auto stop_wire = serialize(stop_payload);
     const auto parsed_stop = parse_scenario_stop(stop_wire);
     assert(parsed_stop.reason == "scenario stop requested");
+
+    const ScenarioResetPayload reset_payload {{1001U, 101U, 5U}, "reset for new run"};
+    const auto reset_wire = serialize(reset_payload);
+    const auto parsed_reset = parse_scenario_reset(reset_wire);
+    assert(parsed_reset.reason == "reset for new run");
 
     const CommandIssuePayload command {
         {1001U, 101U, 7U},
@@ -50,6 +58,9 @@ int main() {
         {1001U, 1U, 8U},
         {3U, 35U, 12.5F, 1'776'327'000'800ULL},
         "reconnected",
+        3U,
+        "judgment_produced",
+        "Judgment produced",
     };
     const auto telemetry_wire = serialize(telemetry);
     const auto parsed_telemetry = parse_telemetry(telemetry_wire);
@@ -57,12 +68,29 @@ int main() {
     assert(parsed_telemetry.sample.latency_ms == 35U);
     assert(parsed_telemetry.sample.packet_loss_pct > 12.0F);
     assert(parsed_telemetry.connection_state == "reconnected");
+    assert(parsed_telemetry.event_tick == 3U);
+    assert(parsed_telemetry.event_type == "judgment_produced");
+    assert(parsed_telemetry.event_summary == "Judgment produced");
 
     const SnapshotPayload snapshot {
         {1001U, 1U, 9U},
         {3U, 1'776'327'000'900ULL, 9U},
+        "tracking",
+        576,
+        384,
         "target-alpha",
+        true,
+        4,
+        6,
+        5,
+        -3,
         "asset-interceptor",
+        true,
+        8,
+        2,
+        14,
+        12,
+        26,
         true,
         82,
         "ready",
@@ -72,6 +100,16 @@ int main() {
     };
     const auto snapshot_wire = serialize(snapshot);
     const auto parsed_snapshot = parse_snapshot(snapshot_wire);
+    assert(parsed_snapshot.phase == "tracking");
+    assert(parsed_snapshot.world_width == 576);
+    assert(parsed_snapshot.target_velocity_x == 5);
+    assert(parsed_snapshot.target_active);
+    assert(parsed_snapshot.target_x == 4);
+    assert(parsed_snapshot.target_y == 6);
+    assert(parsed_snapshot.asset_active);
+    assert(parsed_snapshot.asset_x == 8);
+    assert(parsed_snapshot.asset_y == 2);
+    assert(parsed_snapshot.interceptor_speed_per_tick == 14);
     assert(parsed_snapshot.track_confidence_pct == 82);
     assert(parsed_snapshot.asset_status == "ready");
     assert(parsed_snapshot.command_status == "accepted");
