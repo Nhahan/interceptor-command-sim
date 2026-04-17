@@ -1,5 +1,12 @@
 # Sample Output
 
+- backend: in_process
+- session_id: 1001
+- cursor_index: 11/12
+- latest_freshness: fresh
+- latest_snapshot_sequence: 8
+- resilience_case: reconnect_and_resync,udp_snapshot_gap_convergence
+
 ```text
 === Tactical Viewer ===
 ............
