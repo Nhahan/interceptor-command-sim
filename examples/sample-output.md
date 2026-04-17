@@ -1,11 +1,15 @@
 # Sample Output
 
-- backend: in_process
+- schema_version: icss-sample-output-v1
+- backend: socket_live
 - session_id: 1001
-- cursor_index: 11/12
-- latest_freshness: fresh
-- latest_snapshot_sequence: 8
-- resilience_case: reconnect_and_resync,udp_snapshot_gap_convergence
+- cursor_index: 0/1
+- command_console_connection: disconnected
+- viewer_connection: disconnected
+- latest_freshness: stale
+- latest_snapshot_sequence: 2
+- last_event_type: resilience_triggered
+- resilience_case: udp_snapshot_gap_convergence
 
 ```text
 === Tactical Viewer ===
@@ -15,20 +19,17 @@
 ............
 ............
 ............
-....T.......
 ............
+.T..........
 Entities:
-- target=target-alpha @ (4, 6) active=yes
-- asset=asset-interceptor @ (8, 2) active=yes
+- target=target-alpha @ (1, 7) active=no
+- asset=asset-interceptor @ (8, 2) active=no
 State:
-- tracking=on (confidence=82%), asset_status=complete, command_status=completed, judgment=intercept_success
+- tracking=off (confidence=0%), asset_status=idle, command_status=none, judgment=pending
 Telemetry:
-- connection=connected, freshness=fresh, snapshot_sequence=8, tick=3, latency_ms=43, packet_loss_pct=0.0, last_snapshot_ms=1776327004000
+- connection=disconnected, freshness=stale, snapshot_sequence=2, tick=2, latency_ms=47, packet_loss_pct=25.0, last_snapshot_ms=1776327000450
 AAR:
-- cursor_index=11/12
+- cursor_index=0/1
 Recent events:
-- [tick 1] Command accepted (command_accepted)
 - [tick 2] Snapshot gap exercised (resilience_triggered)
-- [tick 3] Judgment produced (judgment_produced)
-- [tick 3] Session archived (session_ended)
 ```
