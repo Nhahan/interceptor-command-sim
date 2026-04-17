@@ -20,6 +20,10 @@ So the runtime can separate command/snapshot intent from the backend that carrie
 
 So transport-level liveness is observable independently from authoritative command/judgment state. A viewer timeout should affect connection/resilience state, not mission outcome.
 
+## Why keep the live backend single-session?
+
+Because the current scope optimizes for clear transport ownership and explainable behavior. One active command console and one active tactical viewer keep the live path easy to reason about and easy to verify.
+
 ## Why separate framing from payload serialization?
 
 So the logical schema remains independent from how bytes move over the wire. The same payload can travel in a JSON line or a length-prefixed binary frame without redefining the underlying command structure.

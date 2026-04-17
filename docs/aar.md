@@ -35,6 +35,12 @@ It only needs to support:
 - state/event correlation
 - easy explanation of “what happened when and why”
 
+Current control semantics:
+- `absolute` jumps to the requested cursor index
+- `step_forward` advances from the current cursor
+- `step_backward` moves back from the current cursor
+- out-of-range requests clamp to the nearest valid cursor
+
 ## Tactical Viewer + AAR
 
 During replay mode, the viewer should show:
@@ -42,6 +48,12 @@ During replay mode, the viewer should show:
 - current snapshot time/tick
 - visible event panel updates
 - enough state visualization to connect events with positions/status
+
+The live `aar_response` should report:
+- applied cursor index
+- control used
+- requested index
+- whether the result was clamped at a boundary
 
 ## Output Target
 

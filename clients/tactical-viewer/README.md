@@ -11,7 +11,9 @@ Required elements:
 - tracking status
 - tracking confidence
 - connection status
+- freshness state
 - tick / latency / packet loss telemetry
+- snapshot sequence
 - last snapshot timestamp
 - event log panel
 - AAR playback cursor
@@ -27,4 +29,4 @@ Entrypoint:
 
 Current behavior:
 - renders an ASCII tactical frame
-- shows telemetry, connection state, recent events, and AAR cursor position
+- shows telemetry, freshness state, connection state, recent events, and AAR cursor position

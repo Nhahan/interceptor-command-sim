@@ -33,6 +33,8 @@ Current log output:
 - the summary log includes backend name, judgment code, and resilience summary
 
 Current live transport operational concerns:
+- one active command console connection per runtime instance
+- one active tactical viewer registration per runtime instance
 - TCP command clients disconnect explicitly on EOF and clear stale sender state
 - UDP viewer endpoints register separately from TCP command endpoints
 - viewer heartbeat timeout can raise visible timeout state without contaminating authoritative judgment
@@ -53,9 +55,11 @@ At minimum, make abnormal states visible for:
 ### Telemetry Visibility
 The tactical viewer or command console should expose at least:
 - connection status
+- freshness state
 - tick
 - latency
 - packet loss estimate
+- snapshot sequence
 - last snapshot timestamp
 - richer track/asset/command/judgment state
 

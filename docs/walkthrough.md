@@ -27,10 +27,12 @@ Show command/control flow, state propagation, one resilience case, and AAR outpu
 - show server-side validation/judgment result
 - keep telemetry visible
 - point out richer state panels (track confidence / asset status / command lifecycle / judgment code)
+- point out connection and freshness labels on the viewer
 
 ### 2:30–3:20 — Resilience case
 - exercise reconnect / timeout / UDP loss convergence
 - surface viewer heartbeat/timeout visibility on the live transport path when appropriate
+- point out `freshness=resync` and `freshness=stale` transitions when applicable
 - point out snapshot batching/filtering behavior when a viewer joins late
 - explain what the viewer and logs show
 

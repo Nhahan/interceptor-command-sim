@@ -61,7 +61,9 @@ It stays **read-only / observability-first**.
 - target / asset position icons
 - tracking status
 - connection status
+- freshness state
 - tick / latency / packet loss telemetry
+- snapshot sequence
 - last snapshot timestamp
 - event log panel
 - AAR playback cursor
@@ -82,6 +84,7 @@ Current shape:
 - authoritative runtime under `common/include/icss/core/` and `common/src/`
 - shared protocol schema under `common/include/icss/protocol/`
 - in-process and socket-based transport backends
+- single-session live transport with one command console and one tactical viewer
 - replay, timeout, batching, and logging coverage in tests
 
 Therefore:

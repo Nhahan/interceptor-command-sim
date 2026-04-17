@@ -37,8 +37,8 @@ If they diverge, update both in the same change.
 | `command_issue` | submit a command for validation/judgment |
 | `command_ack` | acknowledge accepted or processed command flow |
 | `judgment_event` | emit critical server-side judgment result |
-| `aar_request` | request replay/AAR output |
-| `aar_response` | return replay/AAR summary metadata over TCP |
+| `aar_request` | request replay/AAR cursor movement or summary output |
+| `aar_response` | return replay/AAR cursor state and summary metadata over TCP |
 
 ## UDP Message Kinds (`UdpMessageKind`)
 
@@ -130,6 +130,8 @@ Backend kinds:
 - `socket_live` — bind/listen-capable backend for the live transport direction, kept separate from the deterministic in-process runtime
 
 Current live backend scope:
+- keeps one active command console connection per runtime instance
+- keeps one active tactical viewer registration per runtime instance
 - accepts a TCP command connection
 - receives UDP viewer registration datagrams
 - processes framed command payloads over TCP
@@ -141,6 +143,8 @@ Current live backend scope:
 ## Validation Behavior
 
 The authoritative runtime records rejected command attempts as `command_rejected` events. Validation is part of the system boundary, not a UI detail.
+That includes duplicate command-console joins and duplicate tactical-viewer registrations on the live path.
+Malformed or unsupported `aar_request` controls are rejected explicitly on the TCP command path.
 
 ## Reliability Strategy
 
@@ -167,6 +171,11 @@ At least one of the following must be fully exercised:
 - include monotonic sequence/timestamp where useful
 - keep operator intent separate from rendered world state
 - make event payloads AAR-friendly
+
+For `aar_request` / `aar_response` specifically:
+- treat `control` as an explicit replay operation
+- carry the requested cursor index even when stepping
+- report whether the final cursor position was clamped
 
 ## Explanation Targets
 

@@ -33,6 +33,8 @@ Current verification covers:
 - concrete payload serialization/parsing round-trips successfully
 - JSON and binary frame codecs round-trip successfully
 - transport backend dispatch behavior is verified
+- live transport session policy is verified
+- AAR control semantics are verified
 - the scenario flow passes end-to-end regression
 - invalid command ordering is rejected and logged
 - runtime config loading is verified against the example config set
@@ -47,13 +49,14 @@ Current verification covers:
 
 - configure: passed
 - build: passed
-- test: passed (`14/14` tests)
+- test: passed (`15/15` tests)
 - runtime smoke: passed (`icss_server`, `icss_command_console`, `icss_tactical_viewer`)
 - verified targets:
   - `protocol_smoke`
   - `payload_codec_smoke`
   - `frame_codec_smoke`
   - `transport_backend_smoke`
+  - `socket_live_single_session_policy_smoke`
   - `scenario_flow`
   - `validation_rejects_invalid_flow`
   - `runtime_config_smoke`

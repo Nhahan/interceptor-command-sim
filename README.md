@@ -23,6 +23,7 @@ This repository contains an implemented system with deterministic local verifica
 - CMake-based configure/build/test flow
 - shared protocol schema plus payload/frame codecs
 - deterministic in-process runtime plus socket-based transport backend
+- single-session live transport policy with one command console and one tactical viewer
 - command, snapshot, telemetry, AAR, and timeout flows exercised in code
 - regression coverage for protocol, runtime, transport, logging, replay, and resilience paths
 
@@ -52,7 +53,9 @@ The default runtime remains **in-process** for deterministic verification, while
 - tracking status
 - tracking confidence
 - connection status
+- freshness state
 - tick / latency / packet loss telemetry
+- snapshot sequence
 - last snapshot timestamp
 - event log panel
 - AAR playback cursor
