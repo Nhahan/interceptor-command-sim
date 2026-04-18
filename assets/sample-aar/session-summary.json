@@ -1,38 +1,23 @@
 {
   "schema_version": "icss-session-summary-json-v1",
   "session_id": 1001,
-  "final_phase": "archived",
-  "snapshot_count": 528,
-  "event_count": 8,
-  "command_console_connection": "connected",
-  "viewer_connection": "timed_out",
+  "final_phase": "initialized",
+  "snapshot_count": 2,
+  "event_count": 1,
+  "command_console_connection": "disconnected",
+  "viewer_connection": "disconnected",
   "judgment_ready": false,
   "judgment_code": "pending",
-  "last_event_type": "session_ended",
-  "resilience_case": "udp_snapshot_gap_convergence,timeout_visibility",
-  "latest_snapshot_sequence": 528,
-  "latest_viewer_connection": "timed_out",
+  "last_event_type": "resilience_triggered",
+  "resilience_case": "udp_snapshot_gap_convergence",
+  "latest_snapshot_sequence": 2,
+  "latest_viewer_connection": "disconnected",
   "latest_freshness": "stale",
   "recent_events": [
     {
-      "tick": 179,
-      "event_type": "session_started",
-      "summary": "Scenario started"
-    },
-    {
-      "tick": 229,
-      "event_type": "track_updated",
-      "summary": "Track request accepted"
-    },
-    {
-      "tick": 262,
-      "event_type": "asset_updated",
-      "summary": "Interceptor activation accepted"
-    },
-    {
-      "tick": 523,
-      "event_type": "session_ended",
-      "summary": "Session archived"
+      "tick": 2,
+      "event_type": "resilience_triggered",
+      "summary": "Snapshot gap exercised"
     }
   ]
 }

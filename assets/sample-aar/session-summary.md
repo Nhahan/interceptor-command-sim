@@ -4,22 +4,19 @@
 
 - schema_version: icss-session-summary-v1
 - session_id: 1001
-- final_phase: archived
-- snapshot_count: 528
-- event_count: 8
-- command_console_connection: connected
-- viewer_connection: timed_out
+- final_phase: initialized
+- snapshot_count: 2
+- event_count: 1
+- command_console_connection: disconnected
+- viewer_connection: disconnected
 - judgment_ready: false
 - judgment_code: pending
-- last_event_type: session_ended
-- resilience_case: udp_snapshot_gap_convergence,timeout_visibility
-- latest_snapshot_sequence: 528
-- latest_viewer_connection: timed_out
+- last_event_type: resilience_triggered
+- resilience_case: udp_snapshot_gap_convergence
+- latest_snapshot_sequence: 2
+- latest_viewer_connection: disconnected
 - latest_freshness: stale
 
 ## Recent Events
 
-- [tick 179] Scenario started (session_started)
-- [tick 229] Track request accepted (track_updated)
-- [tick 262] Interceptor activation accepted (asset_updated)
-- [tick 523] Session archived (session_ended)
+- [tick 2] Snapshot gap exercised (resilience_triggered)

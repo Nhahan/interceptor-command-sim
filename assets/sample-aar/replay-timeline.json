@@ -1,83 +1,20 @@
 {
   "schema_version": "icss-replay-timeline-v1",
   "session_id": "1001",
-  "final_phase": "archived",
-  "snapshot_count": 528,
-  "event_count": 8,
+  "final_phase": "initialized",
+  "snapshot_count": 2,
+  "event_count": 1,
   "judgment_code": "pending",
-  "resilience_case": "udp_snapshot_gap_convergence,timeout_visibility",
+  "resilience_case": "udp_snapshot_gap_convergence",
   "events": [
     {
-      "timestamp_ms": 1776327000400,
+      "timestamp_ms": 1776327000300,
       "tick": 2,
       "event_type": "resilience_triggered",
       "source": "simulation_server",
       "entity_ids": ["target-alpha"],
       "summary": "Snapshot gap exercised",
       "details": "Viewer should converge on the next valid snapshot rather than require retransmission."
-    },
-    {
-      "timestamp_ms": 1776327001600,
-      "tick": 6,
-      "event_type": "client_joined",
-      "source": "tactical_viewer",
-      "entity_ids": [],
-      "summary": "Client joined session",
-      "details": "Client registered before scenario activity."
-    },
-    {
-      "timestamp_ms": 1776327004600,
-      "tick": 20,
-      "event_type": "resilience_triggered",
-      "source": "simulation_server",
-      "entity_ids": [],
-      "summary": "Client timeout exercised",
-      "details": "viewer heartbeat timeout threshold exceeded"
-    },
-    {
-      "timestamp_ms": 1776327036600,
-      "tick": 178,
-      "event_type": "client_joined",
-      "source": "command_console",
-      "entity_ids": [],
-      "summary": "Client joined session",
-      "details": "Client registered before scenario activity."
-    },
-    {
-      "timestamp_ms": 1776327037000,
-      "tick": 179,
-      "event_type": "session_started",
-      "source": "simulation_server",
-      "entity_ids": ["target-alpha"],
-      "summary": "Scenario started",
-      "details": "The authoritative loop is now in detecting state."
-    },
-    {
-      "timestamp_ms": 1776327047400,
-      "tick": 229,
-      "event_type": "track_updated",
-      "source": "command_console",
-      "entity_ids": ["target-alpha"],
-      "summary": "Track request accepted",
-      "details": "Target is now actively tracked by the server."
-    },
-    {
-      "timestamp_ms": 1776327054400,
-      "tick": 262,
-      "event_type": "asset_updated",
-      "source": "command_console",
-      "entity_ids": ["asset-interceptor"],
-      "summary": "Interceptor activation accepted",
-      "details": "Interceptor is ready for command issue."
-    },
-    {
-      "timestamp_ms": 1776327107000,
-      "tick": 523,
-      "event_type": "session_ended",
-      "source": "simulation_server",
-      "entity_ids": ["target-alpha", "asset-interceptor"],
-      "summary": "Session archived",
-      "details": "Scenario completed and artifacts are ready for AAR review."
     }
   ]
 }

@@ -3,19 +3,19 @@
 - schema_version: icss-sample-output-v1
 - backend: socket_live
 - session_id: 1001
-- cursor_index: 7/8
-- command_console_connection: connected
-- viewer_connection: timed_out
+- cursor_index: 0/1
+- command_console_connection: disconnected
+- viewer_connection: disconnected
 - latest_freshness: stale
-- latest_snapshot_sequence: 528
-- last_event_type: session_ended
-- resilience_case: udp_snapshot_gap_convergence,timeout_visibility
+- latest_snapshot_sequence: 2
+- last_event_type: resilience_triggered
+- resilience_case: udp_snapshot_gap_convergence
 
 ```text
 === Tactical Viewer ===
 ........................
-....................T...
-......A.................
+........................
+........................
 ........................
 ........................
 ........................
@@ -30,18 +30,15 @@
 ........................
 ........................
 Entities:
-- target=target-alpha @ (500, 34) active=yes
-- interceptor=asset-interceptor @ (160, 60) active=yes
+- target=target-alpha @ (80, 300) active=no
+- interceptor=asset-interceptor @ (160, 60) active=no
 State:
-- phase=archived, tracking=on (confidence=82%), interceptor_status=ready, command_status=none, judgment=pending
-- target_heading_deg=-149.0, interceptor_heading_deg=0.0, tti_s=10.7, predicted_intercept_valid=yes
+- phase=initialized, tracking=off (confidence=0%), covariance=0.0, measurement_age=0, interceptor_status=idle, command_status=none, judgment=pending
+- target_heading_deg=-31.0, interceptor_heading_deg=0.0, tti_s=0.0, predicted_intercept_valid=no
 Telemetry:
-- connection=timed_out, freshness=stale, snapshot_sequence=528, tick=523, latency_ms=563, packet_loss_pct=0.0, last_snapshot_ms=1776327107200
+- connection=disconnected, freshness=stale, snapshot_sequence=2, tick=2, latency_ms=47, packet_loss_pct=25.0, last_snapshot_ms=1776327000450
 AAR:
-- cursor_index=7/8
+- cursor_index=0/1
 Recent events:
-- [tick 179] Scenario started (session_started)
-- [tick 229] Track request accepted (track_updated)
-- [tick 262] Interceptor activation accepted (asset_updated)
-- [tick 523] Session archived (session_ended)
+- [tick 2] Snapshot gap exercised (resilience_triggered)
 ```
