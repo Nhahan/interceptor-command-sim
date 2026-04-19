@@ -98,12 +98,13 @@ int main() {
         out << "  target_start_y: 288\n";
         out << "  target_velocity_x: 7\n";
         out << "  target_velocity_y: -4\n";
-        out << "  interceptor_start_x: 192\n";
-        out << "  interceptor_start_y: 48\n";
+        out << "  interceptor_start_x: 0\n";
+        out << "  interceptor_start_y: 0\n";
         out << "  interceptor_speed_per_tick: 40\n";
         out << "  intercept_radius: 20\n";
         out << "  engagement_timeout_ticks: 70\n";
         out << "  seeker_fov_deg: 50\n";
+        out << "  launch_angle_deg: 50\n";
     }
 
     auto server = process::spawn_server_process({
@@ -129,9 +130,10 @@ int main() {
     assert(icss::testsupport::minijson::require_field(object, "planned_target_start_x").as_int() == 96);
     assert(icss::testsupport::minijson::require_field(object, "planned_target_start_y").as_int() == 288);
     assert(icss::testsupport::minijson::require_field(object, "planned_target_velocity_x").as_int() == 7);
-    assert(icss::testsupport::minijson::require_field(object, "planned_interceptor_start_x").as_int() == 192);
+    assert(icss::testsupport::minijson::require_field(object, "planned_interceptor_start_x").as_int() == 0);
     assert(icss::testsupport::minijson::require_field(object, "planned_interceptor_speed_per_tick").as_int() == 40);
     assert(icss::testsupport::minijson::require_field(object, "planned_engagement_timeout_ticks").as_int() == 70);
+    assert(icss::testsupport::minijson::require_field(object, "planned_launch_angle_deg").as_int() == 50);
     assert(icss::testsupport::minijson::require_field(object, "world_width").as_int() == 640);
     assert(icss::testsupport::minijson::require_field(object, "world_height").as_int() == 320);
 

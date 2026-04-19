@@ -45,7 +45,7 @@ ChildProcess spawn_gui_viewer(const std::filesystem::path& dump_path,
             "--tcp-port", tcp,
             "--headless",
             "--hidden",
-            "--auto-controls", "Start,Track,Activate,Command",
+            "--auto-controls", "Start,Guidance,Activate,Command",
             "--duration-ms", "1400",
             "--heartbeat-interval-ms", "100",
             "--dump-state", dump_path.string(),
@@ -104,17 +104,17 @@ int main() {
     assert(icss::testsupport::minijson::require_field(object, "received_snapshot").as_bool());
     assert(icss::testsupport::minijson::require_field(object, "received_telemetry").as_bool());
     const auto phase = icss::testsupport::minijson::require_field(object, "phase").as_string();
-    assert(phase == "command_issued" || phase == "engaging" || phase == "judged");
+    assert(phase == "command_issued" || phase == "engaging" || phase == "judged" || phase == "archived");
     const auto phase_banner = icss::testsupport::minijson::require_field(object, "phase_banner").as_string();
-    assert(phase_banner == "COMMAND ACCEPTED" || phase_banner == "ENGAGING" || phase_banner == "JUDGMENT PRODUCED");
-    assert(icss::testsupport::minijson::require_field(object, "target_active").as_bool());
+    assert(phase_banner == "COMMAND ACCEPTED" || phase_banner == "ENGAGING" || phase_banner == "JUDGMENT PRODUCED" || phase_banner == "ARCHIVED");
+    const auto target_active = icss::testsupport::minijson::require_field(object, "target_active").as_bool();
     assert(icss::testsupport::minijson::require_field(object, "asset_active").as_bool());
     assert(icss::testsupport::minijson::require_field(object, "last_control_label").as_string() == "Command");
     assert(icss::testsupport::minijson::require_field(object, "last_control_message").as_string().find("command accepted") != std::string::npos);
     const auto authoritative_headline = icss::testsupport::minijson::require_field(object, "authoritative_headline").as_string();
     assert(authoritative_headline.find("ACTIVE COMMAND") != std::string::npos
            || authoritative_headline.find("JUDGMENT") != std::string::npos);
-    assert(icss::testsupport::minijson::require_field(object, "recommended_control").as_string() == "Stop");
+    assert(icss::testsupport::minijson::require_field(object, "recommended_control").as_string().empty() || icss::testsupport::minijson::require_field(object, "recommended_control").as_string() == "Review");
     assert(icss::testsupport::minijson::require_field(object, "last_server_event_tick").is_int());
     const auto command_status = icss::testsupport::minijson::require_field(object, "command_status").as_string();
     assert(command_status == "accepted" || command_status == "executing" || command_status == "completed");
@@ -123,11 +123,25 @@ int main() {
     assert(icss::testsupport::minijson::require_field(object, "command_visual_active").as_bool() || command_status == "completed");
     assert(icss::testsupport::minijson::require_field(object, "predicted_intercept_valid").as_bool());
     assert(icss::testsupport::minijson::require_field(object, "track_covariance_trace").is_number());
-    assert(icss::testsupport::minijson::require_field(object, "track_confidence_pct").as_int() > 0);
-    assert(icss::testsupport::minijson::require_field(object, "target_motion_visual_visible").as_bool());
-    assert(icss::testsupport::minijson::require_field(object, "asset_motion_visual_visible").as_bool());
-    assert(icss::testsupport::minijson::require_field(object, "engagement_visual_visible").as_bool());
-    assert(icss::testsupport::minijson::require_field(object, "predicted_marker_visual_visible").as_bool());
+    assert(icss::testsupport::minijson::require_field(object, "track_measurement_residual_distance").is_number());
+    const auto target_motion_visible = icss::testsupport::minijson::require_field(object, "target_motion_visual_visible").as_bool();
+    const auto asset_motion_visible = icss::testsupport::minijson::require_field(object, "asset_motion_visual_visible").as_bool();
+    const auto engagement_visual_visible = icss::testsupport::minijson::require_field(object, "engagement_visual_visible").as_bool();
+    const auto predicted_marker_visible = icss::testsupport::minijson::require_field(object, "predicted_marker_visual_visible").as_bool();
+    if (phase == "engaging" && command_status == "executing") {
+        assert(target_active);
+        assert(target_motion_visible);
+        assert(asset_motion_visible);
+        assert(engagement_visual_visible);
+        assert(predicted_marker_visible);
+    } else {
+        assert(!asset_motion_visible);
+        assert(!engagement_visual_visible);
+        assert(!predicted_marker_visible);
+    }
+    if (icss::testsupport::minijson::require_field(object, "judgment_code").as_string() == "intercept_success") {
+        assert(!target_active);
+    }
     assert(icss::testsupport::minijson::require_field(object, "recent_event_count").as_int() >= 4);
 
     ::kill(server.pid, SIGTERM);

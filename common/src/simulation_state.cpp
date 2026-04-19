@@ -49,10 +49,10 @@ void SimulationSession::seed_track_state_from_target() {
     track_.estimated_velocity = track_estimate_velocity_;
     track_.measurement_position = track_measurement_world_;
     track_.measurement_valid = true;
+    track_.measurement_residual_distance = detail::length(detail::subtract(track_measurement_world_, track_estimate_world_));
     track_.covariance_trace = detail::covariance_trace(track_position_variance_, track_velocity_variance_);
     track_.measurement_age_ticks = 0;
     track_.missed_updates = 0;
-    track_.confidence_pct = detail::confidence_from_covariance(track_.covariance_trace, 0, 0);
 }
 
 void SimulationSession::update_track_state() {
@@ -62,12 +62,15 @@ void SimulationSession::update_track_state() {
     track_velocity_variance_.x += 1.5F;
     track_velocity_variance_.y += 1.5F;
 
-    track_measurement_valid_ = detail::measurement_available(tick_);
-    if (track_measurement_valid_) {
+    const auto measurement_due = detail::measurement_due(tick_);
+    const auto fresh_measurement = detail::measurement_available(tick_);
+    if (fresh_measurement) {
         track_measurement_world_ = detail::add(target_world_, detail::deterministic_noise(tick_));
         track_measurement_age_ticks_ = 0;
         track_missed_updates_ = 0;
+        track_measurement_valid_ = true;
         const auto residual = detail::subtract(track_measurement_world_, track_estimate_world_);
+        track_.measurement_residual_distance = detail::length(residual);
         constexpr float kMeasurementVariance = 25.0F;
         const auto kpx = track_position_variance_.x / (track_position_variance_.x + kMeasurementVariance);
         const auto kpy = track_position_variance_.y / (track_position_variance_.y + kMeasurementVariance);
@@ -84,7 +87,9 @@ void SimulationSession::update_track_state() {
         track_velocity_variance_.y *= (1.0F - kvy);
     } else {
         ++track_measurement_age_ticks_;
-        ++track_missed_updates_;
+        if (measurement_due) {
+            ++track_missed_updates_;
+        }
     }
 
     track_.estimated_position = track_estimate_world_;
@@ -94,10 +99,6 @@ void SimulationSession::update_track_state() {
     track_.measurement_age_ticks = track_measurement_age_ticks_;
     track_.missed_updates = track_missed_updates_;
     track_.covariance_trace = detail::covariance_trace(track_position_variance_, track_velocity_variance_);
-    track_.confidence_pct = detail::confidence_from_covariance(
-        track_.covariance_trace,
-        track_measurement_age_ticks_,
-        track_missed_updates_);
 }
 
 void SimulationSession::reset_world_state_from_scenario() {

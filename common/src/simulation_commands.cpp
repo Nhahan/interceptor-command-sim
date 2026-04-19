@@ -1,5 +1,7 @@
 #include "icss/core/simulation.hpp"
 
+#include <cmath>
+
 namespace icss::core {
 
 CommandResult SimulationSession::start_scenario() {
@@ -38,8 +40,6 @@ void SimulationSession::configure_scenario(ScenarioConfig scenario) {
 
 CommandResult SimulationSession::reset_session(std::string) {
     tick_ = 0;
-    sequence_ = 0;
-    clock_ms_ = 1'776'327'000'000ULL;
     phase_ = SessionPhase::Initialized;
     reset_world_state_from_scenario();
     clear_track_state();
@@ -63,20 +63,92 @@ CommandResult SimulationSession::reset_session(std::string) {
 }
 
 CommandResult SimulationSession::request_track() {
-    if (phase_ != SessionPhase::Detecting) {
+    if (phase_ == SessionPhase::Detecting) {
+        seed_track_state_from_target();
+        phase_ = SessionPhase::Tracking;
+        push_event(protocol::EventType::TrackUpdated,
+                   "command_console",
+                   {target_.id},
+                   "Guidance enabled",
+                   "Target-follow guidance is now enabled before launch.");
+        record_snapshot();
+        return {true, "track accepted", protocol::TcpMessageKind::TrackRequest};
+    }
+    if (phase_ == SessionPhase::AssetReady) {
+        if (track_.active) {
+            return reject_command("Track request rejected",
+                                  "track guidance is already enabled",
+                                  {target_.id});
+        }
+        seed_track_state_from_target();
+        push_event(protocol::EventType::TrackUpdated,
+                   "command_console",
+                   {target_.id, asset_.id},
+                   "Guidance enabled",
+                   "Target-follow guidance was re-enabled while the interceptor remained ready.");
+        record_snapshot();
+        return {true, "track accepted", protocol::TcpMessageKind::TrackRequest};
+    }
+    if (phase_ == SessionPhase::CommandIssued || phase_ == SessionPhase::Engaging) {
         return reject_command("Track request rejected",
-                              "track request is only valid while detecting",
+                              "track control is unavailable after command issue",
+                              {target_.id, asset_.id});
+    }
+    if (phase_ == SessionPhase::Judged || phase_ == SessionPhase::Archived) {
+        return reject_command("Track request rejected",
+                              "track control is unavailable after archive",
                               {target_.id});
     }
-    seed_track_state_from_target();
-    phase_ = SessionPhase::Tracking;
-    push_event(protocol::EventType::TrackUpdated,
-               "command_console",
-               {target_.id},
-               "Track request accepted",
-               "Target is now actively tracked by the server.");
-    record_snapshot();
-    return {true, "track accepted", protocol::TcpMessageKind::TrackRequest};
+    return reject_command("Track request rejected",
+                          "track request is only valid while detecting or asset_ready",
+                          {target_.id});
+}
+
+CommandResult SimulationSession::release_track() {
+    if (phase_ == SessionPhase::Tracking) {
+        if (!track_.active) {
+            return reject_command("Track release rejected",
+                                  "track guidance is already disabled",
+                                  {target_.id});
+        }
+        clear_track_state();
+        phase_ = SessionPhase::Detecting;
+        push_event(protocol::EventType::TrackUpdated,
+                   "command_console",
+                   {target_.id},
+                   "Guidance disabled",
+                   "Straight launch will be used unless guidance is re-enabled before command. Session returned to detecting.");
+        record_snapshot();
+        return {true, "track released", protocol::TcpMessageKind::TrackRelease};
+    }
+    if (phase_ == SessionPhase::AssetReady) {
+        if (!track_.active) {
+            return reject_command("Track release rejected",
+                                  "track guidance is already disabled",
+                                  {target_.id, asset_.id});
+        }
+        clear_track_state();
+        push_event(protocol::EventType::TrackUpdated,
+                   "command_console",
+                   {target_.id, asset_.id},
+                   "Guidance disabled",
+                   "Straight launch will be used unless guidance is re-enabled before command. The interceptor remains ready.");
+        record_snapshot();
+        return {true, "track released", protocol::TcpMessageKind::TrackRelease};
+    }
+    if (phase_ == SessionPhase::CommandIssued || phase_ == SessionPhase::Engaging) {
+        return reject_command("Track release rejected",
+                              "track control is unavailable after command issue",
+                              {target_.id, asset_.id});
+    }
+    if (phase_ == SessionPhase::Judged || phase_ == SessionPhase::Archived) {
+        return reject_command("Track release rejected",
+                              "track control is unavailable after archive",
+                              {target_.id});
+    }
+    return reject_command("Track release rejected",
+                          "track release is only valid while tracking or asset_ready",
+                          {target_.id});
 }
 
 CommandResult SimulationSession::activate_asset() {
@@ -116,11 +188,20 @@ CommandResult SimulationSession::issue_command() {
     command_status_ = CommandLifecycle::Accepted;
     phase_ = SessionPhase::CommandIssued;
     engagement_started_tick_ = tick_;
+    const auto launch_angle_rad = static_cast<float>(scenario_.launch_angle_deg) * 3.1415926535F / 180.0F;
+    const auto interceptor_speed = static_cast<float>(scenario_.interceptor_speed_per_tick);
+    const bool guided_launch = track_.active;
+    asset_velocity_world_ = {
+        std::cos(launch_angle_rad) * interceptor_speed,
+        std::sin(launch_angle_rad) * interceptor_speed,
+    };
     push_event(protocol::EventType::CommandAccepted,
                "command_console",
                {asset_.id, target_.id},
-               "Command accepted",
-               "Authoritative server accepted the operator command for judgment.");
+               "Launch accepted",
+               "Authoritative server accepted the operator command and launched the interceptor on a "
+                   + std::string(guided_launch ? "guided" : "straight")
+                   + " path at " + std::to_string(scenario_.launch_angle_deg) + " deg.");
     record_snapshot();
     return {true, "command accepted", protocol::TcpMessageKind::CommandAck};
 }
@@ -128,10 +209,18 @@ CommandResult SimulationSession::issue_command() {
 CommandResult SimulationSession::record_transport_rejection(std::string summary,
                                                             std::string reason,
                                                             std::vector<std::string> entity_ids) {
-    return reject_command(std::move(summary), std::move(reason), std::move(entity_ids));
+    push_event(protocol::EventType::CommandRejected,
+               "simulation_server",
+               std::move(entity_ids),
+               std::move(summary),
+               reason);
+    return {false, std::move(reason), protocol::TcpMessageKind::CommandAck};
 }
 
 void SimulationSession::archive_session() {
+    if (phase_ == SessionPhase::Archived) {
+        return;
+    }
     phase_ = SessionPhase::Archived;
     push_event(protocol::EventType::SessionEnded,
                "simulation_server",

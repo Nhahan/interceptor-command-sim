@@ -12,6 +12,46 @@ namespace {
 
 constexpr std::string_view kRuntimeLogSchemaVersion = "icss-runtime-log-v1";
 
+bool event_guidance_active(const icss::core::EventRecord& event) {
+    if (event.summary.find("disabled") != std::string::npos
+        || event.details.find("disabled") != std::string::npos
+        || event.summary.find("straight") != std::string::npos
+        || event.details.find("straight") != std::string::npos) {
+        return false;
+    }
+    return event.summary.find("enabled") != std::string::npos
+        || event.details.find("enabled") != std::string::npos
+        || event.summary.find("guided") != std::string::npos
+        || event.details.find("guided") != std::string::npos;
+}
+
+bool runtime_guidance_active(const std::vector<icss::core::EventRecord>& events, const icss::core::Snapshot* snapshot) {
+    for (auto it = events.rbegin(); it != events.rend(); ++it) {
+        if (it->header.event_type == icss::protocol::EventType::CommandAccepted
+            || it->header.event_type == icss::protocol::EventType::TrackUpdated) {
+            return event_guidance_active(*it);
+        }
+    }
+    if (snapshot == nullptr) {
+        return false;
+    }
+    return snapshot->track.active;
+}
+
+const char* guidance_state_label(bool guidance_active, const icss::core::Snapshot* snapshot) {
+    if (!guidance_active && snapshot == nullptr) {
+        return "unknown";
+    }
+    return guidance_active ? "on" : "off";
+}
+
+const char* launch_mode_label(bool guidance_active, const icss::core::Snapshot* snapshot) {
+    if (!guidance_active && snapshot == nullptr) {
+        return "unknown";
+    }
+    return guidance_active ? "guided" : "straight";
+}
+
 std::string escape_json(std::string_view input) {
     std::string escaped;
     escaped.reserve(input.size());
@@ -38,7 +78,9 @@ std::string escape_json(std::string_view input) {
     return escaped;
 }
 
-void drive_baseline_transport_sequence(icss::net::TransportBackend& transport, const icss::core::RuntimeConfig& config) {
+void drive_sample_transport_sequence(icss::net::TransportBackend& transport,
+                                     const icss::core::RuntimeConfig& config,
+                                     icss::core::SampleMode sample_mode) {
     transport.connect_client(icss::core::ClientRole::CommandConsole, 101U);
     transport.connect_client(icss::core::ClientRole::TacticalViewer, 201U);
     if (!transport.start_scenario().accepted) {
@@ -51,9 +93,15 @@ void drive_baseline_transport_sequence(icss::net::TransportBackend& transport, c
     if (!transport.dispatch(icss::protocol::AssetActivatePayload{{1001U, 101U, 2U}, "asset-interceptor"}).accepted) {
         throw std::runtime_error("baseline asset_activate rejected");
     }
+    if (sample_mode == icss::core::SampleMode::Straight) {
+        if (!transport.dispatch(icss::protocol::TrackReleasePayload{{1001U, 101U, 3U}, "target-alpha"}).accepted) {
+            throw std::runtime_error("baseline track_release rejected");
+        }
+    }
     transport.disconnect_client(icss::core::ClientRole::TacticalViewer, "viewer reconnect exercised for resilience evidence");
     transport.connect_client(icss::core::ClientRole::TacticalViewer, 201U);
-    if (!transport.dispatch(icss::protocol::CommandIssuePayload{{1001U, 101U, 3U}, "asset-interceptor", "target-alpha"}).accepted) {
+    const std::uint64_t command_sequence = sample_mode == icss::core::SampleMode::Straight ? 4U : 3U;
+    if (!transport.dispatch(icss::protocol::CommandIssuePayload{{1001U, 101U, command_sequence}, "asset-interceptor", "target-alpha"}).accepted) {
         throw std::runtime_error("baseline command_issue rejected");
     }
     for (int i = 0; i < config.scenario.engagement_timeout_ticks && !transport.latest_snapshot().judgment.ready; ++i) {
@@ -61,7 +109,9 @@ void drive_baseline_transport_sequence(icss::net::TransportBackend& transport, c
     }
 }
 
-void drive_baseline_session_sequence(icss::core::SimulationSession& session, const icss::core::RuntimeConfig& config) {
+void drive_sample_session_sequence(icss::core::SimulationSession& session,
+                                   const icss::core::RuntimeConfig& config,
+                                   icss::core::SampleMode sample_mode) {
     session.connect_client(icss::core::ClientRole::CommandConsole, 101U);
     session.connect_client(icss::core::ClientRole::TacticalViewer, 201U);
     if (!session.start_scenario().accepted) {
@@ -73,6 +123,11 @@ void drive_baseline_session_sequence(icss::core::SimulationSession& session, con
     session.advance_tick();
     if (!session.activate_asset().accepted) {
         throw std::runtime_error("baseline asset_activate rejected");
+    }
+    if (sample_mode == icss::core::SampleMode::Straight) {
+        if (!session.release_track().accepted) {
+            throw std::runtime_error("baseline track_release rejected");
+        }
     }
     session.disconnect_client(icss::core::ClientRole::TacticalViewer, "viewer reconnect exercised for resilience evidence");
     session.connect_client(icss::core::ClientRole::TacticalViewer, 201U);
@@ -86,27 +141,32 @@ void drive_baseline_session_sequence(icss::core::SimulationSession& session, con
 
 }  // namespace
 
-BaselineRuntime::BaselineRuntime(RuntimeConfig config)
-    : config_(std::move(config)) {}
+BaselineRuntime::BaselineRuntime(RuntimeConfig config, SampleMode sample_mode)
+    : config_(std::move(config)),
+      sample_mode_(sample_mode) {}
 
 const RuntimeConfig& BaselineRuntime::config() const {
     return config_;
 }
 
+SampleMode BaselineRuntime::sample_mode() const {
+    return sample_mode_;
+}
+
 RuntimeResult BaselineRuntime::run() const {
     auto transport = icss::net::make_transport(icss::net::BackendKind::InProcess, config_);
-    drive_baseline_transport_sequence(*transport, config_);
+    drive_sample_transport_sequence(*transport, config_, sample_mode_);
     transport->archive_session();
 
     const auto summary = transport->summary();
     const auto aar_dir = config_.repo_root / config_.logging.aar_output_dir;
     const auto example_output = config_.repo_root / "examples/sample-output.md";
-    const auto log_file = config_.repo_root / config_.logging.file_path;
 
     transport->write_aar_artifacts(aar_dir);
     transport->write_example_output(example_output, icss::view::make_replay_cursor(summary.event_count, summary.event_count == 0 ? 0 : summary.event_count - 1));
 
-    write_runtime_session_log(config_, transport->backend_name(), summary, transport->events());
+    const auto latest_snapshot = transport->latest_snapshot();
+    write_runtime_session_log(config_, transport->backend_name(), summary, transport->events(), &latest_snapshot);
 
     return {config_, summary};
 }
@@ -115,27 +175,32 @@ RuntimeConfig default_runtime_config(const std::filesystem::path& repo_root) {
     return load_runtime_config(repo_root);
 }
 
-SimulationSession run_baseline_demo(const RuntimeConfig& config) {
+SimulationSession run_baseline_demo(const RuntimeConfig& config, SampleMode sample_mode) {
     SimulationSession session(1001, config.server.tick_rate_hz, config.scenario.telemetry_interval_ms, config.scenario);
-    drive_baseline_session_sequence(session, config);
+    drive_sample_session_sequence(session, config, sample_mode);
     session.archive_session();
     return session;
 }
 
+SimulationSession run_baseline_demo(SampleMode sample_mode) {
+    return run_baseline_demo(default_runtime_config(std::filesystem::path {ICSS_REPO_ROOT}), sample_mode);
+}
+
 SimulationSession run_baseline_demo() {
-    RuntimeConfig config;
-    SimulationSession session(1001, config.server.tick_rate_hz, config.scenario.telemetry_interval_ms, config.scenario);
-    drive_baseline_session_sequence(session, config);
-    session.archive_session();
-    return session;
+    return run_baseline_demo(default_runtime_config(std::filesystem::path {ICSS_REPO_ROOT}), SampleMode::Guided);
 }
 
 void write_runtime_session_log(const RuntimeConfig& config,
                                std::string_view backend_name,
                                const SessionSummary& summary,
-                               const std::vector<EventRecord>& events) {
+                               const std::vector<EventRecord>& events,
+                               const Snapshot* latest_snapshot) {
     const auto log_file = config.repo_root / config.logging.file_path;
-    std::filesystem::create_directories(log_file.parent_path());
+    const auto parent = log_file.parent_path();
+    if (!parent.empty()) {
+        std::filesystem::create_directories(parent);
+    }
+    const bool guidance_active = runtime_guidance_active(events, latest_snapshot);
     std::ofstream log(log_file);
     log << "{\"schema_version\":\"" << kRuntimeLogSchemaVersion
         << "\",\"record_type\":\"session_summary\",\"level\":\"" << escape_json(config.logging.level)
@@ -147,6 +212,9 @@ void write_runtime_session_log(const RuntimeConfig& config,
         << ",\"command_console_connection\":\"" << escape_json(to_string(summary.command_console_connection)) << "\""
         << ",\"viewer_connection\":\"" << escape_json(to_string(summary.viewer_connection)) << "\""
         << ",\"judgment_code\":\"" << escape_json(to_string(summary.judgment_code)) << "\""
+        << ",\"guidance_state\":\"" << guidance_state_label(guidance_active, latest_snapshot) << "\""
+        << ",\"launch_mode\":\"" << launch_mode_label(guidance_active, latest_snapshot) << "\""
+        << ",\"launch_angle_deg\":" << (latest_snapshot != nullptr ? static_cast<int>(latest_snapshot->launch_angle_deg) : config.scenario.launch_angle_deg)
         << ",\"last_event_type\":\"" << escape_json(summary.has_last_event ? std::string(icss::protocol::to_string(summary.last_event_type)) : std::string("none")) << "\""
         << ",\"resilience\":\"" << escape_json(summary.resilience_case) << "\"}\n";
     for (const auto& event : events) {
@@ -164,7 +232,16 @@ void write_runtime_session_log(const RuntimeConfig& config,
                 log << ",";
             }
         }
-        log << "]}\n";
+        log << "]";
+        if (event.header.event_type == icss::protocol::EventType::TrackUpdated
+            || event.header.event_type == icss::protocol::EventType::CommandAccepted) {
+            log << ",\"guidance_active\":" << (event_guidance_active(event) ? "true" : "false");
+        }
+        if (event.header.event_type == icss::protocol::EventType::CommandAccepted) {
+            log << ",\"launch_mode\":\"" << launch_mode_label(event_guidance_active(event), latest_snapshot) << "\""
+                << ",\"launch_angle_deg\":" << (latest_snapshot != nullptr ? static_cast<int>(latest_snapshot->launch_angle_deg) : config.scenario.launch_angle_deg);
+        }
+        log << "}\n";
     }
 }
 

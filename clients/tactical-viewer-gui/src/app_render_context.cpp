@@ -1,26 +1,70 @@
 #include "render_internal.hpp"
 
 #include <algorithm>
-#include <cmath>
 
 namespace icss::viewer_gui {
 
-float map_axis(int value, int world_limit, int screen_origin, int screen_extent) {
-    if (world_limit <= 1) {
-        return static_cast<float>(screen_origin);
+ViewportTransform make_viewport_transform(const SDL_Rect& map_rect,
+                                         int world_width,
+                                         int world_height,
+                                         const ViewerOptions& options) {
+    ViewportTransform transform;
+    transform.screen_bounds = SDL_FRect {
+        static_cast<float>(map_rect.x),
+        static_cast<float>(map_rect.y),
+        static_cast<float>(map_rect.w),
+        static_cast<float>(map_rect.h),
+    };
+    transform.world_width = std::max(world_width, 1);
+    transform.world_height = std::max(world_height, 1);
+    const float full_span_x = static_cast<float>(std::max(transform.world_width - 1, 1));
+    const float full_span_y = static_cast<float>(std::max(transform.world_height - 1, 1));
+    const float zoom = std::max(1.0F, options.camera_zoom);
+    const float visible_span_x = full_span_x / zoom;
+    const float visible_span_y = full_span_y / zoom;
+    const float half_span_x = visible_span_x * 0.5F;
+    const float half_span_y = visible_span_y * 0.5F;
+    const float full_center_x = full_span_x * 0.5F;
+    const float full_center_y = full_span_y * 0.5F;
+
+    float center_x = full_center_x + options.camera_pan_x;
+    float center_y = full_center_y + options.camera_pan_y;
+
+    if (visible_span_x >= full_span_x) {
+        center_x = full_center_x;
+    } else {
+        center_x = std::clamp(center_x, half_span_x, full_span_x - half_span_x);
     }
-    const int clamped = std::clamp(value, 0, world_limit - 1);
-    return static_cast<float>(screen_origin)
-        + (static_cast<float>(clamped) * static_cast<float>(screen_extent - 1) / static_cast<float>(world_limit - 1));
+    if (visible_span_y >= full_span_y) {
+        center_y = full_center_y;
+    } else {
+        center_y = std::clamp(center_y, half_span_y, full_span_y - half_span_y);
+    }
+
+    transform.visible_min_x = std::max(0.0F, center_x - half_span_x);
+    transform.visible_max_x = std::min(full_span_x, center_x + half_span_x);
+    transform.visible_min_y = std::max(0.0F, center_y - half_span_y);
+    transform.visible_max_y = std::min(full_span_y, center_y + half_span_y);
+    const float effective_span_x = std::max(1.0F, transform.visible_max_x - transform.visible_min_x);
+    const float effective_span_y = std::max(1.0F, transform.visible_max_y - transform.visible_min_y);
+    transform.pixels_per_world_x = (transform.screen_bounds.w - 1.0F) / effective_span_x;
+    transform.pixels_per_world_y = (transform.screen_bounds.h - 1.0F) / effective_span_y;
+    return transform;
 }
 
-SDL_FPoint map_point_for_entity(const SDL_Rect& map_rect,
-                                int world_width,
-                                int world_height,
-                                const icss::core::Vec2f& position) {
+SDL_FPoint world_to_screen(const ViewportTransform& transform, icss::core::Vec2f position) {
+    const float clamped_x = std::clamp(position.x, transform.visible_min_x, transform.visible_max_x);
+    const float clamped_y = std::clamp(position.y, transform.visible_min_y, transform.visible_max_y);
     return SDL_FPoint {
-        map_axis(static_cast<int>(std::lround(position.x)), world_width, map_rect.x, map_rect.w),
-        map_axis(static_cast<int>(std::lround(position.y)), world_height, map_rect.y, map_rect.h),
+        transform.screen_bounds.x + ((clamped_x - transform.visible_min_x) * transform.pixels_per_world_x),
+        transform.screen_bounds.y + transform.screen_bounds.h - 1.0F - ((clamped_y - transform.visible_min_y) * transform.pixels_per_world_y),
+    };
+}
+
+SDL_FPoint world_delta_to_pixels(const ViewportTransform& transform, icss::core::Vec2f delta) {
+    return SDL_FPoint {
+        delta.x * transform.pixels_per_world_x,
+        -delta.y * transform.pixels_per_world_y,
     };
 }
 

@@ -80,11 +80,11 @@ struct ClientState {
 
 struct TrackState {
     bool active {false};
-    int confidence_pct {0};
     Vec2f estimated_position {};
     Vec2f estimated_velocity {};
     Vec2f measurement_position {};
     bool measurement_valid {false};
+    float measurement_residual_distance {0.0F};
     float covariance_trace {0.0F};
     std::uint32_t measurement_age_ticks {0};
     std::uint32_t missed_updates {0};
@@ -106,8 +106,8 @@ struct Snapshot {
     protocol::SessionEnvelope envelope {};
     protocol::SnapshotHeader header {};
     SessionPhase phase {SessionPhase::Initialized};
-    int world_width {576};
-    int world_height {384};
+    int world_width {2304};
+    int world_height {1536};
     EntityState target;
     EntityState asset;
     Vec2f target_world_position {};
@@ -134,6 +134,7 @@ struct Snapshot {
     JudgmentState judgment;
     ConnectionState viewer_connection {ConnectionState::Disconnected};
     protocol::TelemetrySample telemetry {};
+    float launch_angle_deg {45.0F};
 };
 
 struct EventRecord {

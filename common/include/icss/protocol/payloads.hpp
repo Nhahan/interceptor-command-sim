@@ -24,18 +24,19 @@ struct SessionLeavePayload {
 struct ScenarioStartPayload {
     SessionEnvelope envelope {};
     std::string scenario_name;
-    int world_width {576};
-    int world_height {384};
-    int target_start_x {80};
-    int target_start_y {300};
+    int world_width {2304};
+    int world_height {1536};
+    int target_start_x {480};
+    int target_start_y {1200};
     int target_velocity_x {5};
     int target_velocity_y {-3};
-    int interceptor_start_x {160};
-    int interceptor_start_y {60};
+    int interceptor_start_x {0};
+    int interceptor_start_y {0};
     int interceptor_speed_per_tick {32};
     int intercept_radius {24};
     int engagement_timeout_ticks {60};
     int seeker_fov_deg {45};
+    int launch_angle_deg {45};
 };
 
 struct ScenarioStopPayload {
@@ -49,6 +50,11 @@ struct ScenarioResetPayload {
 };
 
 struct TrackRequestPayload {
+    SessionEnvelope envelope {};
+    std::string target_id;
+};
+
+struct TrackReleasePayload {
     SessionEnvelope envelope {};
     std::string target_id;
 };
@@ -93,8 +99,8 @@ struct SnapshotPayload {
     SessionEnvelope envelope {};
     SnapshotHeader header {};
     std::string phase;
-    int world_width {576};
-    int world_height {384};
+    int world_width {2304};
+    int world_height {1536};
     std::string target_id;
     bool target_active {false};
     int target_x {0};
@@ -127,7 +133,6 @@ struct SnapshotPayload {
     float predicted_intercept_y {0.0F};
     float time_to_intercept_s {0.0F};
     bool tracking_active {false};
-    int track_confidence_pct {0};
     float track_estimated_x {0.0F};
     float track_estimated_y {0.0F};
     float track_estimated_vx {0.0F};
@@ -135,6 +140,7 @@ struct SnapshotPayload {
     bool track_measurement_valid {false};
     float track_measurement_x {0.0F};
     float track_measurement_y {0.0F};
+    float track_measurement_residual_distance {0.0F};
     float track_covariance_trace {0.0F};
     int track_measurement_age_ticks {0};
     int track_missed_updates {0};
@@ -142,6 +148,7 @@ struct SnapshotPayload {
     std::string command_status;
     bool judgment_ready {false};
     std::string judgment_code;
+    float launch_angle_deg {45.0F};
 };
 
 struct TelemetryPayload {

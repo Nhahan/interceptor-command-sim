@@ -293,6 +293,7 @@ std::string serialize(const ScenarioStartPayload& payload) {
         {"intercept_radius", as_string(static_cast<std::int64_t>(payload.intercept_radius))},
         {"engagement_timeout_ticks", as_string(static_cast<std::int64_t>(payload.engagement_timeout_ticks))},
         {"seeker_fov_deg", as_string(static_cast<std::int64_t>(payload.seeker_fov_deg))},
+        {"launch_angle_deg", as_string(static_cast<std::int64_t>(payload.launch_angle_deg))},
     });
 }
 
@@ -319,6 +320,16 @@ std::string serialize(const ScenarioResetPayload& payload) {
 std::string serialize(const TrackRequestPayload& payload) {
     return join_fields({
         {"kind", "track_request"},
+        {"session_id", as_string(payload.envelope.session_id)},
+        {"sender_id", as_string(payload.envelope.sender_id)},
+        {"sequence", as_string(payload.envelope.sequence)},
+        {"target_id", payload.target_id},
+    });
+}
+
+std::string serialize(const TrackReleasePayload& payload) {
+    return join_fields({
+        {"kind", "track_release"},
         {"session_id", as_string(payload.envelope.session_id)},
         {"sender_id", as_string(payload.envelope.sender_id)},
         {"sequence", as_string(payload.envelope.sequence)},
@@ -431,7 +442,6 @@ std::string serialize(const SnapshotPayload& payload) {
         {"predicted_intercept_y", as_string(payload.predicted_intercept_y)},
         {"time_to_intercept_s", as_string(payload.time_to_intercept_s)},
         {"tracking_active", as_string(payload.tracking_active)},
-        {"track_confidence_pct", as_string(static_cast<std::uint32_t>(payload.track_confidence_pct))},
         {"track_estimated_x", as_string(payload.track_estimated_x)},
         {"track_estimated_y", as_string(payload.track_estimated_y)},
         {"track_estimated_vx", as_string(payload.track_estimated_vx)},
@@ -439,6 +449,7 @@ std::string serialize(const SnapshotPayload& payload) {
         {"track_measurement_valid", as_string(payload.track_measurement_valid)},
         {"track_measurement_x", as_string(payload.track_measurement_x)},
         {"track_measurement_y", as_string(payload.track_measurement_y)},
+        {"track_measurement_residual_distance", as_string(payload.track_measurement_residual_distance)},
         {"track_covariance_trace", as_string(payload.track_covariance_trace)},
         {"track_measurement_age_ticks", as_string(static_cast<std::int64_t>(payload.track_measurement_age_ticks))},
         {"track_missed_updates", as_string(static_cast<std::int64_t>(payload.track_missed_updates))},
@@ -446,6 +457,7 @@ std::string serialize(const SnapshotPayload& payload) {
         {"command_status", payload.command_status},
         {"judgment_ready", as_string(payload.judgment_ready)},
         {"judgment_code", payload.judgment_code},
+        {"launch_angle_deg", as_string(payload.launch_angle_deg)},
     });
 }
 
@@ -511,18 +523,19 @@ ScenarioStartPayload parse_scenario_start(std::string_view wire) {
     return {
         parse_envelope(fields),
         require(fields, "scenario_name"),
-        static_cast<int>(parse_i64(require_or(fields, "world_width", "576"))),
-        static_cast<int>(parse_i64(require_or(fields, "world_height", "384"))),
-        static_cast<int>(parse_i64(require_or(fields, "target_start_x", "80"))),
-        static_cast<int>(parse_i64(require_or(fields, "target_start_y", "300"))),
+        static_cast<int>(parse_i64(require_or(fields, "world_width", "2304"))),
+        static_cast<int>(parse_i64(require_or(fields, "world_height", "1536"))),
+        static_cast<int>(parse_i64(require_or(fields, "target_start_x", "480"))),
+        static_cast<int>(parse_i64(require_or(fields, "target_start_y", "1200"))),
         static_cast<int>(parse_i64(require_or(fields, "target_velocity_x", "5"))),
         static_cast<int>(parse_i64(require_or(fields, "target_velocity_y", "-3"))),
-        static_cast<int>(parse_i64(require_or(fields, "interceptor_start_x", "160"))),
-        static_cast<int>(parse_i64(require_or(fields, "interceptor_start_y", "60"))),
+        static_cast<int>(parse_i64(require_or(fields, "interceptor_start_x", "0"))),
+        static_cast<int>(parse_i64(require_or(fields, "interceptor_start_y", "0"))),
         static_cast<int>(parse_i64(require_or(fields, "interceptor_speed_per_tick", "32"))),
         static_cast<int>(parse_i64(require_or(fields, "intercept_radius", "24"))),
         static_cast<int>(parse_i64(require_or(fields, "engagement_timeout_ticks", "60"))),
         static_cast<int>(parse_i64(require_or(fields, "seeker_fov_deg", "45"))),
+        static_cast<int>(parse_i64(require_or(fields, "launch_angle_deg", "45"))),
     };
 }
 
@@ -541,6 +554,12 @@ ScenarioResetPayload parse_scenario_reset(std::string_view wire) {
 TrackRequestPayload parse_track_request(std::string_view wire) {
     const auto fields = parse_fields(wire);
     require_kind(fields, "track_request");
+    return {parse_envelope(fields), require(fields, "target_id")};
+}
+
+TrackReleasePayload parse_track_release(std::string_view wire) {
+    const auto fields = parse_fields(wire);
+    require_kind(fields, "track_release");
     return {parse_envelope(fields), require(fields, "target_id")};
 }
 
@@ -589,8 +608,8 @@ SnapshotPayload parse_snapshot(std::string_view wire) {
         parse_envelope(fields),
         parse_snapshot_header(fields),
         require_enum_string(fields, "phase", is_valid_session_phase),
-        static_cast<int>(parse_i64(require_or(fields, "world_width", "576"))),
-        static_cast<int>(parse_i64(require_or(fields, "world_height", "384"))),
+        static_cast<int>(parse_i64(require_or(fields, "world_width", "2304"))),
+        static_cast<int>(parse_i64(require_or(fields, "world_height", "1536"))),
         require(fields, "target_id"),
         parse_bool(require(fields, "target_active")),
         static_cast<int>(parse_i64(require(fields, "target_x"))),
@@ -623,7 +642,6 @@ SnapshotPayload parse_snapshot(std::string_view wire) {
         parse_float(require_or(fields, "predicted_intercept_y", "0")),
         parse_float(require_or(fields, "time_to_intercept_s", "0")),
         parse_bool(require(fields, "tracking_active")),
-        static_cast<int>(parse_u32(require(fields, "track_confidence_pct"))),
         parse_float(require_or(fields, "track_estimated_x", "0")),
         parse_float(require_or(fields, "track_estimated_y", "0")),
         parse_float(require_or(fields, "track_estimated_vx", "0")),
@@ -631,6 +649,7 @@ SnapshotPayload parse_snapshot(std::string_view wire) {
         parse_bool(require_or(fields, "track_measurement_valid", "false")),
         parse_float(require_or(fields, "track_measurement_x", "0")),
         parse_float(require_or(fields, "track_measurement_y", "0")),
+        parse_float(require_or(fields, "track_measurement_residual_distance", "0")),
         parse_float(require_or(fields, "track_covariance_trace", "0")),
         static_cast<int>(parse_i64(require_or(fields, "track_measurement_age_ticks", "0"))),
         static_cast<int>(parse_i64(require_or(fields, "track_missed_updates", "0"))),
@@ -638,6 +657,7 @@ SnapshotPayload parse_snapshot(std::string_view wire) {
         require_enum_string(fields, "command_status", is_valid_command_status),
         parse_bool(require(fields, "judgment_ready")),
         require_enum_string(fields, "judgment_code", is_valid_judgment_code),
+        parse_float(require_or(fields, "launch_angle_deg", "45")),
     };
 }
 

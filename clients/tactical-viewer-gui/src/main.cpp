@@ -91,6 +91,44 @@ int main(int argc, char** argv) {
                         }
                     }
                 }
+                if (event.type == SDL_MOUSEWHEEL && !options.headless) {
+                    int mouse_x = 0;
+                    int mouse_y = 0;
+                    SDL_GetMouseState(&mouse_x, &mouse_y);
+                    const auto layout = build_layout(options);
+                    const auto& panel = layout.event_panel;
+                    if (mouse_x >= panel.x && mouse_x < panel.x + panel.w
+                        && mouse_y >= panel.y && mouse_y < panel.y + panel.h) {
+                        if (event.wheel.y > 0) {
+                            const auto delta = static_cast<std::size_t>(event.wheel.y * 3);
+                            state.timeline_scroll_lines = delta > state.timeline_scroll_lines
+                                ? 0
+                                : state.timeline_scroll_lines - delta;
+                        } else if (event.wheel.y < 0) {
+                            state.timeline_scroll_lines += static_cast<std::size_t>((-event.wheel.y) * 3);
+                        }
+                    }
+                }
+                if (event.type == SDL_KEYDOWN && !options.headless) {
+                    switch (event.key.keysym.sym) {
+                    case SDLK_HOME:
+                        state.timeline_scroll_lines = 0;
+                        break;
+                    case SDLK_END:
+                        state.timeline_scroll_lines = 1024;
+                        break;
+                    case SDLK_PAGEUP:
+                        state.timeline_scroll_lines = state.timeline_scroll_lines > 8
+                            ? state.timeline_scroll_lines - 8
+                            : 0;
+                        break;
+                    case SDLK_PAGEDOWN:
+                        state.timeline_scroll_lines += 8;
+                        break;
+                    default:
+                        break;
+                    }
+                }
             }
             const auto now = SDL_GetTicks64();
             if (options.duration_ms > 0 && now - start_ticks >= options.duration_ms) {
@@ -102,7 +140,7 @@ int main(int argc, char** argv) {
                 send_viewer_heartbeat(socket, options, sequence, state);
                 next_heartbeat = now + options.heartbeat_interval_ms;
             }
-            receive_datagrams(socket, state, now);
+            receive_datagrams(socket, options, state, now);
             if ((state.received_snapshot || state.received_telemetry)
                 && state.last_datagram_received_ms > 0
                 && now > state.last_datagram_received_ms + (options.heartbeat_interval_ms * 2)
@@ -113,12 +151,12 @@ int main(int argc, char** argv) {
             }
             if (options.auto_control_script) {
                 static const std::vector<std::string> kDefaultScript {
-                    "Start", "Track", "Activate", "Command", "Stop", "Review", "Reset", "Start"
+                    "Start", "Guidance", "Activate", "Command", "Review", "Reset", "Start"
                 };
                 const auto& script = options.auto_controls.empty() ? kDefaultScript : options.auto_controls;
                 if (state.control.auto_step < script.size() && now >= state.control.auto_last_action_ms + 140) {
                     const auto& next_action = script[state.control.auto_step];
-                    const bool requires_judgment = (next_action == "Stop" || next_action == "Review")
+                    const bool requires_judgment = (next_action == "Review")
                         && state.snapshot.command_status != icss::core::CommandLifecycle::None
                         && !state.snapshot.judgment.ready;
                     if (!requires_judgment) {
@@ -133,7 +171,8 @@ int main(int argc, char** argv) {
             SDL_Delay(16);
         }
 
-        write_dump_state(options.dump_state_path, state);
+        write_dump_state(options.dump_state_path, state, options);
+        write_dump_golden_state(options.dump_golden_state_path, state);
         write_dump_frame(renderer, options.dump_frame_path);
         std::printf("received_snapshot=%s\n", state.received_snapshot ? "true" : "false");
         std::printf("received_telemetry=%s\n", state.received_telemetry ? "true" : "false");

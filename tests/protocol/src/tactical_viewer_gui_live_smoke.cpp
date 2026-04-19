@@ -1,5 +1,6 @@
 #include <cassert>
 #include <chrono>
+#include <cmath>
 #include <csignal>
 #include <filesystem>
 #include <fstream>
@@ -55,10 +56,13 @@ ChildProcess spawn_gui_viewer(const std::filesystem::path& dump_path,
             "--tcp-frame-format", "binary",
             "--session-id", session,
             "--sender-id", sender,
+            "--camera-zoom", "1.25",
+            "--camera-pan-x", "8",
+            "--camera-pan-y", "-6",
             "--headless",
             "--hidden",
             "--auto-control-script",
-            "--auto-controls", "target_pos_x_inc,target_pos_y_dec,asset_pos_x_inc,asset_pos_y_inc,Start",
+            "--auto-controls", "target_pos_x_inc,target_pos_y_dec,Start",
             "--duration-ms", "1800",
             "--heartbeat-interval-ms", "100",
             "--dump-state", dump_path.string(),
@@ -140,35 +144,50 @@ int main() {
     assert(icss::testsupport::minijson::require_field(object, "last_server_event_tick").is_int());
     assert(icss::testsupport::minijson::require_field(object, "last_server_event_type").as_string() == "session_started");
     assert(icss::testsupport::minijson::require_field(object, "authoritative_headline").as_string().find("SESSION STARTED") != std::string::npos);
-    assert(icss::testsupport::minijson::require_field(object, "recommended_control").as_string() == "Track");
+    assert(icss::testsupport::minijson::require_field(object, "recommended_control").as_string() == "Guidance");
     assert(!icss::testsupport::minijson::require_field(object, "target_motion_visual_visible").as_bool());
     assert(!icss::testsupport::minijson::require_field(object, "asset_motion_visual_visible").as_bool());
     assert(!icss::testsupport::minijson::require_field(object, "engagement_visual_visible").as_bool());
     assert(!icss::testsupport::minijson::require_field(object, "predicted_marker_visual_visible").as_bool());
-    assert(icss::testsupport::minijson::require_field(object, "planned_target_start_x").as_int() == 96);
-    assert(icss::testsupport::minijson::require_field(object, "planned_target_start_y").as_int() == 284);
-    assert(icss::testsupport::minijson::require_field(object, "planned_interceptor_start_x").as_int() == 176);
-    assert(icss::testsupport::minijson::require_field(object, "planned_interceptor_start_y").as_int() == 76);
+    assert(icss::testsupport::minijson::require_field(object, "planned_target_start_x").as_int() == 496);
+    assert(icss::testsupport::minijson::require_field(object, "planned_target_start_y").as_int() == 1184);
+    assert(icss::testsupport::minijson::require_field(object, "planned_interceptor_start_x").as_int() == 0);
+    assert(icss::testsupport::minijson::require_field(object, "planned_interceptor_start_y").as_int() == 0);
+    assert(icss::testsupport::minijson::require_field(object, "planned_launch_angle_deg").as_int() == 45);
+    assert(icss::testsupport::minijson::require_field(object, "camera_zoom").is_number());
+    assert(icss::testsupport::minijson::require_field(object, "camera_pan_x").is_number());
+    assert(icss::testsupport::minijson::require_field(object, "camera_pan_y").is_number());
+    assert(icss::testsupport::minijson::require_field(object, "camera_visible_min_x").is_number());
+    assert(icss::testsupport::minijson::require_field(object, "camera_visible_max_x").is_number());
+    assert(icss::testsupport::minijson::require_field(object, "camera_visible_min_y").is_number());
+    assert(icss::testsupport::minijson::require_field(object, "camera_visible_max_y").is_number());
     assert(icss::testsupport::minijson::require_field(object, "last_control_label").as_string() == "Start");
     assert(icss::testsupport::minijson::require_field(object, "last_control_message").as_string().find("scenario started") != std::string::npos);
     assert(icss::testsupport::minijson::require_field(object, "target_active").as_bool());
     assert(!icss::testsupport::minijson::require_field(object, "asset_active").as_bool());
+    assert(icss::testsupport::minijson::require_field(object, "guidance_active").as_bool()
+        == icss::testsupport::minijson::require_field(object, "tracking_active").as_bool());
     assert(icss::testsupport::minijson::require_field(object, "target_x").is_int());
     assert(icss::testsupport::minijson::require_field(object, "asset_x").is_int());
-    assert(icss::testsupport::minijson::require_field(object, "world_width").as_int() == 576);
-    assert(icss::testsupport::minijson::require_field(object, "world_height").as_int() == 384);
+    const auto actual_asset_x = icss::testsupport::minijson::require_field(object, "asset_x").as_int();
+    const auto actual_asset_y = icss::testsupport::minijson::require_field(object, "asset_y").as_int();
+    assert(actual_asset_x == 0);
+    assert(actual_asset_y == 0);
+    assert(icss::testsupport::minijson::require_field(object, "world_width").as_int() == 2304);
+    assert(icss::testsupport::minijson::require_field(object, "world_height").as_int() == 1536);
     const auto target_velocity_x = icss::testsupport::minijson::require_field(object, "target_velocity_x").as_int();
-    assert(target_velocity_x == 5 || target_velocity_x == -5);
+    assert(std::abs(target_velocity_x) >= 4 && std::abs(target_velocity_x) <= 6);
     const auto target_velocity_y = icss::testsupport::minijson::require_field(object, "target_velocity_y").as_int();
-    assert(target_velocity_y == -3 || target_velocity_y == 3);
+    assert(std::abs(target_velocity_y) >= 2 && std::abs(target_velocity_y) <= 4);
     assert(icss::testsupport::minijson::require_field(object, "interceptor_speed_per_tick").as_int() == 32);
     assert(icss::testsupport::minijson::require_field(object, "interceptor_acceleration_per_tick").is_number());
+    assert(icss::testsupport::minijson::require_field(object, "active_launch_angle_deg").is_number());
     assert(icss::testsupport::minijson::require_field(object, "seeker_fov_deg").is_number());
     assert(icss::testsupport::minijson::require_field(object, "target_world_x").is_number());
     assert(icss::testsupport::minijson::require_field(object, "time_to_intercept_s").is_number());
     assert(!icss::testsupport::minijson::require_field(object, "predicted_intercept_valid").as_bool());
     assert(!icss::testsupport::minijson::require_field(object, "seeker_lock").as_bool());
-    assert(icss::testsupport::minijson::require_field(object, "track_confidence_pct").as_int() >= 0);
+    assert(icss::testsupport::minijson::require_field(object, "track_measurement_residual_distance").is_number());
     assert(icss::testsupport::minijson::require_field(object, "track_covariance_trace").is_number());
     assert(icss::testsupport::minijson::require_field(object, "recent_event_count").as_int() >= 2);
 

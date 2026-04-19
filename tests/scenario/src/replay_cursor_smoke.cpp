@@ -34,7 +34,7 @@ int main() {
     const auto frame = view::render_tactical_frame(snapshot, recent, cursor);
     assert(frame.find("cursor_index=") != std::string::npos);
     assert(frame.find("command_status=") != std::string::npos);
-    assert(frame.find("confidence=") != std::string::npos);
+    assert(frame.find("tracker_residual=") != std::string::npos);
     assert(frame.find("freshness=") != std::string::npos);
     assert(frame.find("snapshot_sequence=") != std::string::npos);
     assert(frame.find("packet_loss_pct=") != std::string::npos);

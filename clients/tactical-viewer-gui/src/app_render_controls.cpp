@@ -9,8 +9,17 @@ void draw_button(SDL_Renderer* renderer,
                  bool is_live_control) {
     const bool is_review_button = button.action == "Review";
     const bool is_reset_button = button.action == "Reset";
-    const bool enabled = !is_review_button || review_available(ctx.state);
+    const bool is_guidance_button = button.action == "Guidance";
+    const bool post_command_track_locked = is_guidance_button
+        && (ctx.state.snapshot.phase == icss::core::SessionPhase::CommandIssued
+            || ctx.state.snapshot.phase == icss::core::SessionPhase::Engaging
+            || ctx.state.snapshot.phase == icss::core::SessionPhase::Judged
+            || ctx.state.snapshot.phase == icss::core::SessionPhase::Archived);
+    const bool enabled = (!is_review_button || review_available(ctx.state)) && !post_command_track_locked;
     const bool recommended = is_live_control && enabled && button.action == ctx.recommended_control;
+    const std::string button_label = is_guidance_button
+        ? (ctx.state.snapshot.track.active ? "Guidance Off" : "Guidance On")
+        : button.label;
     const auto fill = is_reset_button
         ? (enabled ? rgba(92, 42, 52) : rgba(56, 36, 40))
         : (is_live_control
@@ -46,7 +55,7 @@ void draw_button(SDL_Renderer* renderer,
         SDL_RenderDrawRect(renderer, &glow);
     }
     const int text_x = is_live_control ? button.rect.x + 10 : button.rect.x + 5;
-    draw_text(renderer, ctx.body_font, text_x, button.rect.y + (is_live_control ? 5 : 3), text, button.label);
+    draw_text(renderer, ctx.body_font, text_x, button.rect.y + (is_live_control ? 5 : 3), text, button_label);
 }
 
 }  // namespace
@@ -65,6 +74,13 @@ void render_control_panel(SDL_Renderer* renderer, const RenderContext& ctx) {
               ctx.recommended_control.empty() ? "Next recommended control: none" : "Next recommended control: " + ctx.recommended_control,
               next_hint_box.w - 20);
 
+    draw_text(renderer,
+              ctx.body_font,
+              panel.x + 12,
+              panel.y + 79,
+              rgba(148, 156, 172),
+              "Guidance");
+
     for (const auto& button : ctx.layout.buttons) {
         if (is_live_control_action(button.action)) {
             draw_button(renderer, ctx, button, true);
@@ -76,12 +92,12 @@ void render_setup_panel(SDL_Renderer* renderer, const RenderContext& ctx) {
     const auto& panel = ctx.layout.setup_panel;
     fill_panel(renderer, panel, rgba(12, 14, 20), rgba(54, 60, 78));
     draw_text(renderer, ctx.title_font, panel.x + 12, panel.y + 10, rgba(141, 211, 199), "Scenario Setup");
-    draw_text(renderer, ctx.body_font, panel.x + 12, panel.y + 38, rgba(148, 156, 172), "Adjust inputs for the next Start");
-    const SDL_Rect target_pos_box {panel.x + 12, panel.y + 62, panel.w - 24, 28};
-    const SDL_Rect target_vel_box {panel.x + 12, panel.y + 92, panel.w - 24, 28};
-    const SDL_Rect asset_pos_box {panel.x + 12, panel.y + 122, panel.w - 24, 28};
-    const SDL_Rect asset_dyn_box {panel.x + 12, panel.y + 152, panel.w - 24, 28};
-    for (const auto& box : {target_pos_box, target_vel_box, asset_pos_box, asset_dyn_box}) {
+    draw_text(renderer, ctx.body_font, panel.x + 12, panel.y + 38, rgba(148, 156, 172), "Target jitter only; origin fixed at (0,0)");
+    const SDL_Rect target_pos_box {panel.x + 12, panel.y + 60, panel.w - 24, 28};
+    const SDL_Rect target_vel_box {panel.x + 12, panel.y + 88, panel.w - 24, 28};
+    const SDL_Rect launch_box {panel.x + 12, panel.y + 116, panel.w - 24, 28};
+    const SDL_Rect asset_dyn_box {panel.x + 12, panel.y + 144, panel.w - 24, 28};
+    for (const auto& box : {target_pos_box, target_vel_box, launch_box, asset_dyn_box}) {
         fill_panel(renderer, box, rgba(22, 27, 36), rgba(56, 66, 86));
     }
     draw_text(renderer,
@@ -98,10 +114,10 @@ void render_setup_panel(SDL_Renderer* renderer, const RenderContext& ctx) {
               "Velocity  " + std::to_string(ctx.state.planned_scenario.target_velocity_x) + "," + std::to_string(ctx.state.planned_scenario.target_velocity_y));
     draw_text(renderer,
               ctx.body_font,
-              asset_pos_box.x + 8,
-              asset_pos_box.y + 5,
+              launch_box.x + 8,
+              launch_box.y + 5,
               rgba(188, 198, 214),
-              "Interceptor  " + std::to_string(ctx.state.planned_scenario.interceptor_start_x) + "," + std::to_string(ctx.state.planned_scenario.interceptor_start_y));
+              "Origin  0,0 | Launch  " + std::to_string(ctx.state.planned_scenario.launch_angle_deg) + " deg");
     draw_text(renderer,
               ctx.body_font,
               asset_dyn_box.x + 8,

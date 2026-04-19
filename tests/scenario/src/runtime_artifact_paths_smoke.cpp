@@ -31,6 +31,9 @@ int main() {
     assert(summary_text.find("latest_snapshot_sequence:") != std::string::npos);
     assert(summary_text.find("latest_freshness:") != std::string::npos);
     assert(summary_text.find("command_console_connection:") != std::string::npos);
+    assert(summary_text.find("guidance_state: on") != std::string::npos);
+    assert(summary_text.find("launch_mode: guided") != std::string::npos);
+    assert(summary_text.find("launch_angle_deg: 45") != std::string::npos);
     assert(summary_text.find("last_event_type:") != std::string::npos);
     assert(summary_text.find("## Recent Events") != std::string::npos);
 
@@ -43,6 +46,9 @@ int main() {
     assert(output_text.find("latest_freshness:") != std::string::npos);
     assert(output_text.find("latest_snapshot_sequence:") != std::string::npos);
     assert(output_text.find("command_console_connection:") != std::string::npos);
+    assert(output_text.find("guidance_state: on") != std::string::npos);
+    assert(output_text.find("launch_mode: guided") != std::string::npos);
+    assert(output_text.find("launch_angle_deg: 45") != std::string::npos);
     assert(output_text.find("last_event_type:") != std::string::npos);
     assert(output_text.find("freshness=") != std::string::npos);
 
@@ -59,6 +65,9 @@ int main() {
     assert(icss::testsupport::minijson::require_field(timeline_object, "snapshot_count").is_int());
     assert(icss::testsupport::minijson::require_field(timeline_object, "event_count").is_int());
     assert(icss::testsupport::minijson::require_field(timeline_object, "judgment_code").is_string());
+    assert(icss::testsupport::minijson::require_field(timeline_object, "guidance_state").as_string() == "on");
+    assert(icss::testsupport::minijson::require_field(timeline_object, "launch_mode").as_string() == "guided");
+    assert(icss::testsupport::minijson::require_field(timeline_object, "launch_angle_deg").as_int() == 45);
     assert(icss::testsupport::minijson::require_field(timeline_object, "resilience_case").is_string());
     const auto& events = icss::testsupport::minijson::require_field(timeline_object, "events");
     assert(events.is_array());
@@ -90,6 +99,9 @@ int main() {
     assert(icss::testsupport::minijson::require_field(summary_json_object, "viewer_connection").is_string());
     assert(icss::testsupport::minijson::require_field(summary_json_object, "judgment_ready").is_bool());
     assert(icss::testsupport::minijson::require_field(summary_json_object, "judgment_code").is_string());
+    assert(icss::testsupport::minijson::require_field(summary_json_object, "guidance_state").as_string() == "on");
+    assert(icss::testsupport::minijson::require_field(summary_json_object, "launch_mode").as_string() == "guided");
+    assert(icss::testsupport::minijson::require_field(summary_json_object, "launch_angle_deg").as_int() == 45);
     assert(icss::testsupport::minijson::require_field(summary_json_object, "last_event_type").is_string());
     assert(icss::testsupport::minijson::require_field(summary_json_object, "resilience_case").is_string());
     assert(icss::testsupport::minijson::require_field(summary_json_object, "latest_snapshot_sequence").is_int());

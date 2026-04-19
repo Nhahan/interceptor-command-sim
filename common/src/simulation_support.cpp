@@ -100,15 +100,16 @@ Vec2f deterministic_noise(std::uint64_t tick) {
     };
 }
 
-bool measurement_available(std::uint64_t tick) {
-    return (tick % 11U) != 0U;
+bool measurement_due(std::uint64_t tick) {
+    return (tick % 3U) == 0U;
 }
 
-int confidence_from_covariance(float trace, std::uint32_t measurement_age_ticks, std::uint32_t missed_updates) {
-    const auto normalized = clampf(1.0F - (trace / 180.0F), 0.10F, 0.98F);
-    const auto age_penalty = std::min(0.45F, static_cast<float>(measurement_age_ticks) * 0.06F);
-    const auto miss_penalty = std::min(0.20F, static_cast<float>(missed_updates) * 0.03F);
-    return static_cast<int>(std::lround(clampf(normalized - age_penalty - miss_penalty, 0.05F, 0.99F) * 100.0F));
+bool measurement_available(std::uint64_t tick) {
+    if (!measurement_due(tick)) {
+        return false;
+    }
+    const auto measurement_index = tick / 3U;
+    return (measurement_index % 5U) != 3U;
 }
 
 std::string build_resilience_case(bool reconnect_exercised, bool timeout_exercised, bool packet_gap_exercised) {

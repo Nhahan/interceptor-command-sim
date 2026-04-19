@@ -7,15 +7,16 @@ entities:
 rules:
   enable_replay: true
   telemetry_interval_ms: 200
-  world_width: 576
-  world_height: 384
-  target_start_x: 80
-  target_start_y: 300
+  world_width: 2304
+  world_height: 1536
+  target_start_x: 480
+  target_start_y: 1200
   target_velocity_x: 5
   target_velocity_y: -3
-  interceptor_start_x: 160
-  interceptor_start_y: 60
+  interceptor_start_x: 0
+  interceptor_start_y: 0
   interceptor_speed_per_tick: 32
   intercept_radius: 24
   engagement_timeout_ticks: 60
   seeker_fov_deg: 45
+  launch_angle_deg: 45

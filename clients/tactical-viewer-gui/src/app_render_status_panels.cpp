@@ -1,6 +1,7 @@
 #include "render_internal.hpp"
 
 #include <array>
+#include <cmath>
 
 #include "icss/view/ascii_tactical_view.hpp"
 
@@ -13,7 +14,7 @@ void render_phase_panel(SDL_Renderer* renderer, const RenderContext& ctx) {
     const std::array<std::pair<icss::core::SessionPhase, const char*>, 8> phase_flow {{
         {icss::core::SessionPhase::Initialized, "INITIALIZED"},
         {icss::core::SessionPhase::Detecting, "DETECTING"},
-        {icss::core::SessionPhase::Tracking, "TRACKING"},
+        {icss::core::SessionPhase::Tracking, "GUIDANCE LOCKED"},
         {icss::core::SessionPhase::AssetReady, "INTERCEPTOR READY"},
         {icss::core::SessionPhase::CommandIssued, "COMMAND ACCEPTED"},
         {icss::core::SessionPhase::Engaging, "ENGAGING"},
@@ -49,14 +50,11 @@ void render_decision_panel(SDL_Renderer* renderer, const RenderContext& ctx) {
     fill_panel(renderer, panel, rgba(12, 14, 20), rgba(54, 60, 78));
     draw_text(renderer, ctx.title_font, panel.x + 12, panel.y + 10, rgba(255, 179, 102), "Authoritative Status");
     std::string block;
-    block += "Last telemetry event: " + telemetry_event_status(ctx.state) + "\n";
-    block += "Latest timeline entry: " + latest_timeline_entry(ctx.state) + "\n";
-    block += std::string(ctx.state.control.last_ok ? "Last accepted control: " : "Last rejected control: ")
+    block += std::string(ctx.state.control.last_ok ? "Control: accepted | " : "Control: rejected | ")
         + ctx.state.control.last_label + " | " + ctx.state.control.last_message + "\n";
-    block += "Judgment: " + std::string(icss::core::to_string(ctx.state.snapshot.judgment.code))
-        + " | Command lifecycle: " + std::string(icss::core::to_string(ctx.state.snapshot.command_status)) + "\n";
-    block += "Interceptor status: " + std::string(icss::core::to_string(ctx.state.snapshot.asset_status))
-        + " | AAR cursor: live";
+    block += "Judgment: " + std::string(icss::core::to_string(ctx.state.snapshot.judgment.code)) + "\n";
+    block += "Command lifecycle: " + std::string(icss::core::to_string(ctx.state.snapshot.command_status)) + "\n";
+    block += "Interceptor status: " + std::string(icss::core::to_string(ctx.state.snapshot.asset_status));
     draw_text(renderer, ctx.body_font, panel.x + 12, panel.y + 44, rgba(220, 223, 230), block, panel.w - 24);
 }
 
@@ -69,14 +67,10 @@ void render_resilience_panel(SDL_Renderer* renderer, const RenderContext& ctx) {
         + " | Freshness: " + icss::view::freshness_label(ctx.state.snapshot) + "\n";
     block += "Tick: " + std::to_string(ctx.state.snapshot.telemetry.tick)
         + " | Snapshot: " + std::to_string(ctx.state.snapshot.header.snapshot_sequence) + "\n";
+    block += "Last snapshot: " + std::to_string(ctx.state.snapshot.header.timestamp_ms) + " ms\n";
     block += "Latency: " + format_fixed_0(ctx.state.snapshot.telemetry.latency_ms)
         + " ms | Loss: " + format_fixed_1(ctx.state.snapshot.telemetry.packet_loss_pct) + " %";
-    block += ctx.state.snapshot.telemetry.packet_loss_pct > 0.0F ? " | degraded sample" : " | stable";
-    block += "\n";
-    block += "I/O: snapshots=" + std::to_string(ctx.state.snapshot_count_received)
-        + ", telemetry=" + std::to_string(ctx.state.telemetry_count_received)
-        + ", heartbeats=" + std::to_string(ctx.state.heartbeat_count) + "\n";
-    block += "Note: " + ctx.resilience_note;
+    block += ctx.state.snapshot.telemetry.packet_loss_pct > 0.0F ? " | degraded" : " | stable";
     draw_text(renderer, ctx.body_font, panel.x + 12, panel.y + 44, rgba(220, 223, 230), block, panel.w - 24);
 }
 
@@ -84,34 +78,33 @@ void render_entity_panel(SDL_Renderer* renderer, const RenderContext& ctx) {
     const auto& panel = ctx.layout.entity_panel;
     fill_panel(renderer, panel, rgba(12, 14, 20), rgba(54, 60, 78));
     draw_text(renderer, ctx.title_font, panel.x + 12, panel.y + 10, rgba(220, 223, 230), "Entity Picture");
-    draw_text(renderer, ctx.body_font, panel.x + 170, panel.y + 14, rgba(140, 149, 168), "target=red | interceptor=blue | predicted intercept=green");
+    draw_text(renderer,
+              ctx.body_font,
+              panel.x + 150,
+              panel.y + 14,
+              rgba(140, 149, 168),
+              "red=target | blue=interceptor | dashed=trail",
+              panel.w - 162);
     std::string block;
-    block += "Target " + ctx.state.snapshot.target.id + " @ (" + format_fixed_1(ctx.state.snapshot.target_world_position.x)
-        + ", " + format_fixed_1(ctx.state.snapshot.target_world_position.y) + ") active=" + (ctx.state.snapshot.target.active ? "yes" : "no") + "\n";
-    block += "Interceptor " + ctx.state.snapshot.asset.id + " @ (" + format_fixed_1(ctx.state.snapshot.asset_world_position.x)
-        + ", " + format_fixed_1(ctx.state.snapshot.asset_world_position.y) + ") active=" + (ctx.state.snapshot.asset.active ? "yes" : "no") + "\n";
-    block += "Target v=(" + format_fixed_1(ctx.state.snapshot.target_velocity.x) + "," + format_fixed_1(ctx.state.snapshot.target_velocity.y)
-        + ") hdg=" + format_fixed_1(ctx.state.snapshot.target_heading_deg)
-        + " | Interceptor v=(" + format_fixed_1(ctx.state.snapshot.asset_velocity.x) + "," + format_fixed_1(ctx.state.snapshot.asset_velocity.y)
-        + ") hdg=" + format_fixed_1(ctx.state.snapshot.asset_heading_deg) + "\n";
-    block += "Tracking " + std::string(ctx.state.snapshot.track.active ? "LOCKED" : "OFF")
-        + " (" + std::to_string(ctx.state.snapshot.track.confidence_pct) + "%)"
-        + " | cov=" + format_fixed_1(ctx.state.snapshot.track.covariance_trace)
-        + " | age=" + std::to_string(ctx.state.snapshot.track.measurement_age_ticks)
+    block += "T=(" + std::to_string(static_cast<int>(std::lround(ctx.state.snapshot.target_world_position.x)))
+        + "," + std::to_string(static_cast<int>(std::lround(ctx.state.snapshot.target_world_position.y))) + ") "
+        + (ctx.state.snapshot.target.active ? "yes" : "no")
+        + " | I=(" + std::to_string(static_cast<int>(std::lround(ctx.state.snapshot.asset_world_position.x)))
+        + "," + std::to_string(static_cast<int>(std::lround(ctx.state.snapshot.asset_world_position.y))) + ") "
+        + (ctx.state.snapshot.asset.active ? "yes" : "no") + "\n";
+    block += "Tv=(" + format_fixed_1(ctx.state.snapshot.target_velocity.x) + "," + format_fixed_1(ctx.state.snapshot.target_velocity.y)
+        + ") h=" + format_fixed_1(ctx.state.snapshot.target_heading_deg)
+        + " | Iv=(" + format_fixed_1(ctx.state.snapshot.asset_velocity.x) + "," + format_fixed_1(ctx.state.snapshot.asset_velocity.y)
+        + ") h=" + format_fixed_1(ctx.state.snapshot.asset_heading_deg) + "\n";
+    block += "Guidance " + std::string(ctx.state.snapshot.track.active ? "ON" : "OFF")
+        + " | tracker res="
+        + (ctx.state.snapshot.track.measurement_valid ? format_fixed_1(ctx.state.snapshot.track.measurement_residual_distance) : std::string("n/a"))
+        + " | cov=" + format_fixed_1(ctx.state.snapshot.track.covariance_trace) + "\n";
+    block += "age=" + std::to_string(ctx.state.snapshot.track.measurement_age_ticks)
         + " | misses=" + std::to_string(ctx.state.snapshot.track.missed_updates)
+        + " | launch=" + format_fixed_1(ctx.state.snapshot.launch_angle_deg) + " deg"
         + " | TTI=" + (ctx.state.snapshot.predicted_intercept_valid ? format_fixed_1(ctx.state.snapshot.time_to_intercept_s) + "s" : std::string("pending"))
-        + " | seeker_lock=" + (ctx.state.snapshot.predicted_intercept_valid ? (ctx.state.snapshot.seeker_lock ? "yes" : "no") : "n/a") + "\n";
-    if (ctx.state.snapshot.predicted_intercept_valid) {
-        block += "Predicted intercept=(" + format_fixed_1(ctx.state.snapshot.predicted_intercept_position.x)
-            + "," + format_fixed_1(ctx.state.snapshot.predicted_intercept_position.y)
-            + ") | off_boresight=" + format_fixed_1(ctx.state.snapshot.off_boresight_deg)
-            + " deg | Command visual " + (command_visual_active(ctx.state) ? "ON" : "OFF");
-    } else {
-        block += "Measurement=(" + format_fixed_1(ctx.state.snapshot.track.measurement_position.x)
-            + "," + format_fixed_1(ctx.state.snapshot.track.measurement_position.y)
-            + ") valid=" + (ctx.state.snapshot.track.measurement_valid ? "yes" : "no")
-            + " | off_boresight=n/a | Command visual " + std::string(command_visual_active(ctx.state) ? "ON" : "OFF");
-    }
+        + " | seeker=" + (ctx.state.snapshot.predicted_intercept_valid ? (ctx.state.snapshot.seeker_lock ? "yes" : "no") : "n/a");
     draw_text(renderer, ctx.body_font, panel.x + 12, panel.y + 42, rgba(220, 223, 230), block, panel.w - 24);
 }
 
@@ -126,8 +119,43 @@ void render_event_panel(SDL_Renderer* renderer, const RenderContext& ctx) {
               panel.y + 14,
               rgba(120, 128, 144),
               showing_review ? "[review mode]" : "[live mode]");
-    const std::string events_block = terminal_timeline_text(ctx.state, showing_review);
-    draw_text(renderer, ctx.body_font, panel.x + 12, panel.y + 46, rgba(187, 255, 187), events_block, panel.w - 24);
+    auto lines = terminal_timeline_lines(ctx.state, showing_review);
+    const int line_height = std::max(16, TTF_FontLineSkip(ctx.body_font));
+    const int scrollbar_w = 10;
+    const SDL_Rect body_rect {panel.x + 12, panel.y + 46, panel.w - 36, panel.h - 58};
+    const std::size_t visible_lines = std::max(1, body_rect.h / line_height);
+    const std::size_t total_lines = lines.size();
+    const std::size_t max_scroll = total_lines > visible_lines ? (total_lines - visible_lines) : 0;
+    const std::size_t scroll = std::min(ctx.state.timeline_scroll_lines, max_scroll);
+    const SDL_Rect text_clip {body_rect.x, body_rect.y, body_rect.w - scrollbar_w - 8, body_rect.h};
+    SDL_RenderSetClipRect(renderer, &text_clip);
+    const std::size_t end = std::min(total_lines, scroll + visible_lines);
+    for (std::size_t index = scroll; index < end; ++index) {
+        draw_text(renderer,
+                  ctx.body_font,
+                  body_rect.x,
+                  body_rect.y + static_cast<int>((index - scroll) * line_height),
+                  rgba(187, 255, 187),
+                  lines[index]);
+    }
+    SDL_RenderSetClipRect(renderer, nullptr);
+
+    if (total_lines > visible_lines) {
+        const SDL_Rect track {panel.x + panel.w - 18, body_rect.y, scrollbar_w, body_rect.h};
+        SDL_SetRenderDrawColor(renderer, 28, 34, 46, 220);
+        SDL_RenderFillRect(renderer, &track);
+        SDL_SetRenderDrawColor(renderer, 54, 60, 78, 255);
+        SDL_RenderDrawRect(renderer, &track);
+        const int thumb_h = std::max(24, static_cast<int>((static_cast<float>(visible_lines) / static_cast<float>(total_lines)) * static_cast<float>(track.h)));
+        const float denom = max_scroll == 0 ? 1.0F : static_cast<float>(max_scroll);
+        const float thumb_ratio = static_cast<float>(scroll) / denom;
+        const int thumb_y = track.y + static_cast<int>(thumb_ratio * static_cast<float>(track.h - thumb_h));
+        SDL_Rect thumb {track.x + 1, thumb_y, track.w - 2, thumb_h};
+        SDL_SetRenderDrawColor(renderer, 112, 192, 112, 230);
+        SDL_RenderFillRect(renderer, &thumb);
+        SDL_SetRenderDrawColor(renderer, 164, 215, 150, 255);
+        SDL_RenderDrawRect(renderer, &thumb);
+    }
 }
 
 }  // namespace icss::viewer_gui

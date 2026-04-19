@@ -50,6 +50,9 @@ SessionSummaryArtifact read_session_summary_json(const std::filesystem::path& pa
     artifact.viewer_connection = icss::testsupport::minijson::require_field(object, "viewer_connection").as_string();
     artifact.judgment_ready = icss::testsupport::minijson::require_field(object, "judgment_ready").as_bool();
     artifact.judgment_code = icss::testsupport::minijson::require_field(object, "judgment_code").as_string();
+    artifact.guidance_state = icss::testsupport::minijson::require_field(object, "guidance_state").as_string();
+    artifact.launch_mode = icss::testsupport::minijson::require_field(object, "launch_mode").as_string();
+    artifact.launch_angle_deg = to_u32(icss::testsupport::minijson::require_field(object, "launch_angle_deg"));
     artifact.last_event_type = icss::testsupport::minijson::require_field(object, "last_event_type").as_string();
     artifact.resilience_case = icss::testsupport::minijson::require_field(object, "resilience_case").as_string();
     artifact.latest_snapshot_sequence = to_u64(icss::testsupport::minijson::require_field(object, "latest_snapshot_sequence"));
@@ -80,6 +83,9 @@ ReplayTimelineArtifact read_replay_timeline_json(const std::filesystem::path& pa
     artifact.snapshot_count = to_size(icss::testsupport::minijson::require_field(object, "snapshot_count"));
     artifact.event_count = to_size(icss::testsupport::minijson::require_field(object, "event_count"));
     artifact.judgment_code = icss::testsupport::minijson::require_field(object, "judgment_code").as_string();
+    artifact.guidance_state = icss::testsupport::minijson::require_field(object, "guidance_state").as_string();
+    artifact.launch_mode = icss::testsupport::minijson::require_field(object, "launch_mode").as_string();
+    artifact.launch_angle_deg = to_u32(icss::testsupport::minijson::require_field(object, "launch_angle_deg"));
     artifact.resilience_case = icss::testsupport::minijson::require_field(object, "resilience_case").as_string();
 
     const auto& events = icss::testsupport::minijson::require_field(object, "events").as_array();
@@ -124,6 +130,9 @@ RuntimeLogArtifact read_runtime_log(const std::filesystem::path& path) {
             artifact.command_console_connection = icss::testsupport::minijson::require_field(object, "command_console_connection").as_string();
             artifact.viewer_connection = icss::testsupport::minijson::require_field(object, "viewer_connection").as_string();
             artifact.judgment_code = icss::testsupport::minijson::require_field(object, "judgment_code").as_string();
+            artifact.guidance_state = icss::testsupport::minijson::require_field(object, "guidance_state").as_string();
+            artifact.launch_mode = icss::testsupport::minijson::require_field(object, "launch_mode").as_string();
+            artifact.launch_angle_deg = to_u32(icss::testsupport::minijson::require_field(object, "launch_angle_deg"));
             artifact.last_event_type = icss::testsupport::minijson::require_field(object, "last_event_type").as_string();
             artifact.resilience_case = icss::testsupport::minijson::require_field(object, "resilience").as_string();
             continue;

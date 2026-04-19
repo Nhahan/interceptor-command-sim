@@ -23,6 +23,9 @@ struct SessionSummaryArtifact {
     std::string viewer_connection;
     bool judgment_ready {false};
     std::string judgment_code;
+    std::string guidance_state;
+    std::string launch_mode;
+    std::uint32_t launch_angle_deg {};
     std::string last_event_type;
     std::string resilience_case;
     std::uint64_t latest_snapshot_sequence {};
@@ -48,6 +51,9 @@ struct ReplayTimelineArtifact {
     std::size_t snapshot_count {};
     std::size_t event_count {};
     std::string judgment_code;
+    std::string guidance_state;
+    std::string launch_mode;
+    std::uint32_t launch_angle_deg {};
     std::string resilience_case;
     std::vector<ReplayTimelineEvent> events;
 };
@@ -62,6 +68,9 @@ struct RuntimeLogArtifact {
     std::string command_console_connection;
     std::string viewer_connection;
     std::string judgment_code;
+    std::string guidance_state;
+    std::string launch_mode;
+    std::uint32_t launch_angle_deg {};
     std::string last_event_type;
     std::string resilience_case;
     std::size_t event_record_count {};

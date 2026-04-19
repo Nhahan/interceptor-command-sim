@@ -26,11 +26,12 @@ struct RenderContext {
     int header_text_y;
 };
 
-float map_axis(int value, int world_limit, int screen_origin, int screen_extent);
-SDL_FPoint map_point_for_entity(const SDL_Rect& map_rect,
-                                int world_width,
-                                int world_height,
-                                const icss::core::Vec2f& position);
+ViewportTransform make_viewport_transform(const SDL_Rect& map_rect,
+                                         int world_width,
+                                         int world_height,
+                                         const ViewerOptions& options);
+SDL_FPoint world_to_screen(const ViewportTransform& transform, icss::core::Vec2f position);
+SDL_FPoint world_delta_to_pixels(const ViewportTransform& transform, icss::core::Vec2f delta);
 void draw_emphasized_line(SDL_Renderer* renderer,
                           SDL_Color color,
                           int x1,

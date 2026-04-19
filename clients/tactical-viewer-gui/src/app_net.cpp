@@ -125,6 +125,12 @@ void TcpSocket::reset() {
 bool TcpSocket::connected() const { return fd_ >= 0; }
 int TcpSocket::fd() const { return fd_; }
 
+bool same_endpoint(const sockaddr_in& lhs, const sockaddr_in& rhs) {
+    return lhs.sin_family == rhs.sin_family
+        && lhs.sin_port == rhs.sin_port
+        && lhs.sin_addr.s_addr == rhs.sin_addr.s_addr;
+}
+
 void send_viewer_join(UdpSocket& socket, const ViewerOptions& options, std::uint64_t& sequence) {
     const icss::protocol::SessionJoinPayload join {{options.session_id, options.sender_id, sequence++}, "tactical_viewer"};
     send_datagram(socket.get(), make_server_addr(options), icss::protocol::serialize(join));
@@ -136,11 +142,11 @@ void send_viewer_heartbeat(UdpSocket& socket, const ViewerOptions& options, std:
     ++state.heartbeat_count;
 }
 
-void receive_datagrams(UdpSocket& socket, ViewerState& state, std::uint64_t now_ms) {
+void receive_datagrams(UdpSocket& socket, const ViewerOptions& options, ViewerState& state, std::uint64_t now_ms) {
     char buffer[4096];
     sockaddr_in from {};
-    socklen_t len = sizeof(from);
     while (true) {
+        socklen_t len = sizeof(from);
         const auto received = ::recvfrom(socket.get(),
                                          buffer,
                                          sizeof(buffer),
@@ -148,13 +154,19 @@ void receive_datagrams(UdpSocket& socket, ViewerState& state, std::uint64_t now_
                                          reinterpret_cast<sockaddr*>(&from),
                                          &len);
         if (received < 0) {
+            if (errno == EINTR) {
+                continue;
+            }
             break;
         }
+        if (!same_endpoint(from, make_server_addr(options))) {
+            continue;
+        }
         const std::string wire(buffer, buffer + received);
-        state.last_datagram_received_ms = now_ms;
         if (wire.rfind("kind=world_snapshot", 0) == 0) {
             try {
                 apply_snapshot(state, icss::protocol::parse_snapshot(wire));
+                state.last_datagram_received_ms = now_ms;
             } catch (const std::exception&) {
                 continue;
             }
@@ -163,6 +175,7 @@ void receive_datagrams(UdpSocket& socket, ViewerState& state, std::uint64_t now_
         if (wire.rfind("kind=telemetry", 0) == 0) {
             try {
                 apply_telemetry(state, icss::protocol::parse_telemetry(wire));
+                state.last_datagram_received_ms = now_ms;
             } catch (const std::exception&) {
                 continue;
             }
@@ -253,7 +266,7 @@ bool TcpSocket::connected() const { return false; }
 int TcpSocket::fd() const { return -1; }
 void send_viewer_join(UdpSocket&, const ViewerOptions&, std::uint64_t&) {}
 void send_viewer_heartbeat(UdpSocket&, const ViewerOptions&, std::uint64_t&, ViewerState&) {}
-void receive_datagrams(UdpSocket&, ViewerState&, std::uint64_t) {}
+void receive_datagrams(UdpSocket&, const ViewerOptions&, ViewerState&, std::uint64_t) {}
 void ensure_control_connected(TcpSocket&, ViewerState&, const ViewerOptions&, FrameMode) {}
 void send_frame(TcpSocket&, FrameMode, std::string_view, std::string_view) {}
 icss::protocol::FramedMessage recv_frame(TcpSocket&, FrameMode) { throw std::runtime_error("gui networking unsupported on this platform"); }

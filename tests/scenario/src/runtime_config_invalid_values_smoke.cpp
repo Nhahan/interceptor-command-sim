@@ -90,5 +90,15 @@ int main() {
     }
     assert(rejected_telemetry);
 
+    config = default_runtime_config(fs::path{ICSS_REPO_ROOT});
+    config.scenario.launch_angle_deg = 91;
+    bool rejected_launch_angle = false;
+    try {
+        validate_runtime_config(config);
+    } catch (const std::runtime_error& error) {
+        rejected_launch_angle = std::string(error.what()).find("scenario.launch_angle_deg") != std::string::npos;
+    }
+    assert(rejected_launch_angle);
+
     return 0;
 }

@@ -9,6 +9,12 @@
 namespace icss::core {
 
 void SimulationSession::advance_tick() {
+    if (phase_ == SessionPhase::Judged) {
+        ++tick_;
+        archive_session();
+        return;
+    }
+
     ++tick_;
 
     if (target_.active) {
@@ -29,18 +35,20 @@ void SimulationSession::advance_tick() {
     }
 
     if (phase_ == SessionPhase::Engaging && asset_.active) {
-        const auto to_target = detail::subtract(target_world_, asset_world_);
-        const auto distance = detail::length(to_target);
         const auto interceptor_max_speed = static_cast<float>(scenario_.interceptor_speed_per_tick);
-        const auto interceptor_accel = std::max(1.0F, interceptor_max_speed * 0.28F);
-        const auto tti_guess = distance / std::max(0.1F, interceptor_max_speed);
-        const auto predicted_intercept = detail::add(target_world_, detail::scale(target_velocity_world_, tti_guess));
-        const auto desired_velocity = detail::scale(detail::normalize(detail::subtract(predicted_intercept, asset_world_)), interceptor_max_speed);
-        const auto velocity_error = detail::subtract(desired_velocity, asset_velocity_world_);
-        const auto accel_step = detail::scale(detail::normalize(velocity_error), std::min(interceptor_accel, detail::length(velocity_error)));
-        asset_velocity_world_ = detail::add(asset_velocity_world_, accel_step);
+        if (track_.active) {
+            const auto to_target = detail::subtract(target_world_, asset_world_);
+            const auto distance = detail::length(to_target);
+            const auto interceptor_accel = std::max(1.0F, interceptor_max_speed * 0.28F);
+            const auto tti_guess = distance / std::max(0.1F, interceptor_max_speed);
+            const auto predicted_intercept = detail::add(target_world_, detail::scale(target_velocity_world_, tti_guess));
+            const auto desired_velocity = detail::scale(detail::normalize(detail::subtract(predicted_intercept, asset_world_)), interceptor_max_speed);
+            const auto velocity_error = detail::subtract(desired_velocity, asset_velocity_world_);
+            const auto accel_step = detail::scale(detail::normalize(velocity_error), std::min(interceptor_accel, detail::length(velocity_error)));
+            asset_velocity_world_ = detail::add(asset_velocity_world_, accel_step);
+        }
         const auto speed = detail::length(asset_velocity_world_);
-        if (speed > interceptor_max_speed) {
+        if (speed > interceptor_max_speed && speed > 0.0F) {
             asset_velocity_world_ = detail::scale(detail::normalize(asset_velocity_world_), interceptor_max_speed);
         }
         asset_world_ = detail::add(asset_world_, asset_velocity_world_);
@@ -55,7 +63,7 @@ void SimulationSession::advance_tick() {
             && (command_status_ == CommandLifecycle::Accepted
                 || command_status_ == CommandLifecycle::Executing
                 || command_status_ == CommandLifecycle::Completed);
-        if (engagement_context) {
+        if (engagement_context && track_.active) {
             const auto los = detail::subtract(target_world_, asset_world_);
             off_boresight_deg_ = std::abs(detail::normalize_angle_deg(detail::heading_deg(los) - detail::heading_deg(asset_velocity_world_)));
             seeker_lock_ = detail::length(los) > 0.0F && off_boresight_deg_ <= static_cast<float>(scenario_.seeker_fov_deg);
@@ -73,6 +81,12 @@ void SimulationSession::advance_tick() {
             judgment_.code = JudgmentCode::InterceptSuccess;
             judgment_.summary = "authoritative intercept judgment complete";
             phase_ = SessionPhase::Judged;
+            target_.active = false;
+            track_.active = false;
+            target_velocity_world_ = {0.0F, 0.0F};
+            asset_velocity_world_ = {0.0F, 0.0F};
+            seeker_lock_ = false;
+            off_boresight_deg_ = 0.0F;
             asset_status_ = AssetStatus::Complete;
             command_status_ = CommandLifecycle::Completed;
             engagement_started_tick_.reset();
@@ -80,7 +94,7 @@ void SimulationSession::advance_tick() {
                        "simulation_server",
                        {asset_.id, target_.id},
                        "Judgment produced",
-                       "Server-authoritative judgment marked the intercept attempt as successful.");
+                       "Server-authoritative judgment marked the intercept attempt as successful and the target as intercepted.");
         } else if (engagement_ticks >= static_cast<std::uint64_t>(scenario_.engagement_timeout_ticks)) {
             judgment_.ready = true;
             judgment_.code = JudgmentCode::TimeoutObserved;

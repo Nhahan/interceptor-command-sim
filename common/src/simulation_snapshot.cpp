@@ -23,7 +23,7 @@ void SimulationSession::record_snapshot(float packet_loss_pct) {
     auto predicted_valid = false;
     auto seeker_lock = false;
     auto off_boresight = 0.0F;
-    if (engagement_context) {
+    if (engagement_context && track_.active) {
         const auto relative = detail::subtract(target_world_, asset_world_);
         const auto distance = detail::length(relative);
         const auto max_speed = std::max(0.1F, static_cast<float>(scenario_.interceptor_speed_per_tick));
@@ -65,6 +65,7 @@ void SimulationSession::record_snapshot(float packet_loss_pct) {
         judgment_,
         viewer_connection,
         {tick_, static_cast<std::uint32_t>((telemetry_interval_ms_ / 10) + tick_rate_hz_ + static_cast<int>(tick_)), packet_loss_pct, timestamp},
+        static_cast<float>(scenario_.launch_angle_deg),
     });
     if (viewer_connection == ConnectionState::Reconnected) {
         tactical_viewer_.connection = ConnectionState::Connected;

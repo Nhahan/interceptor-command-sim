@@ -24,7 +24,7 @@ int main() {
     const auto parsed_leave = parse_session_leave(leave_wire);
     assert(parsed_leave.reason == "operator requested leave");
 
-    const ScenarioStartPayload start_payload {{1001U, 101U, 3U}, "basic_intercept_training", 576, 384, 80, 300, 5, -3, 160, 60, 32, 24, 60, 45};
+    const ScenarioStartPayload start_payload {{1001U, 101U, 3U}, "basic_intercept_training", 576, 384, 80, 300, 5, -3, 0, 0, 32, 24, 60, 45, 37};
     const auto start_wire = serialize(start_payload);
     const auto parsed_start = parse_scenario_start(start_wire);
     assert(parsed_start.scenario_name == "basic_intercept_training");
@@ -32,6 +32,7 @@ int main() {
     assert(parsed_start.target_velocity_y == -3);
     assert(parsed_start.interceptor_speed_per_tick == 32);
     assert(parsed_start.seeker_fov_deg == 45);
+    assert(parsed_start.launch_angle_deg == 37);
 
     const ScenarioStopPayload stop_payload {{1001U, 101U, 4U}, "scenario stop requested"};
     const auto stop_wire = serialize(stop_payload);
@@ -54,6 +55,15 @@ int main() {
     assert(parsed_command.envelope.sender_id == 101U);
     assert(parsed_command.target_id == "target-alpha");
     assert(parsed_command.asset_id == "asset-interceptor");
+
+    const TrackReleasePayload track_release {
+        {1001U, 101U, 8U},
+        "target-alpha",
+    };
+    const auto track_release_wire = serialize(track_release);
+    const auto parsed_track_release = parse_track_release(track_release_wire);
+    assert(parsed_track_release.envelope.sequence == 8U);
+    assert(parsed_track_release.target_id == "target-alpha");
 
     const TelemetryPayload telemetry {
         {1001U, 1U, 8U},
@@ -111,7 +121,6 @@ int main() {
         12.5F,
         1.8F,
         true,
-        82,
         4.5F,
         6.5F,
         4.8F,
@@ -119,6 +128,7 @@ int main() {
         true,
         4.7F,
         6.4F,
+        2.6F,
         18.5F,
         0,
         1,
@@ -126,6 +136,7 @@ int main() {
         "accepted",
         false,
         "pending",
+        37.0F,
     };
     const auto snapshot_wire = serialize(snapshot);
     const auto parsed_snapshot = parse_snapshot(snapshot_wire);
@@ -148,13 +159,14 @@ int main() {
     assert(parsed_snapshot.off_boresight_deg == 9.0F);
     assert(parsed_snapshot.predicted_intercept_valid);
     assert(parsed_snapshot.time_to_intercept_s > 1.0F);
-    assert(parsed_snapshot.track_confidence_pct == 82);
     assert(parsed_snapshot.track_estimated_x > 4.0F);
     assert(parsed_snapshot.track_measurement_valid);
+    assert(parsed_snapshot.track_measurement_residual_distance > 2.0F);
     assert(parsed_snapshot.track_covariance_trace > 10.0F);
     assert(parsed_snapshot.asset_status == "ready");
     assert(parsed_snapshot.command_status == "accepted");
     assert(parsed_snapshot.judgment_code == "pending");
+    assert(parsed_snapshot.launch_angle_deg == 37.0F);
 
     const CommandAckPayload ack {
         {1001U, 1U, 10U},

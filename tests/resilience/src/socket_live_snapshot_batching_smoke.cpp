@@ -37,8 +37,8 @@ std::vector<std::string> recv_udp_messages(int fd, std::size_t max_messages) {
     std::vector<std::string> messages;
     char buffer[4096];
     sockaddr_in from {};
-    socklen_t len = sizeof(from);
     for (std::size_t i = 0; i < max_messages; ++i) {
+        socklen_t len = sizeof(from);
         const auto received = ::recvfrom(fd, buffer, sizeof(buffer), 0, reinterpret_cast<sockaddr*>(&from), &len);
         if (received <= 0) break;
         messages.emplace_back(buffer, buffer + received);

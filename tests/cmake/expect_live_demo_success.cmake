@@ -12,7 +12,7 @@ file(MAKE_DIRECTORY "${runtime_root}/configs")
 file(COPY "${REPO_ROOT}/configs/server.example.yaml" DESTINATION "${runtime_root}/configs")
 file(COPY "${REPO_ROOT}/configs/scenario.example.yaml" DESTINATION "${runtime_root}/configs")
 file(COPY "${REPO_ROOT}/configs/logging.example.yaml" DESTINATION "${runtime_root}/configs")
-file(WRITE "${runtime_root}/configs/scenario.example.yaml" "scenario:\n  name: basic_intercept_training\n  description: live demo timeout verification\nentities:\n  targets: 1\n  assets: 1\nrules:\n  enable_replay: true\n  telemetry_interval_ms: 200\n  world_width: 576\n  world_height: 384\n  target_start_x: 80\n  target_start_y: 300\n  target_velocity_x: 9\n  target_velocity_y: -6\n  interceptor_start_x: 160\n  interceptor_start_y: 60\n  interceptor_speed_per_tick: 8\n  intercept_radius: 12\n  engagement_timeout_ticks: 10\n  seeker_fov_deg: 45\n")
+file(WRITE "${runtime_root}/configs/scenario.example.yaml" "scenario:\n  name: basic_intercept_training\n  description: live demo timeout verification\nentities:\n  targets: 1\n  assets: 1\nrules:\n  enable_replay: true\n  telemetry_interval_ms: 200\n  world_width: 576\n  world_height: 384\n  target_start_x: 80\n  target_start_y: 300\n  target_velocity_x: 9\n  target_velocity_y: -6\n  interceptor_start_x: 0\n  interceptor_start_y: 0\n  interceptor_speed_per_tick: 8\n  intercept_radius: 12\n  engagement_timeout_ticks: 10\n  seeker_fov_deg: 45\n  launch_angle_deg: 45\n")
 
 execute_process(
     COMMAND /bin/bash "${DEMO_SCRIPT}"
@@ -44,7 +44,8 @@ endif()
 
 foreach(expected
         "command_issue: accepted"
-        "summary.judgment_code=timeout_observed"
+        "guided.summary.judgment_code=timeout_observed"
+        "straight.available=false"
         "viewer_state.received_snapshot=true"
         "viewer_state.received_telemetry=true"
         "demo_completed=true")

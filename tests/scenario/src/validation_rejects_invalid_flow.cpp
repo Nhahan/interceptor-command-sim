@@ -27,9 +27,32 @@ int main() {
 
     const auto track = session.request_track();
     assert(track.accepted);
+    const auto release_from_tracking = session.release_track();
+    assert(release_from_tracking.accepted);
+    assert(session.phase() == SessionPhase::Detecting);
+    const auto retrack = session.request_track();
+    assert(retrack.accepted);
+    const auto command_status_before_transport_reject = session.latest_snapshot().command_status;
+    const auto judgment_before_transport_reject = session.latest_snapshot().judgment.code;
+    const auto transport_reject = session.record_transport_rejection("Viewer registration rejected", "second viewer blocked");
+    assert(!transport_reject.accepted);
+    assert(session.latest_snapshot().command_status == command_status_before_transport_reject);
+    assert(session.latest_snapshot().judgment.code == judgment_before_transport_reject);
 
     const auto asset = session.activate_asset();
     assert(asset.accepted);
+    const auto release_from_asset_ready = session.release_track();
+    assert(release_from_asset_ready.accepted);
+    assert(session.phase() == SessionPhase::AssetReady);
+    assert(!session.latest_snapshot().track.active);
+    const auto reenable_from_asset_ready = session.request_track();
+    assert(reenable_from_asset_ready.accepted);
+    assert(session.phase() == SessionPhase::AssetReady);
+
+    const auto command = session.issue_command();
+    assert(command.accepted);
+    const auto post_command_track_release = session.release_track();
+    assert(!post_command_track_release.accepted);
 
     session.archive_session();
 
@@ -43,10 +66,14 @@ int main() {
     assert(!post_archive_command.accepted);
 
     const auto& pre_reset_events = session.events();
+    const auto pre_archive_event_count = pre_reset_events.size();
     const auto rejected_count = std::count_if(pre_reset_events.begin(), pre_reset_events.end(), [](const EventRecord& event) {
         return event.header.event_type == EventType::CommandRejected;
     });
     assert(rejected_count >= 4);
+
+    session.archive_session();
+    assert(session.events().size() == pre_archive_event_count);
 
     const auto reset = session.reset_session("reset after archive");
     assert(reset.accepted);

@@ -16,23 +16,23 @@ bool rects_overlap(const SDL_Rect& lhs, const SDL_Rect& rhs) {
 std::vector<Button> make_live_control_buttons(const SDL_Rect& control_panel) {
     const int row1_y = control_panel.y + 74;
     const int row2_y = control_panel.y + 108;
+    const int row3_y = control_panel.y + 142;
     return {
-        {"Start", "Start", {control_panel.x + 12, row1_y, 82, 28}},
-        {"Track", "Track", {control_panel.x + 102, row1_y, 82, 28}},
-        {"Activate", "Activate", {control_panel.x + 192, row1_y, 96, 28}},
-        {"Command", "Command", {control_panel.x + 12, row2_y, 96, 28}},
-        {"Stop", "Stop", {control_panel.x + 116, row2_y, 72, 28}},
-        {"Reset", "Reset", {control_panel.x + 196, row2_y, 82, 28}},
-        {"Review", "Review", {control_panel.x + 286, row2_y, 72, 28}},
+        {"Guidance", "Guidance", {control_panel.x + control_panel.w - 140, row1_y, 128, 28}},
+        {"Start", "Start", {control_panel.x + 12, row2_y, 82, 28}},
+        {"Activate", "Activate", {control_panel.x + 102, row2_y, 96, 28}},
+        {"Command", "Command", {control_panel.x + 206, row2_y, 96, 28}},
+        {"Reset", "Reset", {control_panel.x + 12, row3_y, 82, 28}},
+        {"Review", "Review", {control_panel.x + 102, row3_y, 82, 28}},
     };
 }
 
 std::vector<Button> make_setup_buttons(const SDL_Rect& setup_panel) {
     const int box_w = setup_panel.w - 24;
-    const int row1_y = setup_panel.y + 62;
-    const int row2_y = setup_panel.y + 92;
-    const int row3_y = setup_panel.y + 122;
-    const int row4_y = setup_panel.y + 152;
+    const int row1_y = setup_panel.y + 60;
+    const int row2_y = setup_panel.y + 88;
+    const int row3_y = setup_panel.y + 116;
+    const int row4_y = setup_panel.y + 144;
     const int button_w = 30;
     const int button_h = 20;
     const int button_gap = 4;
@@ -58,11 +58,14 @@ std::vector<Button> make_setup_buttons(const SDL_Rect& setup_panel) {
     std::vector<Button> buttons;
     const auto target_pos = row_buttons(row1_y, "target_pos_x_dec", "target_pos_x_inc", "target_pos_y_dec", "target_pos_y_inc", "-X", "+X", "-Y", "+Y");
     const auto target_vel = row_buttons(row2_y, "target_vel_x_dec", "target_vel_x_inc", "target_vel_y_dec", "target_vel_y_inc", "-X", "+X", "-Y", "+Y");
-    const auto asset_pos = row_buttons(row3_y, "asset_pos_x_dec", "asset_pos_x_inc", "asset_pos_y_dec", "asset_pos_y_inc", "-X", "+X", "-Y", "+Y");
+    const auto angle_buttons = std::array<Button, 2>{
+        Button{"launch_angle_dec", "-A", {setup_panel.x + setup_panel.w - 84, row3_y + 4, button_w, button_h}},
+        Button{"launch_angle_inc", "+A", {setup_panel.x + setup_panel.w - 50, row3_y + 4, button_w, button_h}},
+    };
     const auto asset_dyn = row_buttons(row4_y, "asset_speed_dec", "asset_speed_inc", "timeout_dec", "timeout_inc", "-S", "+S", "-T", "+T");
     buttons.insert(buttons.end(), target_pos.begin(), target_pos.end());
     buttons.insert(buttons.end(), target_vel.begin(), target_vel.end());
-    buttons.insert(buttons.end(), asset_pos.begin(), asset_pos.end());
+    buttons.insert(buttons.end(), angle_buttons.begin(), angle_buttons.end());
     buttons.insert(buttons.end(), asset_dyn.begin(), asset_dyn.end());
     return buttons;
 }
@@ -75,12 +78,12 @@ GuiLayout build_layout(const ViewerOptions& options) {
     constexpr int header_y = 18;
     constexpr int header_h = 64;
     constexpr int gap_after_header = 36;
-    constexpr int gap_after_map = 18;
+    constexpr int gap_after_map = 30;
     constexpr int gap_before_event_panel = 18;
     constexpr int grid_width = 24;
     constexpr int grid_height = 16;
     constexpr int cell_px = 24;
-    constexpr int entity_panel_h = 98;
+    constexpr int entity_panel_h = 118;
     constexpr int right_panel_gap = 12;
     constexpr int left_panel_w = 330;
 
@@ -91,7 +94,7 @@ GuiLayout build_layout(const ViewerOptions& options) {
     layout.map_rect = {margin, content_y, grid_width * cell_px, grid_height * cell_px};
     layout.entity_panel = {margin, layout.map_rect.y + layout.map_rect.h + gap_after_map, layout.map_rect.w, entity_panel_h};
     layout.panel_x = layout.map_rect.x + layout.map_rect.w + margin;
-    const int stacked_column_total_h = layout.map_rect.h + layout.entity_panel.h;
+    const int stacked_column_total_h = layout.map_rect.h + gap_after_map + layout.entity_panel.h - right_panel_gap;
     const int panel_h = stacked_column_total_h / 2;
     layout.phase_panel = {layout.panel_x, content_y, left_panel_w, panel_h};
     const int right_panel_x = layout.panel_x + left_panel_w + right_panel_gap;
@@ -104,7 +107,10 @@ GuiLayout build_layout(const ViewerOptions& options) {
     const int bottom_panel_y = upper_panel_bottom + gap_before_event_panel;
     const int bottom_panel_h = options.height - bottom_panel_y - margin;
     layout.setup_panel = {right_panel_x, bottom_panel_y, layout.control_panel.w, bottom_panel_h};
-    layout.event_panel = {margin, bottom_panel_y, layout.setup_panel.x - (margin * 2), bottom_panel_h};
+    layout.event_panel = {margin,
+                          bottom_panel_y,
+                          (layout.phase_panel.x + layout.phase_panel.w) - margin,
+                          bottom_panel_h};
     layout.buttons = make_live_control_buttons(layout.control_panel);
     const auto setup_buttons = make_setup_buttons(layout.setup_panel);
     layout.buttons.insert(layout.buttons.end(), setup_buttons.begin(), setup_buttons.end());

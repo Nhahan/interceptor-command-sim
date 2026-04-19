@@ -25,6 +25,7 @@ public:
     CommandResult reset_session(std::string reason);
     void configure_scenario(ScenarioConfig scenario);
     CommandResult request_track();
+    CommandResult release_track();
     CommandResult activate_asset();
     CommandResult issue_command();
     CommandResult record_transport_rejection(std::string summary,

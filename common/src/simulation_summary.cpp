@@ -15,6 +15,37 @@ constexpr std::string_view kSessionSummarySchemaVersion = "icss-session-summary-
 constexpr std::string_view kSessionSummaryJsonSchemaVersion = "icss-session-summary-json-v1";
 constexpr std::string_view kSampleOutputSchemaVersion = "icss-sample-output-v1";
 
+bool event_guidance_active(const EventRecord& event) {
+    if (event.summary.find("disabled") != std::string::npos
+        || event.details.find("disabled") != std::string::npos
+        || event.summary.find("straight") != std::string::npos
+        || event.details.find("straight") != std::string::npos) {
+        return false;
+    }
+    return event.summary.find("enabled") != std::string::npos
+        || event.details.find("enabled") != std::string::npos
+        || event.summary.find("guided") != std::string::npos
+        || event.details.find("guided") != std::string::npos;
+}
+
+bool artifact_guidance_active(const std::vector<EventRecord>& events, const Snapshot& snapshot) {
+    for (auto it = events.rbegin(); it != events.rend(); ++it) {
+        if (it->header.event_type == protocol::EventType::CommandAccepted
+            || it->header.event_type == protocol::EventType::TrackUpdated) {
+            return event_guidance_active(*it);
+        }
+    }
+    return snapshot.track.active;
+}
+
+const char* guidance_state_label(bool guidance_active) {
+    return guidance_active ? "on" : "off";
+}
+
+const char* launch_mode_label(bool guidance_active) {
+    return guidance_active ? "guided" : "straight";
+}
+
 }  // namespace
 
 SessionSummary SimulationSession::build_summary() const {
@@ -34,8 +65,12 @@ SessionSummary SimulationSession::build_summary() const {
 }
 
 void SimulationSession::write_aar_artifacts(const std::filesystem::path& output_dir) const {
-    std::filesystem::create_directories(output_dir);
+    if (!output_dir.empty()) {
+        std::filesystem::create_directories(output_dir);
+    }
     const auto summary = build_summary();
+    const auto snapshot = latest_snapshot();
+    const bool guidance_active = artifact_guidance_active(events_, snapshot);
 
     std::ofstream timeline(output_dir / "replay-timeline.json");
     timeline << "{\n";
@@ -45,6 +80,9 @@ void SimulationSession::write_aar_artifacts(const std::filesystem::path& output_
     timeline << "  \"snapshot_count\": " << summary.snapshot_count << ",\n";
     timeline << "  \"event_count\": " << summary.event_count << ",\n";
     timeline << "  \"judgment_code\": \"" << to_string(summary.judgment_code) << "\",\n";
+    timeline << "  \"guidance_state\": \"" << guidance_state_label(guidance_active) << "\",\n";
+    timeline << "  \"launch_mode\": \"" << launch_mode_label(guidance_active) << "\",\n";
+    timeline << "  \"launch_angle_deg\": " << static_cast<int>(snapshot.launch_angle_deg) << ",\n";
     timeline << "  \"resilience_case\": \"" << detail::escape_json(summary.resilience_case) << "\",\n";
     timeline << "  \"events\": [\n";
     for (std::size_t index = 0; index < events_.size(); ++index) {
@@ -69,7 +107,6 @@ void SimulationSession::write_aar_artifacts(const std::filesystem::path& output_
     timeline << "  ]\n";
     timeline << "}\n";
 
-    const auto snapshot = latest_snapshot();
     const auto recent_events = detail::recent_events_for_artifact(events_);
 
     std::ofstream summary_json(output_dir / "session-summary.json");
@@ -83,6 +120,9 @@ void SimulationSession::write_aar_artifacts(const std::filesystem::path& output_
     summary_json << "  \"viewer_connection\": \"" << to_string(summary.viewer_connection) << "\",\n";
     summary_json << "  \"judgment_ready\": " << (summary.judgment_ready ? "true" : "false") << ",\n";
     summary_json << "  \"judgment_code\": \"" << to_string(summary.judgment_code) << "\",\n";
+    summary_json << "  \"guidance_state\": \"" << guidance_state_label(guidance_active) << "\",\n";
+    summary_json << "  \"launch_mode\": \"" << launch_mode_label(guidance_active) << "\",\n";
+    summary_json << "  \"launch_angle_deg\": " << static_cast<int>(snapshot.launch_angle_deg) << ",\n";
     summary_json << "  \"last_event_type\": \"" << (summary.has_last_event ? protocol::to_string(summary.last_event_type) : "none") << "\",\n";
     summary_json << "  \"resilience_case\": \"" << detail::escape_json(summary.resilience_case) << "\",\n";
     summary_json << "  \"latest_snapshot_sequence\": " << snapshot.header.snapshot_sequence << ",\n";
@@ -112,6 +152,9 @@ void SimulationSession::write_aar_artifacts(const std::filesystem::path& output_
     summary_file << "- viewer_connection: " << to_string(summary.viewer_connection) << "\n";
     summary_file << "- judgment_ready: " << (summary.judgment_ready ? "true" : "false") << "\n";
     summary_file << "- judgment_code: " << to_string(summary.judgment_code) << "\n";
+    summary_file << "- guidance_state: " << guidance_state_label(guidance_active) << "\n";
+    summary_file << "- launch_mode: " << launch_mode_label(guidance_active) << "\n";
+    summary_file << "- launch_angle_deg: " << static_cast<int>(snapshot.launch_angle_deg) << "\n";
     summary_file << "- last_event_type: " << (summary.has_last_event ? protocol::to_string(summary.last_event_type) : "none") << "\n";
     summary_file << "- resilience_case: " << summary.resilience_case << "\n";
     summary_file << "- latest_snapshot_sequence: " << snapshot.header.snapshot_sequence << "\n";
@@ -125,19 +168,26 @@ void SimulationSession::write_aar_artifacts(const std::filesystem::path& output_
 }
 
 void SimulationSession::write_example_output(const std::filesystem::path& output_file) const {
-    std::filesystem::create_directories(output_file.parent_path());
+    const auto parent = output_file.parent_path();
+    if (!parent.empty()) {
+        std::filesystem::create_directories(parent);
+    }
     std::ofstream out(output_file);
 
     const auto summary = build_summary();
     const auto snapshot = latest_snapshot();
     const auto recent_events = detail::recent_events_for_artifact(events_);
     const auto cursor = view::make_replay_cursor(events_.size(), events_.empty() ? 0 : events_.size() - 1);
+    const bool guidance_active = artifact_guidance_active(events_, snapshot);
     out << "# Sample Output\n\n";
     out << "- schema_version: " << kSampleOutputSchemaVersion << "\n";
     out << "- session_id: " << summary.session_id << "\n";
     out << "- cursor_index: " << cursor.index << "/" << cursor.total << "\n";
     out << "- command_console_connection: " << to_string(summary.command_console_connection) << "\n";
     out << "- viewer_connection: " << to_string(summary.viewer_connection) << "\n";
+    out << "- guidance_state: " << guidance_state_label(guidance_active) << "\n";
+    out << "- launch_mode: " << launch_mode_label(guidance_active) << "\n";
+    out << "- launch_angle_deg: " << static_cast<int>(snapshot.launch_angle_deg) << "\n";
     out << "- latest_freshness: " << view::freshness_label(snapshot) << "\n";
     out << "- latest_snapshot_sequence: " << snapshot.header.snapshot_sequence << "\n";
     out << "- last_event_type: " << (summary.has_last_event ? protocol::to_string(summary.last_event_type) : "none") << "\n";

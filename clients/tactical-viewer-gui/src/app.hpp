@@ -27,6 +27,9 @@ struct ViewerOptions {
     std::uint64_t duration_ms {0};
     std::uint64_t heartbeat_interval_ms {100};
     std::filesystem::path repo_root {std::filesystem::current_path()};
+    float camera_zoom {1.0F};
+    float camera_pan_x {0.0F};
+    float camera_pan_y {0.0F};
     int width {1360};
     int height {860};
     bool hidden {false};
@@ -36,6 +39,7 @@ struct ViewerOptions {
     std::vector<std::string> auto_controls;
     std::filesystem::path dump_state_path;
     std::filesystem::path dump_frame_path;
+    std::filesystem::path dump_golden_state_path;
     std::filesystem::path font_path;
 };
 
@@ -45,6 +49,7 @@ struct ControlState {
     std::string last_label {"idle"};
     std::string last_message {"control panel idle"};
     std::uint64_t sequence {1};
+    std::uint64_t start_seed {1};
     std::size_t auto_step {0};
     std::uint64_t auto_last_action_ms {0};
 };
@@ -74,12 +79,26 @@ struct ViewerState {
     std::uint64_t last_datagram_received_ms {0};
     std::uint64_t last_join_attempt_ms {0};
     std::uint64_t last_server_event_tick {0};
+    std::size_t timeline_scroll_lines {0};
     std::string last_server_event_type {"none"};
     std::string last_server_event_summary {"no server event"};
-    std::deque<icss::core::Vec2> target_history;
-    std::deque<icss::core::Vec2> asset_history;
+    std::deque<icss::core::Vec2f> target_history;
+    std::deque<icss::core::Vec2f> asset_history;
+    bool effective_guidance_active {false};
     ControlState control;
     ReviewState review;
+};
+
+struct ViewportTransform {
+    SDL_FRect screen_bounds {};
+    int world_width {1};
+    int world_height {1};
+    float visible_min_x {0.0F};
+    float visible_min_y {0.0F};
+    float visible_max_x {0.0F};
+    float visible_max_y {0.0F};
+    float pixels_per_world_x {1.0F};
+    float pixels_per_world_y {1.0F};
 };
 
 struct Button {
@@ -123,6 +142,7 @@ SDL_Color authoritative_badge_color(const ViewerState& state);
 bool review_available(const ViewerState& state);
 std::string review_panel_text(const ViewerState& state);
 std::string terminal_timeline_text(const ViewerState& state, bool review_mode);
+std::vector<std::string> terminal_timeline_lines(const ViewerState& state, bool review_mode);
 std::string control_timeline_message(std::string_view label, bool ok, std::string_view message);
 std::string latest_timeline_entry(const ViewerState& state);
 std::string telemetry_event_status(const ViewerState& state);
@@ -133,6 +153,8 @@ icss::core::ScenarioConfig default_viewer_scenario(const std::filesystem::path& 
 bool apply_parameter_action(ViewerState& state, std::string_view action);
 bool is_live_control_action(std::string_view action);
 std::string recommended_control_label(const ViewerState& state);
+void sync_preview_from_scenario(ViewerState& state, const icss::core::ScenarioConfig& scenario);
+icss::core::ScenarioConfig randomize_start_scenario(const icss::core::ScenarioConfig& base, std::uint64_t seed);
 bool target_motion_visual_visible(const ViewerState& state);
 bool asset_motion_visual_visible(const ViewerState& state);
 bool engagement_visual_visible(const ViewerState& state);
@@ -172,7 +194,7 @@ private:
 FrameMode parse_frame_mode(std::string_view value);
 void send_viewer_join(UdpSocket& socket, const ViewerOptions& options, std::uint64_t& sequence);
 void send_viewer_heartbeat(UdpSocket& socket, const ViewerOptions& options, std::uint64_t& sequence, ViewerState& state);
-void receive_datagrams(UdpSocket& socket, ViewerState& state, std::uint64_t now_ms);
+void receive_datagrams(UdpSocket& socket, const ViewerOptions& options, ViewerState& state, std::uint64_t now_ms);
 void send_frame(TcpSocket& socket, FrameMode mode, std::string_view kind, std::string_view payload);
 icss::protocol::FramedMessage recv_frame(TcpSocket& socket, FrameMode mode);
 void ensure_control_connected(TcpSocket& socket, ViewerState& state, const ViewerOptions& options, FrameMode mode);
@@ -199,6 +221,7 @@ void render_gui(SDL_Renderer* renderer,
                 const ViewerState& state,
                 const ViewerOptions& options);
 void write_dump_frame(SDL_Renderer* renderer, const std::filesystem::path& path);
-void write_dump_state(const std::filesystem::path& path, const ViewerState& state);
+void write_dump_state(const std::filesystem::path& path, const ViewerState& state, const ViewerOptions& options);
+void write_dump_golden_state(const std::filesystem::path& path, const ViewerState& state);
 
 }  // namespace icss::viewer_gui

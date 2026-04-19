@@ -101,10 +101,13 @@ int main() {
 
     SocketGuard tcp_client(::socket(AF_INET, SOCK_STREAM, 0));
     SocketGuard udp_viewer(::socket(AF_INET, SOCK_DGRAM, 0));
+    SocketGuard udp_spoof(::socket(AF_INET, SOCK_DGRAM, 0));
     assert(tcp_client.fd >= 0);
     assert(udp_viewer.fd >= 0);
+    assert(udp_spoof.fd >= 0);
     set_timeout(tcp_client.fd);
     set_timeout(udp_viewer.fd);
+    set_timeout(udp_spoof.fd);
 
     sockaddr_in tcp_addr {};
     tcp_addr.sin_family = AF_INET;
@@ -117,6 +120,7 @@ int main() {
     udp_bind_addr.sin_port = htons(0);
     assert(::inet_pton(AF_INET, config.server.bind_host.c_str(), &udp_bind_addr.sin_addr) == 1);
     assert(::bind(udp_viewer.fd, reinterpret_cast<sockaddr*>(&udp_bind_addr), sizeof(udp_bind_addr)) == 0);
+    assert(::bind(udp_spoof.fd, reinterpret_cast<sockaddr*>(&udp_bind_addr), sizeof(udp_bind_addr)) == 0);
 
     sockaddr_in udp_server_addr {};
     udp_server_addr.sin_family = AF_INET;
@@ -137,6 +141,11 @@ int main() {
 
     const auto heartbeat = serialize(ViewerHeartbeatPayload{{1001U, 201U, 2U}, 1U});
     assert(::sendto(udp_viewer.fd, heartbeat.data(), heartbeat.size(), 0,
+                    reinterpret_cast<sockaddr*>(&udp_server_addr), sizeof(udp_server_addr)) >= 0);
+    live->poll_once();
+
+    const auto spoofed_heartbeat = serialize(ViewerHeartbeatPayload{{1001U, 201U, 3U}, 2U});
+    assert(::sendto(udp_spoof.fd, spoofed_heartbeat.data(), spoofed_heartbeat.size(), 0,
                     reinterpret_cast<sockaddr*>(&udp_server_addr), sizeof(udp_server_addr)) >= 0);
     live->poll_once();
 

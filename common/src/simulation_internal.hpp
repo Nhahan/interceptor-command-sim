@@ -22,8 +22,8 @@ float heading_deg(Vec2f value);
 float normalize_angle_deg(float value);
 float covariance_trace(Vec2f position_variance, Vec2f velocity_variance);
 Vec2f deterministic_noise(std::uint64_t tick);
+bool measurement_due(std::uint64_t tick);
 bool measurement_available(std::uint64_t tick);
-int confidence_from_covariance(float trace, std::uint32_t measurement_age_ticks, std::uint32_t missed_updates);
 std::string build_resilience_case(bool reconnect_exercised, bool timeout_exercised, bool packet_gap_exercised);
 
 }  // namespace icss::core::detail

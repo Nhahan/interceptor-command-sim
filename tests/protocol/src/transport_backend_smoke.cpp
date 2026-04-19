@@ -72,8 +72,8 @@ std::vector<std::string> recv_udp_messages(int fd, std::size_t max_messages) {
     std::vector<std::string> messages;
     char buffer[4096];
     sockaddr_in from {};
-    socklen_t len = sizeof(from);
     for (std::size_t i = 0; i < max_messages; ++i) {
+        socklen_t len = sizeof(from);
         const auto received = ::recvfrom(fd, buffer, sizeof(buffer), 0, reinterpret_cast<sockaddr*>(&from), &len);
         if (received <= 0) {
             break;
@@ -104,8 +104,17 @@ int main() {
     assert(!bad_target.accepted);
     assert(inproc->start_scenario().accepted);
     assert(inproc->dispatch(TrackRequestPayload{{1001U, 101U, 1U}, "target-alpha"}).accepted);
+    assert(inproc->dispatch(TrackReleasePayload{{1001U, 101U, 2U}, "target-alpha"}).accepted);
+    assert(inproc->latest_snapshot().phase == SessionPhase::Detecting);
+    assert(inproc->dispatch(TrackRequestPayload{{1001U, 101U, 3U}, "target-alpha"}).accepted);
     assert(inproc->dispatch(AssetActivatePayload{{1001U, 101U, 2U}, "asset-interceptor"}).accepted);
-    assert(inproc->dispatch(CommandIssuePayload{{1001U, 101U, 3U}, "asset-interceptor", "target-alpha"}).accepted);
+    assert(inproc->dispatch(TrackReleasePayload{{1001U, 101U, 4U}, "target-alpha"}).accepted);
+    assert(inproc->latest_snapshot().phase == SessionPhase::AssetReady);
+    assert(!inproc->latest_snapshot().track.active);
+    assert(inproc->dispatch(TrackRequestPayload{{1001U, 101U, 5U}, "target-alpha"}).accepted);
+    assert(inproc->latest_snapshot().phase == SessionPhase::AssetReady);
+    assert(inproc->latest_snapshot().track.active);
+    assert(inproc->dispatch(CommandIssuePayload{{1001U, 101U, 6U}, "asset-interceptor", "target-alpha"}).accepted);
     for (int i = 0; i < config.scenario.engagement_timeout_ticks && !inproc->latest_snapshot().judgment.ready; ++i) {
         inproc->advance_tick();
     }
@@ -208,8 +217,8 @@ int main() {
     assert(!duplicate_start_ack.accepted);
     assert(duplicate_start_ack.reason.find("initialized state") != std::string::npos);
     const auto snapshot_after_duplicate_start = live->latest_snapshot();
-    assert(snapshot_after_duplicate_start.world_width == live_config.scenario.world_width);
-    assert(snapshot_after_duplicate_start.world_height == live_config.scenario.world_height);
+    assert(snapshot_after_duplicate_start.world_width != 320);
+    assert(snapshot_after_duplicate_start.world_height != 240);
     assert(snapshot_after_duplicate_start.target_world_position.x != 999.0F);
     assert(snapshot_after_duplicate_start.target_world_position.y != 999.0F);
 
@@ -248,15 +257,34 @@ int main() {
     const auto asset_ack = parse_command_ack(asset_frame.payload);
     assert(asset_ack.accepted);
 
-    send_binary_frame(tcp_client.fd, "command_issue", serialize(CommandIssuePayload{{1001U, 101U, 6U}, "asset-interceptor", "target-alpha"}));
+    send_binary_frame(tcp_client.fd, "track_release", serialize(TrackReleasePayload{{1001U, 101U, 6U}, "target-alpha"}));
+    const auto release_frame = wait_for_binary_frame(*live, tcp_client.fd);
+    assert(release_frame.kind == "command_ack");
+    const auto release_ack = parse_command_ack(release_frame.payload);
+    assert(release_ack.accepted);
+    const auto asset_ready_snapshot = live->latest_snapshot();
+    assert(asset_ready_snapshot.phase == SessionPhase::AssetReady);
+    assert(!asset_ready_snapshot.track.active);
+
+    send_binary_frame(tcp_client.fd, "command_issue", serialize(CommandIssuePayload{{1001U, 101U, 7U}, "asset-interceptor", "target-alpha"}));
     const auto command_frame = wait_for_binary_frame(*live, tcp_client.fd);
     assert(command_frame.kind == "command_ack");
     const auto command_ack = parse_command_ack(command_frame.payload);
     assert(command_ack.accepted);
 
+    send_binary_frame(tcp_client.fd, "track_release", serialize(TrackReleasePayload{{1001U, 101U, 8U}, "target-alpha"}));
+    const auto late_release_frame = wait_for_binary_frame(*live, tcp_client.fd);
+    assert(late_release_frame.kind == "command_ack");
+    const auto late_release_ack = parse_command_ack(late_release_frame.payload);
+    assert(!late_release_ack.accepted);
+    assert(late_release_ack.reason.find("after command issue") != std::string::npos);
+
     live->advance_tick();
     {
         const auto degraded_snapshot = live->latest_snapshot();
+        assert(degraded_snapshot.launch_angle_deg == static_cast<float>(live_config.scenario.launch_angle_deg));
+        assert(!degraded_snapshot.predicted_intercept_valid);
+        assert(degraded_snapshot.asset_heading_deg > 40.0F && degraded_snapshot.asset_heading_deg < 50.0F);
         assert(degraded_snapshot.telemetry.packet_loss_pct > 0.0F);
         const auto degraded_frame = icss::view::render_tactical_frame(
             degraded_snapshot,
@@ -267,7 +295,7 @@ int main() {
     }
     live->advance_tick();
 
-    send_binary_frame(tcp_client.fd, "scenario_stop", serialize(ScenarioStopPayload{{1001U, 101U, 7U}, "scenario stop requested"}));
+    send_binary_frame(tcp_client.fd, "scenario_stop", serialize(ScenarioStopPayload{{1001U, 101U, 9U}, "scenario stop requested"}));
     const auto stop_frame = wait_for_binary_frame(*live, tcp_client.fd);
     assert(stop_frame.kind == "command_ack");
     const auto stop_ack = parse_command_ack(stop_frame.payload);

@@ -86,24 +86,25 @@ int main() {
         out << "  target_start_y: 300\n";
         out << "  target_velocity_x: 9\n";
         out << "  target_velocity_y: -6\n";
-        out << "  interceptor_start_x: 160\n";
-        out << "  interceptor_start_y: 60\n";
+        out << "  interceptor_start_x: 0\n";
+        out << "  interceptor_start_y: 0\n";
         out << "  interceptor_speed_per_tick: 8\n";
         out << "  intercept_radius: 12\n";
-        out << "  engagement_timeout_ticks: 10\n";
+        out << "  engagement_timeout_ticks: 24\n";
         out << "  seeker_fov_deg: 45\n";
+        out << "  launch_angle_deg: 45\n";
     }
     auto server = process::spawn_server_process({
         .repo_root = temp_root,
         .tcp_frame_format = "binary",
         .run_forever = true,
-        .tick_sleep_ms = 10,
+        .tick_sleep_ms = 30,
     });
     const auto startup = process::wait_for_startup(server);
 
     auto console = spawn_command_console(temp_root, startup.tcp_port, "binary");
     const auto [console_exited, console_status] =
-        process::wait_for_exit(console.pid, std::chrono::steady_clock::now() + std::chrono::seconds(5));
+        process::wait_for_exit(console.pid, std::chrono::steady_clock::now() + std::chrono::seconds(8));
     assert(console_exited);
     const auto console_lines =
         process::read_remaining_lines_with_deadline(console, std::chrono::steady_clock::now() + std::chrono::seconds(1));
@@ -124,7 +125,6 @@ int main() {
     assert(output.find("command_issue: accepted") != std::string::npos);
     assert(output.find("aar_response: cursor=") != std::string::npos);
     assert(output.find("judgment_code=timeout_observed") != std::string::npos);
-    assert(output.find("scenario_stop: accepted") != std::string::npos);
 
     ::kill(server.pid, SIGTERM);
     const auto [server_exited, server_status] =

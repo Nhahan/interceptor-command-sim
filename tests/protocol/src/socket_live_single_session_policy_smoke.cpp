@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cassert>
 #include <filesystem>
 #include <string>
@@ -123,8 +124,8 @@ std::vector<std::string> recv_udp_messages(int fd, std::size_t max_messages) {
     std::vector<std::string> messages;
     char buffer[4096];
     sockaddr_in from {};
-    socklen_t len = sizeof(from);
     for (std::size_t i = 0; i < max_messages; ++i) {
+        socklen_t len = sizeof(from);
         const auto received = ::recvfrom(fd, buffer, sizeof(buffer), 0, reinterpret_cast<sockaddr*>(&from), &len);
         if (received <= 0) {
             break;
@@ -179,6 +180,25 @@ int main() {
     const auto join_frame = wait_for_binary_frame(*live, command_client.fd);
     assert(join_frame.kind == "command_ack");
     assert(parse_command_ack(join_frame.payload).accepted);
+    const auto reconnect_events_before_duplicate = std::count_if(
+        live->events().begin(),
+        live->events().end(),
+        [](const icss::core::EventRecord& event) {
+            return event.header.event_type == icss::protocol::EventType::ClientReconnected;
+        });
+    send_binary_frame(command_client.fd,
+                      "session_join",
+                      serialize(SessionJoinPayload{{1001U, 101U, 99U}, "command_console"}));
+    const auto duplicate_join_frame = wait_for_binary_frame(*live, command_client.fd);
+    assert(duplicate_join_frame.kind == "command_ack");
+    assert(parse_command_ack(duplicate_join_frame.payload).accepted);
+    const auto reconnect_events_after_duplicate = std::count_if(
+        live->events().begin(),
+        live->events().end(),
+        [](const icss::core::EventRecord& event) {
+            return event.header.event_type == icss::protocol::EventType::ClientReconnected;
+        });
+    assert(reconnect_events_after_duplicate == reconnect_events_before_duplicate);
 
     auto duplicate_command_client = connect_tcp_client(config.server.bind_host, info.tcp_port);
     assert(wait_for_disconnect(*live, duplicate_command_client.fd));

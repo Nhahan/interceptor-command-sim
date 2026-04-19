@@ -69,6 +69,18 @@ std::string render_tactical_frame(const icss::core::Snapshot& snapshot,
               'A');
     }
 
+    bool guidance_active = snapshot.track.active;
+    for (auto it = recent_events.rbegin(); it != recent_events.rend(); ++it) {
+        if (it->header.event_type == icss::protocol::EventType::CommandAccepted
+            || it->header.event_type == icss::protocol::EventType::TrackUpdated) {
+            guidance_active = !(it->summary.find("disabled") != std::string::npos
+                || it->details.find("disabled") != std::string::npos
+                || it->summary.find("straight") != std::string::npos
+                || it->details.find("straight") != std::string::npos);
+            break;
+        }
+    }
+
     std::ostringstream out;
     out << "=== Tactical Viewer ===\n";
     for (const auto& row : grid) {
@@ -81,15 +93,21 @@ std::string render_tactical_frame(const icss::core::Snapshot& snapshot,
         << ") active=" << (snapshot.asset.active ? "yes" : "no") << '\n';
     out << "State:\n";
     out << "- phase=" << icss::core::to_string(snapshot.phase)
-        << ", tracking=" << (snapshot.track.active ? "on" : "off")
-        << " (confidence=" << snapshot.track.confidence_pct << "%)"
-        << ", covariance=" << std::fixed << std::setprecision(1) << snapshot.track.covariance_trace
+        << ", guidance=" << (guidance_active ? "on" : "off")
+        << ", tracker_residual="
+        << (snapshot.track.measurement_valid ? std::to_string(snapshot.track.measurement_residual_distance) : std::string("n/a"))
+        << ", tracker_covariance=" << std::fixed << std::setprecision(1) << snapshot.track.covariance_trace
         << ", measurement_age=" << snapshot.track.measurement_age_ticks
+        << ", measurement_valid=" << (snapshot.track.measurement_valid ? "yes" : "no")
+        << ", tracker_estimate=(" << snapshot.track.estimated_position.x << ", " << snapshot.track.estimated_position.y << ")"
+        << ", measurement=(" << snapshot.track.measurement_position.x << ", " << snapshot.track.measurement_position.y << ")"
         << ", interceptor_status=" << icss::core::to_string(snapshot.asset_status)
         << ", command_status=" << icss::core::to_string(snapshot.command_status)
         << ", judgment=" << icss::core::to_string(snapshot.judgment.code) << '\n';
     out << "- target_heading_deg=" << std::fixed << std::setprecision(1) << snapshot.target_heading_deg
         << ", interceptor_heading_deg=" << snapshot.asset_heading_deg
+        << ", launch_angle_deg=" << snapshot.launch_angle_deg
+        << ", launch_mode=" << (guidance_active ? "guided" : "straight")
         << ", tti_s=" << snapshot.time_to_intercept_s
         << ", predicted_intercept_valid=" << (snapshot.predicted_intercept_valid ? "yes" : "no") << '\n';
     out << "Telemetry:\n";

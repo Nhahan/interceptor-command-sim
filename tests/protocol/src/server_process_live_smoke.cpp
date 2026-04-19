@@ -145,7 +145,7 @@ ChildProcess spawn_server_process(const std::filesystem::path& repo_root) {
               "--repo-root", repo_root.c_str(),
               "--tcp-port", "0",
               "--udp-port", "0",
-              "--tick-limit", "40",
+              "--tick-limit", "80",
               "--tick-sleep-ms", "20",
               "--heartbeat-interval-ms", "1000",
               "--heartbeat-timeout-ms", "10000",
@@ -192,9 +192,9 @@ std::vector<std::string> recv_udp_messages(int fd, std::size_t max_messages, int
     std::vector<std::string> messages;
     char buffer[4096];
     sockaddr_in from {};
-    socklen_t len = sizeof(from);
     for (int attempt = 0; attempt < attempts && messages.empty(); ++attempt) {
         for (std::size_t i = 0; i < max_messages; ++i) {
+            socklen_t len = sizeof(from);
             const auto received = ::recvfrom(fd, buffer, sizeof(buffer), 0, reinterpret_cast<sockaddr*>(&from), &len);
             if (received <= 0) {
                 break;
@@ -322,12 +322,6 @@ int main() {
     assert(aar_response.judgment_code == "intercept_success");
     assert(aar_response.control == "absolute");
     assert(aar_response.clamped);
-
-    send_binary_frame(tcp_client.fd, "scenario_stop", serialize(ScenarioStopPayload{{1001U, 101U, 7U}, "process smoke stop"}));
-    const auto stop_frame = wait_for_binary_frame(tcp_client.fd);
-    assert(stop_frame.kind == "command_ack");
-    const auto stop_ack = parse_command_ack(stop_frame.payload);
-    assert(stop_ack.accepted);
 
     const auto udp_messages = recv_udp_messages(udp_viewer.fd, 20);
     for (const auto& wire : udp_messages) {

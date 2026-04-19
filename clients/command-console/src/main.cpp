@@ -246,6 +246,7 @@ int run_socket_live(const ConsoleOptions& options) {
             scenario.intercept_radius,
             scenario.engagement_timeout_ticks,
             scenario.seeker_fov_deg,
+            scenario.launch_angle_deg,
         }));
     send_and_expect_ack(
         "track_request",
@@ -259,7 +260,8 @@ int run_socket_live(const ConsoleOptions& options) {
 
     icss::protocol::AarResponsePayload aar;
     bool aar_ready = false;
-    for (int attempt = 0; attempt < 20; ++attempt) {
+    const auto max_attempts = std::max(20, scenario.engagement_timeout_ticks * 4);
+    for (int attempt = 0; attempt < max_attempts; ++attempt) {
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
         send_frame(socket.fd(),
                    frame_mode,
@@ -281,10 +283,6 @@ int run_socket_live(const ConsoleOptions& options) {
     std::cout << "aar_response: cursor=" << aar.replay_cursor_index << "/" << aar.total_events
               << " | judgment_code=" << aar.judgment_code
               << " | event_type=" << aar.event_type << '\n';
-
-    send_and_expect_ack(
-        "scenario_stop",
-        icss::protocol::serialize(icss::protocol::ScenarioStopPayload{{options.session_id, options.sender_id, sequence++}, "command console completed scripted flow"}));
     return 0;
 }
 #endif

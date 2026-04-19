@@ -13,8 +13,8 @@ int main() {
     scenario.target_start_y = 300;
     scenario.target_velocity_x = 5;
     scenario.target_velocity_y = -3;
-    scenario.interceptor_start_x = 160;
-    scenario.interceptor_start_y = 60;
+    scenario.interceptor_start_x = 0;
+    scenario.interceptor_start_y = 0;
     scenario.interceptor_speed_per_tick = 32;
     scenario.intercept_radius = 24;
     scenario.engagement_timeout_ticks = 60;
@@ -27,13 +27,18 @@ int main() {
     early.advance_tick();
     assert(early.activate_asset().accepted);
     assert(early.issue_command().accepted);
+    early.advance_tick();
+    const auto early_engaging = early.latest_snapshot();
+    assert(early_engaging.predicted_intercept_valid);
+    assert(early_engaging.time_to_intercept_s > 0.0F);
     for (int i = 0; i < scenario.engagement_timeout_ticks && !early.latest_snapshot().judgment.ready; ++i) {
         early.advance_tick();
     }
     assert(early.latest_snapshot().judgment.ready);
     assert(early.latest_snapshot().judgment.code == JudgmentCode::InterceptSuccess);
-    assert(early.latest_snapshot().predicted_intercept_valid);
-    assert(early.latest_snapshot().time_to_intercept_s > 0.0F);
+    assert(!early.latest_snapshot().target.active);
+    assert(early.latest_snapshot().target_velocity.x == 0.0F);
+    assert(early.latest_snapshot().target_velocity.y == 0.0F);
     assert(early.latest_snapshot().asset_world_position.x != static_cast<float>(early.latest_snapshot().asset.position.x)
            || early.latest_snapshot().asset_world_position.y != static_cast<float>(early.latest_snapshot().asset.position.y));
 
@@ -54,12 +59,14 @@ int main() {
     }
     assert(late.activate_asset().accepted);
     assert(late.issue_command().accepted);
+    late.advance_tick();
+    const auto late_engaging = late.latest_snapshot();
+    assert(late_engaging.predicted_intercept_valid);
     for (int i = 0; i < late_scenario.engagement_timeout_ticks && !late.latest_snapshot().judgment.ready; ++i) {
         late.advance_tick();
     }
     assert(late.latest_snapshot().judgment.ready);
     assert(late.latest_snapshot().judgment.code == JudgmentCode::TimeoutObserved);
-    assert(late.latest_snapshot().predicted_intercept_valid);
 
     ScenarioConfig bounce_scenario = scenario;
     bounce_scenario.world_width = 24;

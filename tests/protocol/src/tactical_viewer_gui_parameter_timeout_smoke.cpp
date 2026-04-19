@@ -45,7 +45,7 @@ ChildProcess spawn_gui_viewer(const std::filesystem::path& dump_path,
             "--tcp-port", tcp,
             "--headless",
             "--hidden",
-            "--auto-controls", "asset_speed_dec,asset_speed_dec,asset_speed_dec,timeout_dec,timeout_dec,timeout_dec,timeout_dec,timeout_dec,Start,Track,Activate,Command",
+            "--auto-controls", "asset_speed_dec,asset_speed_dec,asset_speed_dec,timeout_dec,timeout_dec,timeout_dec,timeout_dec,timeout_dec,Start,Guidance,Activate,Command",
             "--duration-ms", "2200",
             "--heartbeat-interval-ms", "100",
             "--dump-state", dump_path.string(),
@@ -105,6 +105,12 @@ int main() {
     assert(icss::testsupport::minijson::require_field(object, "interceptor_speed_per_tick").as_int() == 8);
     assert(icss::testsupport::minijson::require_field(object, "engagement_timeout_ticks").as_int() == 10);
     assert(icss::testsupport::minijson::require_field(object, "judgment_code").as_string() == "timeout_observed");
+    const auto phase = icss::testsupport::minijson::require_field(object, "phase").as_string();
+    assert(phase == "judged" || phase == "archived");
+    assert(!icss::testsupport::minijson::require_field(object, "asset_motion_visual_visible").as_bool());
+    assert(!icss::testsupport::minijson::require_field(object, "engagement_visual_visible").as_bool());
+    assert(!icss::testsupport::minijson::require_field(object, "predicted_marker_visual_visible").as_bool());
+    assert(!icss::testsupport::minijson::require_field(object, "command_visual_active").as_bool());
     assert(icss::testsupport::minijson::require_field(object, "seeker_lock").as_bool() == false
            || icss::testsupport::minijson::require_field(object, "off_boresight_deg").as_double() >= 0.0);
 
