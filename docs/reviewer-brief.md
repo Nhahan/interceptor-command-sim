@@ -23,7 +23,9 @@ If you only have a few minutes:
 1. run `./build/icss_server --backend in_process`
 2. open `assets/sample-aar/session-summary.md`
 3. open `examples/sample-output.md`
-4. skim `docs/protocol.md` and `docs/test-report.md`
+4. compare `assets/sample-aar/straight/session-summary.md`
+5. compare `examples/sample-output-straight.md`
+6. skim `docs/protocol.md` and `docs/test-report.md`
 
 ## Five-Minute Review Path
 
@@ -31,6 +33,8 @@ If you only have a few minutes:
 - live startup behavior: `./build/icss_server --backend socket_live --tick-limit 2`
 - artifact summary: `assets/sample-aar/session-summary.md`
 - viewer snapshot: `examples/sample-output.md`
+- straight comparison summary: `assets/sample-aar/straight/session-summary.md`
+- straight comparison output: `examples/sample-output-straight.md`
 - verification surface: `docs/test-report.md`
 
 ## What To Look For
@@ -48,6 +52,7 @@ If you only have a few minutes:
 - structured runtime log under `logs/session.log`
 - generated AAR under `assets/sample-aar/`
 - generated viewer-oriented sample output under `examples/sample-output.md`
+- straight comparison artifacts under `assets/sample-aar/straight/` and `examples/sample-output-straight.md`
 
 ### 4. Resilience
 - reconnect/resync visibility
@@ -59,7 +64,7 @@ If you only have a few minutes:
 
 ### Runtime / transport
 - server modes: `server/src/main.cpp`
-- transport backend: `common/src/transport.cpp`
+- transport backend: `common/src/transport.cpp`, `common/src/transport_common.cpp`, `common/src/transport_inprocess.cpp`, `common/src/transport_socket_live.cpp`
 - protocol and framing: `common/include/icss/protocol/`, `common/src/serialization.cpp`, `common/src/frame_codec.cpp`
 
 ### Viewer / observability
@@ -71,6 +76,9 @@ If you only have a few minutes:
 - session summary: `assets/sample-aar/session-summary.md`
 - machine-readable summary: `assets/sample-aar/session-summary.json`
 - sample output: `examples/sample-output.md`
+- straight replay timeline: `assets/sample-aar/straight/replay-timeline.json`
+- straight session summary: `assets/sample-aar/straight/session-summary.md`
+- straight sample output: `examples/sample-output-straight.md`
 
 ### Verification
 - test index: `docs/test-report.md`
@@ -111,6 +119,8 @@ ctest --test-dir build --output-on-failure -R 'runtime_config_invalid_values_smo
 - Session summary: `assets/sample-aar/session-summary.md`
 - Replay timeline: `assets/sample-aar/replay-timeline.json`
 - Sample viewer output: `examples/sample-output.md`
+- Straight session summary: `assets/sample-aar/straight/session-summary.md`
+- Straight sample viewer output: `examples/sample-output-straight.md`
 - Runtime log: `logs/session.log`
 
 ## Current Verification Snapshot

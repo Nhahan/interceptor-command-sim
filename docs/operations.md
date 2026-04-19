@@ -40,6 +40,7 @@ Startup output should expose at least:
 - latest event type when available
 - current viewer connection/freshness state
 - latest snapshot sequence, or `none` when the server has not emitted a snapshot yet
+- last snapshot timestamp for viewer-side staleness interpretation
 
 Useful startup overrides for smoke and integration runs:
 - `--tcp-port 0`
@@ -78,6 +79,7 @@ Live mode output parity:
 - when no snapshot has been emitted yet, startup output reports that AAR artifacts were skipped
 - during signal-driven shutdown, the server reports shutdown reason and flushes summary/output artifacts before exit
 - the summary artifact is emitted in both Markdown and JSON forms
+- successful intercepts deactivate the target before archive so post-run artifacts show the target as removed rather than still moving
 
 Current live transport operational concerns:
 - one active command console connection per runtime instance

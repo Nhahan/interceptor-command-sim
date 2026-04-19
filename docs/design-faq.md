@@ -32,6 +32,10 @@ So the logical schema remains independent from how bytes move over the wire. The
 
 So a late-joining or slower viewer can catch up quickly when only the latest state matters.
 
+## Why does the protocol still say `track_*` while the GUI says `Guidance`?
+
+Because the protocol names are stable implementation identifiers, while the GUI wording is tuned for operator legibility. The authoritative runtime still enters the internal `Tracking` phase, but the operator-facing control is a guidance toggle: `Guidance On` enables target-follow guidance before launch and `Guidance Off` leaves the interceptor on a straight launch path.
+
 ## Why include AAR?
 
 Because post-run traceability is part of the system contract, not an afterthought.
@@ -42,4 +46,8 @@ To make state propagation and telemetry legible without drifting into interactio
 
 ## Why show richer state panels?
 
-So the viewer can expose track confidence, asset status, command lifecycle, judgment state, and replay position without forcing operators to reconstruct system state from raw logs alone.
+So the viewer can expose tracker estimate/covariance state, asset status, command lifecycle, judgment state, and replay position without forcing operators to reconstruct system state from raw logs alone.
+
+## Why remove the Stop button from the GUI flow?
+
+Because the current scenario has no meaningful post-command operator action before review. Once judgment is produced, the runtime auto-archives the run and leaves `Review` / `Reset` as the only useful next actions.

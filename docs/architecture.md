@@ -29,16 +29,17 @@ Internal modules:
 Implementation anchors:
 - shared protocol schema: `common/include/icss/protocol/messages.hpp`
 - payload structs/serialization: `common/include/icss/protocol/payloads.hpp`, `common/include/icss/protocol/serialization.hpp`, `common/src/serialization.cpp`
-- transport abstraction: `common/include/icss/net/transport.hpp`, `common/src/transport.cpp`
+- transport abstraction: `common/include/icss/net/transport.hpp`, `common/src/transport.cpp`, `common/src/transport_common.cpp`, `common/src/transport_inprocess.cpp`, `common/src/transport_socket_live.cpp`
 - runtime config loader: `common/include/icss/core/config.hpp`, `common/src/config.cpp`
 - reusable runtime orchestration: `common/include/icss/core/runtime.hpp`, `common/src/runtime.cpp`
-- live transport backend: `common/src/transport.cpp`
+- live transport backend: `common/src/transport_socket_live.cpp`
 - simulation API: `common/include/icss/core/simulation.hpp`
-- simulation runtime: `common/src/simulation.cpp`
+- simulation runtime: `common/src/simulation.cpp`, `common/src/simulation_state.cpp`, `common/src/simulation_commands.cpp`, `common/src/simulation_clients.cpp`, `common/src/simulation_snapshot.cpp`, `common/src/simulation_summary.cpp`, `common/src/simulation_support.cpp`
 - replay cursor + ASCII tactical viewer renderer: `common/include/icss/view/replay_cursor.hpp`, `common/src/ascii_tactical_view.cpp`
 - server reference entrypoint: `server/src/main.cpp`
 - command console reference entrypoint: `clients/command-console/src/main.cpp`
 - tactical viewer reference entrypoint: `clients/tactical-viewer/src/main.cpp`
+- GUI viewer modules: `clients/tactical-viewer-gui/src/app_*.cpp`
 
 ### 2. Command Console Client
 Responsibilities:
@@ -50,7 +51,7 @@ Responsibilities:
 ### 3. Minimal 2D Tactical Viewer
 Responsibilities:
 - render target / asset positions
-- show tracking confidence and snapshot freshness
+- show tracking residual/covariance state and snapshot freshness
 - display connection status and telemetry
 - surface event log panel
 - show AAR playback cursor/state during replay
@@ -97,3 +98,7 @@ The code and docs should answer:
 - Where is replay/AAR generated from?
 - How does reconnect or timeout affect session state?
 - What data is shown by the 2D viewer vs what is decided by the server?
+
+## Coordinate System Convention
+
+The simulation world is treated as a bottom-left-origin 2D space with `+x` to the right and `+y` upward. The SDL GUI keeps that convention in world-space and only flips the Y axis inside the viewport transform when mapping world coordinates into screen space.

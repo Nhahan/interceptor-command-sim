@@ -54,8 +54,8 @@ Both server modes now print backend, bind, heartbeat, and delivery settings at s
 
 ### Viewer Surface
 - target / interceptor position icons
-- tracking status
-- tracking confidence
+- guidance state
+- tracker estimate/covariance state
 - connection status
 - freshness state
 - tick / latency / packet loss telemetry
@@ -96,8 +96,10 @@ Both server modes now print backend, bind, heartbeat, and delivery settings at s
 1. `./build/icss_server --backend in_process`
 2. `assets/sample-aar/session-summary.md`
 3. `examples/sample-output.md`
-4. `docs/protocol.md`
-5. `docs/test-report.md`
+4. `assets/sample-aar/straight/session-summary.md`
+5. `examples/sample-output-straight.md`
+6. `docs/protocol.md`
+7. `docs/test-report.md`
 
 ## Canonical Commands
 
@@ -144,10 +146,17 @@ ctest --test-dir build --output-on-failure
 - resilience/telemetry state (`fresh`, `degraded`, `resync`, `stale`)
 - a terminal-style server event log
 - the tactical picture with target/interceptor geometry as supporting context
-- a dense 576x384 world-space picture rather than a tiny fixed board
+- a larger 2304x1536 world-space picture rather than a tiny fixed board
 - target/interceptor velocity, heading, predicted intercept point, TTI, and seeker/FOV state
-- covariance-driven track quality, measurement age, and missed-update state instead of a fixed tracking percentage
+- the interceptor now always starts from world origin `(0,0)` and uses a configurable launch angle with a `45 deg` default
+- conventional tactical-picture styling: entity identity by color/shape, solid arrows for current motion, dashed trails for history, orange engagement link, and green diamond/X predicted intercept marker
+- the viewer now uses an explicit viewport transform and float world-history so vectors, trails, and markers are rendered from world-space rather than snapped render-grid coordinates
+- tracker estimate, latest measurement residual, covariance, measurement age, and missed-update state from a scheduled noisy-observation tracker instead of a fake tracking percentage in the UI; residual stays visible while age increases between updates
 - time-of-command outcome branching: the same scenario can end in `intercept_success` or `timeout_observed` depending on timing and kinematics
+- on `intercept_success`, the authoritative runtime deactivates the target and freezes both target/interceptor motion before the run auto-archives
+- each GUI `Start` randomizes the actual target start geometry and target velocity within a small bounded envelope around the planned setup values, while keeping the interceptor origin anchored to its planned coordinates
+- the GUI exposes `Guidance On` / `Guidance Off` as the operator-facing pre-command guidance toggle; protocol/internal names remain `track_request` / `track_release`, and guidance control locks once `Command` launches the interceptor
+- the GUI now uses an explicit camera/viewport transform: world origin is treated as bottom-left with +x right / +y up, and the renderer flips Y only when mapping world coordinates into SDL screen space
 
 Defaults:
 - `icss_server --backend socket_live` uses `json` TCP framing unless `--tcp-frame-format` overrides it
@@ -181,9 +190,10 @@ Default behavior:
 - starts `icss_server --backend socket_live --run-forever`
 - starts `icss_tactical_viewer_gui`
 - leaves control to the GUI panel
-- GUI live control order: `Start -> Track -> Activate -> Command -> Stop -> Reset -> Start`
+- GUI live control order: `Start -> Guidance -> Activate -> Command -> Review -> Reset -> Start`
 - `Review` is intentionally separate from the live control chain; request it after judgment/archive to inspect server-side AAR data
 - the bottom timeline panel now shows live server events plus control acknowledgements; `Review` switches that panel into post-action review mode
+- the timeline panel now clips overflowing log lines, draws a scrollbar, and supports mouse-wheel / PageUp / PageDown / Home / End scrolling
 - the GUI highlights mission phase, authoritative decision state, and resilience telemetry while you step through the flow
 
 For a fully scripted visible run:
@@ -202,11 +212,29 @@ Useful options:
 ./scripts/run_live_demo.sh --headless --viewer-duration-ms 1500
 ```
 
+Regenerate the checked-in guided/straight comparison bundle:
+
+```bash
+./scripts/run_live_demo.sh --regen-samples --sample-mode all
+```
+
+That command refreshes:
+- guided AAR/sample output under `assets/sample-aar/` and `examples/sample-output.md`
+- straight comparison artifacts under `assets/sample-aar/straight/` and `examples/sample-output-straight.md`
+- deterministic viewer-state goldens under `assets/screenshots/tactical-viewer-guidance-state.json` and `assets/screenshots/tactical-viewer-straight-state.json`
+- GUI screenshots under `assets/screenshots/tactical-viewer-guidance.bmp` and `assets/screenshots/tactical-viewer-straight.bmp`
+
+The regression suite now keeps repo-root review assets stable:
+- server CLI success smokes run against temp runtime roots instead of writing into the checked-in bundle
+- a dedicated drift smoke regenerates guided/straight text artifacts and viewer-state goldens into a temp runtime root and checks them against the checked-in canonical files
+
 ### Artifact Summary
 
 ```bash
 ./build/icss_artifact_summary
 ```
+
+`icss_artifact_summary` now reports the guided bundle by default, adds straight comparison lines when `assets/sample-aar/straight/` is present, and also supports explicit compare mode via `--guided-root PATH --straight-root PATH`.
 
 ## Code Paths
 
@@ -216,11 +244,12 @@ Useful options:
 - `common/include/icss/protocol/serialization.hpp` — textual payload serialization/parse helpers
 - `common/include/icss/net/transport.hpp` — transport abstraction and backend factory
 - `common/include/icss/core/` — shared session/domain types and simulation API
-- `common/src/` — config loader, transport backends, runtime orchestration, simulation runtime, AAR writer, ASCII tactical viewer renderer
+- `common/src/` — config loader, split transport backends, runtime orchestration, split simulation/runtime lifecycle, AAR writer, ASCII tactical viewer renderer
 - `server/src/main.cpp` — authoritative reference entrypoint
 - `clients/command-console/src/main.cpp` — command console reference flow and socket-live client path
 - `clients/tactical-viewer/src/main.cpp` — minimal 2D tactical viewer reference flow
 - `clients/tactical-viewer-gui/src/main.cpp` — SDL-based live tactical viewer window
+- `clients/tactical-viewer-gui/src/app_*.cpp` — split GUI support, setup, visual-state, render, and network helpers
 - `tests/protocol/src/protocol_smoke.cpp` — protocol smoke verification
 - `tests/protocol/src/payload_codec_smoke.cpp` — payload serialization regression
 - `tests/protocol/src/frame_codec_smoke.cpp` — JSON/binary frame codec regression

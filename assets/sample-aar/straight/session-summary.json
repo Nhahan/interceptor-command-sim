@@ -2,33 +2,38 @@
   "schema_version": "icss-session-summary-json-v1",
   "session_id": 1001,
   "final_phase": "archived",
-  "snapshot_count": 193,
-  "event_count": 3,
-  "command_console_connection": "disconnected",
+  "snapshot_count": 67,
+  "event_count": 13,
+  "command_console_connection": "connected",
   "viewer_connection": "connected",
-  "judgment_ready": false,
-  "judgment_code": "pending",
+  "judgment_ready": true,
+  "judgment_code": "timeout_observed",
   "guidance_state": "off",
   "launch_mode": "straight",
   "launch_angle_deg": 45,
   "last_event_type": "session_ended",
-  "resilience_case": "udp_snapshot_gap_convergence",
-  "latest_snapshot_sequence": 193,
+  "resilience_case": "reconnect_and_resync,udp_snapshot_gap_convergence",
+  "latest_snapshot_sequence": 67,
   "latest_viewer_connection": "connected",
   "latest_freshness": "fresh",
   "recent_events": [
+    {
+      "tick": 1,
+      "event_type": "command_accepted",
+      "summary": "Launch accepted"
+    },
     {
       "tick": 2,
       "event_type": "resilience_triggered",
       "summary": "Snapshot gap exercised"
     },
     {
-      "tick": 6,
-      "event_type": "client_joined",
-      "summary": "Client joined session"
+      "tick": 61,
+      "event_type": "judgment_produced",
+      "summary": "Judgment produced"
     },
     {
-      "tick": 192,
+      "tick": 61,
       "event_type": "session_ended",
       "summary": "Session archived"
     }

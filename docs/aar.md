@@ -9,9 +9,11 @@ AAR (After Action Review) provides an inspectable record of what happened, when 
 For one sample session, capture:
 - session start/end
 - client join/leave/reconnect events
-- target detection/tracking changes
+- target detection plus guidance enable/disable changes
 - operator commands
 - server validation/judgment results
+- launch mode and launch angle context
+- target deactivation on successful intercept before archive
 - important resilience events
 
 ## Event Record Shape
@@ -59,5 +61,8 @@ The live `aar_response` should report:
 
 Keep at least one inspectable artifact under `assets/sample-aar/`.
 The session summary should expose latest snapshot metadata, freshness state, and a short recent-event section.
+The session summary should also expose guidance state, launch mode, and launch angle metadata.
 The replay timeline and summary artifacts should carry explicit schema/version metadata.
 When both are present, `session-summary.md` is the human-readable view and `session-summary.json` is the machine-readable companion.
+
+The normal GUI flow auto-archives immediately after judgment, so AAR/review normally begins from an already-archived run rather than waiting for an explicit stop command.

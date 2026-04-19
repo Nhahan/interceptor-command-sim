@@ -1,0 +1,19 @@
+{
+  "schema_version": "icss-gui-viewer-golden-state-v1",
+  "phase": "archived",
+  "phase_banner": "ARCHIVED",
+  "judgment_code": "intercept_success",
+  "effective_guidance_state": "on",
+  "effective_launch_mode": "guided",
+  "recommended_control": "Review",
+  "asset_status": "complete",
+  "command_status": "completed",
+  "target_active": false,
+  "asset_active": true,
+  "planned_launch_angle_deg": 45,
+  "active_launch_angle_deg": 45,
+  "target_motion_visual_visible": false,
+  "asset_motion_visual_visible": false,
+  "engagement_visual_visible": false,
+  "predicted_marker_visual_visible": false
+}

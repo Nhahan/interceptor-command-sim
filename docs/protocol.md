@@ -32,13 +32,19 @@ If they diverge, update both in the same change.
 | `session_leave` | leave session / operator disconnect flow |
 | `scenario_start` | start the representative scenario |
 | `scenario_stop` | stop or finalize scenario execution |
-| `track_request` | request target tracking |
+| `scenario_reset` | reset the session back to initialized so a new run can start cleanly |
+| `track_request` | enable target tracking / interceptor guidance before launch |
+| `track_release` | disable target tracking / interceptor guidance before launch |
 | `asset_activate` | activate or ready an asset |
 | `command_issue` | submit a command for validation/judgment |
 | `command_ack` | acknowledge accepted or processed command flow |
 | `judgment_event` | emit critical server-side judgment result |
 | `aar_request` | request replay/AAR cursor movement or summary output |
 | `aar_response` | return replay/AAR cursor state and summary metadata over TCP |
+
+Operator-facing note:
+- the GUI labels `track_request` / `track_release` as `Guidance On` / `Guidance Off`
+- the runtime phase remains `Tracking` internally even though the viewer presents that state as `Guidance Locked`
 
 ## UDP Message Kinds (`UdpMessageKind`)
 
@@ -78,9 +84,12 @@ Current headers/records:
 Current payload structs:
 - `SessionCreatePayload`
 - `SessionJoinPayload`
+- `SessionLeavePayload`
 - `ScenarioStartPayload`
 - `ScenarioStopPayload`
+- `ScenarioResetPayload`
 - `TrackRequestPayload`
+- `TrackReleasePayload`
 - `AssetActivatePayload`
 - `CommandIssuePayload`
 - `JudgmentPayload`
@@ -92,10 +101,12 @@ Current payload structs:
 - `AarRequestPayload`
 
 `SnapshotPayload` carries richer state fields for:
-- track confidence
+- guidance state
+- track measurement residual
 - asset status
 - command lifecycle status
 - judgment readiness/code
+- launch angle metadata
 
 ## Serialization Format
 
@@ -134,9 +145,9 @@ Current live backend scope:
 - keeps one active tactical viewer registration per runtime instance
 - accepts a TCP command connection
 - receives UDP viewer registration datagrams
-- processes framed command payloads over TCP
+- processes framed command payloads over TCP, including launch-angle-bearing `scenario_start` and pre-launch guidance toggles
 - emits UDP snapshot/telemetry datagrams to the registered viewer endpoint
-- handles `scenario_stop` and `aar_request` over TCP
+- handles `scenario_stop`, `scenario_reset`, `track_release`, and `aar_request` over TCP; the current GUI/scripted flow usually relies on automatic archive after judgment instead of issuing `scenario_stop`, and uses `scenario_reset` to return to `initialized` for the next run
 - tracks viewer heartbeat datagrams and raises timeout visibility when the heartbeat window expires
 - applies batching/filtering controls when multiple snapshots are pending for a late-joining viewer
 

@@ -17,9 +17,11 @@ Entrypoint:
 Current behavior:
 - loads runtime config from the example config set
 - supports `in_process` and `socket_live` server modes
+- supports deterministic `--sample-mode guided|straight` generation for the in-process path
 - writes AAR artifacts to `assets/sample-aar/`
 - writes runtime logs to `logs/session.log`
 - writes a viewer-oriented sample output to `examples/sample-output.md`
+- auto-archives after judgment in the normal command flow so review starts from an archived run
 
 Executable modes:
 - `./build/icss_server --backend in_process`

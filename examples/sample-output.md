@@ -3,12 +3,15 @@
 - schema_version: icss-sample-output-v1
 - backend: socket_live
 - session_id: 1001
-- cursor_index: 0/1
+- cursor_index: 2/3
 - command_console_connection: disconnected
-- viewer_connection: disconnected
-- latest_freshness: stale
-- latest_snapshot_sequence: 2
-- last_event_type: resilience_triggered
+- viewer_connection: connected
+- guidance_state: off
+- launch_mode: straight
+- launch_angle_deg: 45
+- latest_freshness: fresh
+- latest_snapshot_sequence: 193
+- last_event_type: session_ended
 - resilience_case: udp_snapshot_gap_convergence
 
 ```text
@@ -30,15 +33,17 @@
 ........................
 ........................
 Entities:
-- target=target-alpha @ (80, 300) active=no
-- interceptor=asset-interceptor @ (160, 60) active=no
+- target=target-alpha @ (480, 1200) active=no
+- interceptor=asset-interceptor @ (0, 0) active=no
 State:
-- phase=initialized, tracking=off (confidence=0%), covariance=0.0, measurement_age=0, interceptor_status=idle, command_status=none, judgment=pending
-- target_heading_deg=-31.0, interceptor_heading_deg=0.0, tti_s=0.0, predicted_intercept_valid=no
+- phase=archived, guidance=off, tracker_residual=n/a, tracker_covariance=0.0, measurement_age=0, measurement_valid=no, tracker_estimate=(0.0, 0.0), measurement=(0.0, 0.0), interceptor_status=idle, command_status=none, judgment=pending
+- target_heading_deg=-31.0, interceptor_heading_deg=0.0, launch_angle_deg=45.0, launch_mode=straight, tti_s=0.0, predicted_intercept_valid=no
 Telemetry:
-- connection=disconnected, freshness=stale, snapshot_sequence=2, tick=2, latency_ms=47, packet_loss_pct=25.0, last_snapshot_ms=1776327000450
+- connection=connected, freshness=fresh, snapshot_sequence=193, tick=192, latency_ms=232, packet_loss_pct=0.0, last_snapshot_ms=1776327039200
 AAR:
-- cursor_index=0/1
+- cursor_index=2/3
 Recent events:
 - [tick 2] Snapshot gap exercised (resilience_triggered)
+- [tick 6] Client joined session (client_joined)
+- [tick 192] Session archived (session_ended)
 ```

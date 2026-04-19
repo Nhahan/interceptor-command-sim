@@ -70,6 +70,8 @@ The current scope values clear state convergence over protocol complexity. The n
 - `assets/sample-aar/session-summary.md` for post-run summary
 - `assets/sample-aar/replay-timeline.json` for replay/event history
 - `examples/sample-output.md` for viewer-facing output
+- `assets/sample-aar/straight/session-summary.md` for the straight-launch timeout comparison
+- `examples/sample-output-straight.md` for the viewer-facing straight-launch comparison
 - `docs/test-report.md` for the regression surface
 
 ## Good Closing Summary
@@ -83,3 +85,8 @@ The current scope values clear state convergence over protocol complexity. The n
 - `docs/operations.md`
 - `docs/aar.md`
 - `docs/test-report.md`
+
+### Why randomize the actual start state from the GUI setup?
+- it prevents every run from looking identical
+- it preserves user-controlled base parameters while still demonstrating scenario sensitivity
+- the jitter stays bounded so the run remains explainable and regression-friendly

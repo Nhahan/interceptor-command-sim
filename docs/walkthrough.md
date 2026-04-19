@@ -22,15 +22,15 @@ Show command/control flow, state propagation, one resilience case, and AAR outpu
 - executable live server process can be exercised with external TCP/UDP clients
 
 ### 0:50–1:40 — Scenario start
-- start session
-- detect/track target
+- start session (GUI setup values are used as a base; actual start geometry is slightly randomized per run)
+- detect target and enable guidance
 - show positions/status on viewer
 
 ### 1:40–2:30 — Command and judgment
-- issue command from console
-- show server-side validation/judgment result
+- issue command from console or GUI
+- show server-side validation/judgment result; on success the target should disappear/deactivate before archive
 - keep telemetry visible
-- point out richer state panels (track confidence / asset status / command lifecycle / judgment code)
+- point out richer state panels (track measurement residual / covariance / asset status / command lifecycle / judgment code)
 - point out connection and freshness labels on the viewer
 
 ### 2:30–3:20 — Resilience case
@@ -43,7 +43,8 @@ Show command/control flow, state propagation, one resilience case, and AAR outpu
 
 ### 3:20–4:20 — AAR
 - open replay/AAR artifact
-- point to timeline, event log, and judgment outputs
+- compare guided and straight launch artifacts side by side
+- point to timeline, event log, guidance state, launch mode, and judgment outputs
 - point to freshness and latest snapshot metadata in the generated summaries
 
 ### Closing
@@ -64,7 +65,8 @@ Show command/control flow, state propagation, one resilience case, and AAR outpu
 2. command sequence
 3. tactical viewer state
 4. one resilience moment
-5. AAR summary and replay timeline
+5. guided and straight AAR summaries / replay timelines
+6. checked-in GUI screenshots (`assets/screenshots/tactical-viewer-guidance.bmp`, `assets/screenshots/tactical-viewer-straight.bmp`)
 
 ## Minimal Asset Set
 
@@ -72,4 +74,6 @@ Show command/control flow, state propagation, one resilience case, and AAR outpu
 - one command sequence
 - one viewer frame with freshness labels
 - one resilience example
-- one AAR summary
+- one guided AAR summary
+- one straight AAR summary
+- one checked-in GUI screenshot under `assets/screenshots/`

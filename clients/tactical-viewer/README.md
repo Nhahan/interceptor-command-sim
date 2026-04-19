@@ -9,7 +9,7 @@ Role:
 Required elements:
 - target / interceptor position icons
 - tracking status
-- tracking confidence
+- tracking residual / covariance state
 - connection status
 - freshness state
 - tick / latency / packet loss telemetry

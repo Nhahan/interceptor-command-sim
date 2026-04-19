@@ -37,7 +37,7 @@ Current verification covers:
 - startup output exposes backend, bind, heartbeat, and delivery settings
 - startup output exposes connection-state and latest-event summaries
 - the executable `socket_live` server path is exercised through a process-level live smoke
-- process-level live smoke covers AAR response and scenario stop handling
+- process-level live smoke covers AAR response and automatic post-judgment archive behavior
 - process-level live smoke covers both binary and JSON TCP framing
 - the command console executable drives a scripted `socket_live` flow over TCP
 - the SDL GUI viewer attaches to the live UDP path and is covered by a headless smoke
@@ -53,14 +53,33 @@ Current verification covers:
 - the GUI exposes direct scenario parameter controls and a dense world-space tactical map
 - a GUI parameter smoke verifies that direct timeout/speed adjustments change parameters and produce `timeout_observed`
 - a dedicated GUI setup smoke verifies that editing setup during a live run only changes the next-start plan and does not rewrite the active scenario state
-- tracking confidence is now covariance-driven and exposed with measurement age / missed-update state in viewer output and payloads
+- the pre-command `Guidance On` / `Guidance Off` toggle is verified across simulation, transport, and GUI flows
+- interceptor launch now starts from fixed origin `(0,0)` with configurable launch angle, and config/payload/runtime validation covers that path
+- tracking output now exposes actual tracker residual/covariance/measurement-age/missed-update values in viewer output and payloads instead of a fake confidence percentage
+- tracker observation cadence now produces real non-zero measurement age between scheduled updates and deterministic missed-update counts on dropped samples, so those fields are meaningfully exercised in runtime/tests
 - a dedicated GUI auto-rejoin smoke verifies that the viewer can recover from a timeout by reissuing `session_join`
 - a dedicated GUI repo-root smoke verifies that the setup panel preloads scenario parameters from the provided runtime config root
+- a dedicated GUI malformed-udp smoke verifies that malformed UDP datagrams are ignored without advancing viewer freshness timestamps or mutating timeline state
+- the same malformed-udp smoke also verifies that the viewer ignores datagrams from unexpected UDP endpoints
+- a dedicated GUI snapshot-ordering smoke verifies that out-of-order snapshots and older telemetry samples do not roll back viewer state
+- scenario flow coverage now also verifies that `reset_session()` resets logical tick to zero without rolling snapshot sequence or snapshot timestamps backward
+- baseline scenario flow now also verifies that the no-arg `run_baseline_demo()` follows the repository runtime config rather than drifting to struct-default values
+- a dedicated example-output smoke verifies that `SimulationSession::write_example_output()` works with a plain relative filename that has no parent directory component
+- a dedicated AAR-artifact smoke verifies that `SimulationSession::write_aar_artifacts()` works when asked to emit directly into the current working directory
+- a dedicated GUI relative-dump-path smoke verifies that `--dump-state` and `--dump-frame` work with plain filenames in the current working directory
+- a dedicated GUI duplicate-start smoke verifies that a rejected second `Start` does not overwrite the active authoritative scenario picture with a new local randomization
 - the command console now loads scenario-start parameters from `--repo-root` config instead of falling back to baked defaults
+- command-console live flow now bounds its AAR polling window from scenario timeout parameters instead of using a fixed short retry budget
 - the one-command live demo script now configures/builds required binaries and clears repo-local stale demo processes before launch
 - the live demo smoke now mutates the runtime-root scenario config to prove the script forwards that config path through to the command console
+- the server CLI now validates `--sample-mode guided|straight` for deterministic in-process artifact generation
+- guided and straight sample modes are both covered by artifact and determinism smoke coverage
+- the live demo script now includes a regeneration mode that refreshes guided/straight artifacts and GUI screenshots in one command
 - the GUI viewer now defaults to a 100 ms heartbeat interval so live socket demo progression is not lost to stale viewer keepalive timing
 - the simulation now emits continuous world-space positions, velocity/heading metadata, predicted intercept data, and seeker/FOV state
+- successful intercept now deactivates the target before archive and regression coverage asserts that state change
+- each GUI `Start` now applies a small bounded random jitter to actual target start geometry/target velocity while preserving the displayed setup baseline and keeping the interceptor at its planned origin
+- the GUI setup panel now exposes launch-angle control while keeping interceptor origin fixed
 - the oversized GUI translation unit was split into focused support/network/control/render modules without changing behavior
 - process-level live smoke verifies artifact/log generation for executable live mode
 - long-running live mode handles signal-driven shutdown and flushes outputs
@@ -81,6 +100,8 @@ Current verification covers:
 - baseline artifact generation is deterministic across repeated runs
 - session summary is emitted in both Markdown and JSON forms
 - runtime session logging is verified against generated structured log output
+- server CLI success smokes now run against temp runtime roots so regression runs do not overwrite the checked-in sample bundle
+- guided/straight viewer-state goldens are emitted as reduced JSON artifacts so visual intent can be checked semantically without relying on BMP byte identity
 - replay cursor stepping is verified against viewer output
 - resilience/replay rendering behavior passes smoke verification
 - live viewer heartbeat timeout behavior is verified against the socket backend
@@ -88,12 +109,13 @@ Current verification covers:
 - live viewer freshness transitions are verified against the socket backend
 - degraded freshness under packet loss is verified in rendered output
 - live snapshot batching/filtering is verified against the socket backend
+- a dedicated drift smoke regenerates guided/straight text artifacts plus viewer-state goldens into a temp runtime root and verifies they still match the checked-in canonical bundle
 
 ## Latest Result
 
 - configure: passed
 - build: passed
-- test: passed (`44/44` tests)
+- test: passed (`53/53` tests)
 - runtime smoke: passed (`icss_server`, `icss_command_console`, `icss_tactical_viewer`)
 - cli smoke: passed (`server_inprocess_cli_smoke`, `server_socket_live_cli_smoke`)
 - idle cli smoke: passed (`server_socket_live_idle_cli_smoke`)
@@ -127,7 +149,10 @@ Current verification covers:
   - `command_console_socket_live_smoke`
   - `tactical_viewer_gui_live_smoke`
   - `live_demo_script_smoke`
+  - `sample_regen_script_smoke`
+  - `checked_in_sample_bundle_drift_smoke`
   - `server_invalid_backend_cli`
+  - `server_invalid_sample_mode_cli`
   - `server_invalid_frame_format_cli`
   - `server_invalid_port_cli`
   - `server_invalid_bind_host_cli`
@@ -137,38 +162,45 @@ Current verification covers:
 ## Acceptance Checks
 
 ### 1. Scenario Completeness
-- [ ] scenario runs from start to AAR
-- [ ] command validation occurs on server
-- [ ] final judgment is produced by server
+- [x] scenario runs from start to AAR
+- [x] command validation occurs on server
+- [x] final judgment is produced by server
 
 ### 2. Multi-Client Coverage
-- [ ] command console participates
-- [ ] tactical viewer receives state/telemetry updates
-- [ ] roles are meaningfully separated
+- [x] command console participates
+- [x] tactical viewer receives state/telemetry updates
+- [x] roles are meaningfully separated
 
 ### 3. Protocol Coverage
-- [ ] TCP responsibilities exercised
-- [ ] UDP snapshot/telemetry responsibilities exercised
-- [ ] transport split documented clearly
+- [x] TCP responsibilities exercised
+- [x] UDP snapshot/telemetry responsibilities exercised
+- [x] transport split documented clearly
 
 ### 4. Resilience Coverage
-- [ ] at least one abnormal case is exercised
-- [ ] logs show the abnormal case clearly
-- [ ] system behavior after the abnormal case is understandable
+- [x] at least one abnormal case is exercised
+- [x] logs show the abnormal case clearly
+- [x] system behavior after the abnormal case is understandable
 
 ### 5. AAR Coverage
-- [ ] one sample session can be replayed/reconstructed
-- [ ] event timeline includes key command/judgment points
+- [x] one sample session can be replayed/reconstructed
+- [x] event timeline includes key command/judgment points
 
 ### 6. Operational Coverage
-- [ ] config separation exists
-- [ ] logs have meaningful structure
-- [ ] session cleanup/end-state is visible
+- [x] config separation exists
+- [x] logs have meaningful structure
+- [x] session cleanup/end-state is visible
 
 ## Related Outputs
 
 - sample AAR: `assets/sample-aar/session-summary.md`
-- logs: pending
-- screenshots: pending
+- sample AAR JSON: `assets/sample-aar/session-summary.json`
+- replay timeline: `assets/sample-aar/replay-timeline.json`
+- straight sample AAR: `assets/sample-aar/straight/session-summary.md`
+- straight sample AAR JSON: `assets/sample-aar/straight/session-summary.json`
+- straight replay timeline: `assets/sample-aar/straight/replay-timeline.json`
+- straight sample output: `examples/sample-output-straight.md`
+- viewer-state goldens: `assets/screenshots/tactical-viewer-guidance-state.json`, `assets/screenshots/tactical-viewer-straight-state.json`
+- runtime log: `logs/session.log`
+- GUI screenshots: `assets/screenshots/tactical-viewer-guidance.bmp`, `assets/screenshots/tactical-viewer-straight.bmp`
 - protocol doc: `docs/protocol.md`
 - concrete build/test commands: see canonical commands above
