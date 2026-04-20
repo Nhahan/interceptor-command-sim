@@ -44,10 +44,12 @@ Current verification covers:
 - the repository ships a one-command live demo script with smoke coverage
 - the GUI control panel covers reset-to-standby and restart-after-reset behavior
 - command acceptance now has explicit GUI-side visual feedback and dedicated smoke coverage
-- the GUI exposes mission phase, authoritative decision, and resilience telemetry as first-class panels rather than only map geometry
+- the GUI now uses state-dependent `standby_setup`, `live_tactical`, and `review_tactical` layouts so the tactical picture remains the primary feature
 - GUI headless smoke asserts phase banner and authoritative decision semantics through dump-state fields
+- a dedicated GUI layout smoke verifies standby layout, setup visibility, and map-dominant panel sizing
+- live GUI dump-state now exposes real `link_delay_ms`, raw RTT sample, and authoritative `picture_age_ms`
 - GUI review smoke verifies that Review is requested as a post-assessment/post-archive action rather than a primary live control
-- the GUI routes review output through the bottom log panel, avoiding overlap with the live authoritative-decision panel
+- the GUI routes review output through the bottom log panel and removes full-time setup/link panels from review mode
 - the GUI live timeline now includes control acknowledgements alongside server events so the log panel remains useful before the next telemetry update
 - user-facing viewer text now presents the interceptor as an interceptor
 - the GUI exposes direct scenario parameter controls and a dense world-space tactical map
@@ -105,6 +107,8 @@ Current verification covers:
 - replay cursor stepping is verified against viewer output
 - resilience/replay rendering behavior passes smoke verification
 - live viewer heartbeat timeout behavior is verified against the socket backend
+- live viewer `Link Delay` now comes from heartbeat RTT rather than receive-gap heuristics
+- live viewer `Picture Age` now comes from authoritative snapshot wall-clock capture time
 - telemetry payloads now align event summaries to the snapshot tick they accompany, and a dedicated smoke verifies that alignment
 - live viewer picture-status transitions are verified against the socket backend
 - degraded picture status under packet loss is verified in rendered output
@@ -115,7 +119,7 @@ Current verification covers:
 
 - configure: passed
 - build: passed
-- test: passed (`53/53` tests)
+- test: passed (`54/54` tests)
 - runtime smoke: passed (`icss_server`, `icss_fire_control_console`, `icss_tactical_display`)
 - cli smoke: passed (`server_inprocess_cli_smoke`, `server_socket_live_cli_smoke`)
 - idle cli smoke: passed (`server_socket_live_idle_cli_smoke`)
@@ -148,6 +152,7 @@ Current verification covers:
   - `server_process_live_run_forever_smoke`
   - `fire_control_console_socket_live_smoke`
   - `tactical_display_gui_live_smoke`
+  - `tactical_display_gui_layout_modes_smoke`
   - `live_demo_script_smoke`
   - `sample_regen_script_smoke`
   - `checked_in_sample_bundle_drift_smoke`

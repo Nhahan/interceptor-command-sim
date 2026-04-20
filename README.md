@@ -58,7 +58,7 @@ Both server modes now print backend, bind, heartbeat, and delivery settings at s
 - tracker estimate/covariance state
 - connection status
 - picture status
-- tick / update-gap / packet loss telemetry
+- tick / link-delay / picture-age / packet loss telemetry
 - snapshot sequence
 - last snapshot timestamp
 - event log panel
@@ -141,22 +141,17 @@ ctest --test-dir build --output-on-failure
 ```
 
 `icss_tactical_display_gui` is not just a position plot. The window emphasizes:
-- the current mission phase/state-machine step
-- the latest authoritative server decision or rejection reason via a compact status badge and `Authoritative Status` panel
-- resilience/telemetry state (`current`, `degraded`, `reacquiring`, `stale`)
-- a terminal-style server event log
-- the tactical picture with target/interceptor geometry as supporting context
+- the tactical picture as the primary surface
+- a map-first live layout with compact summary, control, and link/picture cards in the side rail
+- the live `Link / Picture` card now separates real `Link Delay` RTT from authoritative `Picture Age`
+- a review layout that keeps the map and review timeline primary after assessment/archive
+- standby-only setup editing so next-start controls do not dominate live or review screens
 - a larger 2304x1536 world-space picture rather than a tiny fixed board
-- target/interceptor velocity, heading, predicted intercept point, TTI, and seeker/FOV state
 - the interceptor now always starts from world origin `(0,0)` and uses a configurable launch angle with a `45 deg` default
 - conventional tactical-picture styling: entity identity by color/shape, solid arrows for current motion, dashed trails for history, orange engagement link, and green diamond/X predicted intercept marker
-- the viewer now uses an explicit viewport transform and float world-history so vectors, trails, and markers are rendered from world-space rather than snapped render-grid coordinates
-- tracker estimate, latest measurement residual, covariance, measurement age, and missed-update state from a scheduled noisy-observation tracker instead of a fake tracking percentage in the UI; residual stays visible while age increases between updates
-- time-of-command outcome branching: the same scenario can end in `intercept_success` or `timeout_observed` depending on timing and kinematics
-- on `intercept_success`, the authoritative runtime deactivates the target and freezes both target/interceptor motion before the run auto-archives
+- map overlays carry current assessment, track state, TTI, and review summary instead of pushing that information into large side panels
 - each GUI `Start` randomizes the actual target start geometry and target velocity within a small bounded envelope around the planned setup values, while keeping the interceptor origin anchored to its planned coordinates
 - the GUI exposes `Track`, with `Acquire Track` / `Drop Track` stateful labeling, as the operator-facing pre-launch track toggle; protocol/internal names remain `track_acquire` / `track_drop`, and track control locks once `Engage` launches the interceptor
-- the GUI now uses an explicit camera/viewport transform: world origin is treated as bottom-left with +x right / +y up, and the renderer flips Y only when mapping world coordinates into SDL screen space
 
 Defaults:
 - `icss_server --backend socket_live` uses `json` TCP framing unless `--tcp-frame-format` overrides it
@@ -192,9 +187,9 @@ Default behavior:
 - leaves control to the GUI panel
 - GUI live control order: `Start -> Track -> Ready -> Engage -> Review -> Reset -> Start`
 - `Review` is intentionally separate from the live control chain; request it after assessment/archive to inspect the server-side post-engagement review
-- the bottom timeline panel now shows live server events plus control acknowledgements; `Review` switches that panel into post-action review mode
-- the timeline panel now clips overflowing log lines, draws a scrollbar, and supports mouse-wheel / PageUp / PageDown / Home / End scrolling
-- the GUI highlights mission phase, authoritative decision state, and resilience telemetry while you step through the flow
+- the GUI shifts between `standby_setup`, `live_tactical`, and `review_tactical` layouts so the tactical map remains the primary feature
+- the bottom timeline panel shows live server events during operation and becomes the post-engagement review feed after `Review`
+- the timeline panel clips overflowing log lines, draws a scrollbar, and supports mouse-wheel / PageUp / PageDown / Home / End scrolling
 
 For a fully scripted visible run:
 

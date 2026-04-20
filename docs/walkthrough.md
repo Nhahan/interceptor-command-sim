@@ -24,27 +24,29 @@ Show command/control flow, state propagation, one resilience case, and post-enga
 ### 0:50–1:40 — Scenario start
 - start session (GUI setup values are used as a base; actual start geometry is slightly randomized per run)
 - detect target and acquire track
-- show positions/status on viewer
+- keep the tactical map centered as the primary visual
+- point out that setup editing is only front-and-center in standby
 
 ### 1:40–2:30 — Command and assessment
 - issue command from console or GUI
 - show server-side validation/assessment result; on success the target should disappear/deactivate before archive
-- keep telemetry visible
-- point out richer state panels (track measurement residual / covariance / interceptor status / engage order status / assessment code)
-- point out connection and picture-status labels on the viewer
+- use the side rail only for compact outcome/control context
+- point out track state, TTI, and assessment overlays on the map
 
 ### 2:30–3:20 — Resilience case
 - exercise reconnect / timeout / UDP loss convergence
 - surface viewer heartbeat/timeout visibility on the live transport path when appropriate
+- point out that `Link Delay` is real heartbeat RTT and `Picture Age` is authoritative snapshot wall-clock age
 - point out `picture_status=degraded` when packet loss is visible but the stream is still current
 - point out `picture_status=reacquiring` and `picture_status=stale` transitions when applicable
-- point out snapshot batching/filtering behavior when a viewer joins late
+- point out that link/picture status is promoted only during live monitoring
 - explain what the viewer and logs show
 
 ### 3:20–4:20 — Post-Engagement Review
 - open replay/review artifact
 - compare tracked_intercept and unguided_intercept launch artifacts side by side
-- point to timeline, event log, track state, intercept profile, and assessment outputs
+- keep the archived map on screen and use the review timeline as the main secondary surface
+- point to timeline, track state, intercept profile, and assessment outputs
 - point to picture-status and latest snapshot metadata in the generated summaries
 
 ### Closing

@@ -14,7 +14,7 @@ This system is designed to show a clear separation between:
 To keep validation and assessment in one place. The server is the only source of truth.
 
 ### Why split TCP and UDP?
-Control traffic needs reliability and ordering. Snapshot traffic needs freshness more than per-packet guarantees.
+Control traffic needs reliability and ordering. Snapshot traffic needs picture currency more than per-packet guarantees.
 
 ### Why include Post-Engagement Review?
 Because post-run analysis is part of the system contract. Commands, judgments, and resilience events should be explainable after execution.

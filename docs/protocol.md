@@ -21,7 +21,7 @@ If they diverge, update both in the same change.
 | Transport | Use | Why |
 |---|---|---|
 | TCP | session control, command submission, acknowledgements, critical assessment events | reliability and ordering matter |
-| UDP | state snapshots, telemetry, non-critical frequent updates | freshness matters more than per-packet reliability |
+| UDP | state snapshots, telemetry, non-critical frequent updates | picture currency matters more than per-packet reliability |
 
 ## TCP Message Kinds (`TcpMessageKind`)
 
@@ -55,6 +55,7 @@ Operator-facing note:
 | `track_summary` | tracking-specific state summary |
 | `telemetry` | tick/tick-interval/packet-loss/last-snapshot telemetry |
 | `display_heartbeat` | viewer liveness heartbeat over UDP |
+| `display_heartbeat_ack` | viewer heartbeat round-trip acknowledgement over UDP |
 
 ## Event Types (`EventType`)
 
@@ -98,6 +99,7 @@ Current payload structs:
 - `SnapshotPayload`
 - `TelemetryPayload`
 - `DisplayHeartbeatPayload`
+- `DisplayHeartbeatAckPayload`
 - `AarRequestPayload`
 
 `SnapshotPayload` carries richer state fields for:
@@ -107,6 +109,13 @@ Current payload structs:
 - engage order status status
 - assessment readiness/code
 - launch angle metadata
+
+Timing note:
+- `SnapshotHeader.timestamp_ms` remains simulation/replay time
+- `SnapshotHeader.capture_wall_time_ms` is the authoritative real capture time for the live picture
+- `TelemetrySample.last_snapshot_timestamp_ms` remains simulation/replay time
+- `TelemetrySample.last_snapshot_wall_time_ms` is the authoritative real capture time mirrored into telemetry
+- `display_heartbeat` / `display_heartbeat_ack` are used to measure real viewer RTT for `Link Delay`
 
 ## Serialization Format
 
@@ -149,6 +158,7 @@ Current live backend scope:
 - emits UDP snapshot/telemetry datagrams to the registered viewer endpoint
 - handles `scenario_stop`, `scenario_reset`, `track_drop`, and `aar_request` over TCP; the current GUI/scripted flow usually relies on automatic archive after assessment instead of issuing `scenario_stop`, and uses `scenario_reset` to return to `standby` for the next run
 - tracks viewer heartbeat datagrams and raises timeout visibility when the heartbeat window expires
+- replies to accepted viewer heartbeat datagrams with `display_heartbeat_ack` so the viewer can measure real RTT
 - applies batching/filtering controls when multiple snapshots are pending for a late-joining viewer
 
 ## Validation Behavior
