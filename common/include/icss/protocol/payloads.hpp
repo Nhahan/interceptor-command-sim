@@ -163,6 +163,15 @@ struct TelemetryPayload {
 struct DisplayHeartbeatPayload {
     SessionEnvelope envelope {};
     std::uint64_t heartbeat_id {};
+    std::uint64_t client_send_wall_time_ms {};
+};
+
+struct DisplayHeartbeatAckPayload {
+    SessionEnvelope envelope {};
+    std::uint64_t heartbeat_id {};
+    std::uint64_t client_send_wall_time_ms {};
+    std::uint64_t server_receive_wall_time_ms {};
+    std::uint64_t server_send_wall_time_ms {};
 };
 
 struct AarRequestPayload {

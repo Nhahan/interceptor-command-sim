@@ -213,10 +213,26 @@ int main() {
     const DisplayHeartbeatPayload heartbeat {
         {1001U, 201U, 12U},
         42U,
+        123456U,
     };
     const auto heartbeat_wire = serialize(heartbeat);
     const auto parsed_heartbeat = parse_display_heartbeat(heartbeat_wire);
     assert(parsed_heartbeat.heartbeat_id == 42U);
+    assert(parsed_heartbeat.client_send_wall_time_ms == 123456U);
+
+    const DisplayHeartbeatAckPayload heartbeat_ack {
+        {1001U, 1U, 14U},
+        42U,
+        123456U,
+        123460U,
+        123461U,
+    };
+    const auto heartbeat_ack_wire = serialize(heartbeat_ack);
+    const auto parsed_heartbeat_ack = parse_display_heartbeat_ack(heartbeat_ack_wire);
+    assert(parsed_heartbeat_ack.heartbeat_id == 42U);
+    assert(parsed_heartbeat_ack.client_send_wall_time_ms == 123456U);
+    assert(parsed_heartbeat_ack.server_receive_wall_time_ms == 123460U);
+    assert(parsed_heartbeat_ack.server_send_wall_time_ms == 123461U);
 
     bool rejected_wrong_kind = false;
     try {

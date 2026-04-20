@@ -23,6 +23,7 @@ std::string serialize(const AarResponsePayload& payload);
 std::string serialize(const SnapshotPayload& payload);
 std::string serialize(const TelemetryPayload& payload);
 std::string serialize(const DisplayHeartbeatPayload& payload);
+std::string serialize(const DisplayHeartbeatAckPayload& payload);
 std::string serialize(const AarRequestPayload& payload);
 
 SessionCreatePayload parse_session_create(std::string_view wire);
@@ -42,5 +43,6 @@ SnapshotPayload parse_snapshot(std::string_view wire);
 TelemetryPayload parse_telemetry(std::string_view wire);
 AarRequestPayload parse_aar_request(std::string_view wire);
 DisplayHeartbeatPayload parse_display_heartbeat(std::string_view wire);
+DisplayHeartbeatAckPayload parse_display_heartbeat_ack(std::string_view wire);
 
 }  // namespace icss::protocol

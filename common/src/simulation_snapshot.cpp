@@ -1,6 +1,7 @@
 #include "icss/core/simulation.hpp"
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 
 #include "simulation_internal.hpp"
@@ -12,11 +13,19 @@ std::uint32_t tick_interval_ms_for_rate(int tick_rate_hz) {
     return static_cast<std::uint32_t>(std::max(1, 1000 / std::max(1, tick_rate_hz)));
 }
 
+std::uint64_t wall_time_ms_now() {
+    return static_cast<std::uint64_t>(
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now().time_since_epoch())
+            .count());
+}
+
 }  // namespace
 
 void SimulationSession::record_snapshot(float packet_loss_pct) {
     ++sequence_;
     const auto timestamp = next_timestamp_ms();
+    const auto capture_wall_time_ms = wall_time_ms_now();
     const auto display_connection = tactical_display_.connection;
     const auto target_heading = detail::heading_deg(target_velocity_world_);
     const auto asset_heading = detail::heading_deg(interceptor_velocity_world_);
@@ -42,7 +51,7 @@ void SimulationSession::record_snapshot(float packet_loss_pct) {
     }
     snapshots_.push_back({
         {session_id_, kServerSenderId, sequence_},
-        {tick_, timestamp, sequence_},
+        {tick_, timestamp, sequence_, capture_wall_time_ms},
         phase_,
         scenario_.world_width,
         scenario_.world_height,
@@ -71,7 +80,7 @@ void SimulationSession::record_snapshot(float packet_loss_pct) {
         engage_order_status_,
         assessment_,
         display_connection,
-        {tick_, tick_interval_ms_for_rate(tick_rate_hz_), packet_loss_pct, timestamp},
+        {tick_, tick_interval_ms_for_rate(tick_rate_hz_), packet_loss_pct, timestamp, capture_wall_time_ms},
         static_cast<float>(scenario_.launch_angle_deg),
     });
     if (display_connection == ConnectionState::Reconnected) {

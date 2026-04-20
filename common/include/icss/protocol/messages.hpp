@@ -34,6 +34,7 @@ enum class UdpMessageKind : std::uint8_t {
     TrackSummary,
     Telemetry,
     DisplayHeartbeat,
+    DisplayHeartbeatAck,
 };
 
 enum class EventType : std::uint8_t {
@@ -60,6 +61,7 @@ struct SnapshotHeader {
     std::uint64_t tick {};
     std::uint64_t timestamp_ms {};
     std::uint64_t snapshot_sequence {};
+    std::uint64_t capture_wall_time_ms {};
 };
 
 struct TelemetrySample {
@@ -67,6 +69,7 @@ struct TelemetrySample {
     std::uint32_t tick_interval_ms {};
     float packet_loss_pct {};
     std::uint64_t last_snapshot_timestamp_ms {};
+    std::uint64_t last_snapshot_wall_time_ms {};
 };
 
 struct EventRecordHeader {
@@ -92,12 +95,13 @@ inline constexpr std::array<TcpMessageKind, 14> kTcpMessageKinds {
     TcpMessageKind::AarResponse,
 };
 
-inline constexpr std::array<UdpMessageKind, 5> kUdpMessageKinds {
+inline constexpr std::array<UdpMessageKind, 6> kUdpMessageKinds {
     UdpMessageKind::WorldSnapshot,
     UdpMessageKind::EntityState,
     UdpMessageKind::TrackSummary,
     UdpMessageKind::Telemetry,
     UdpMessageKind::DisplayHeartbeat,
+    UdpMessageKind::DisplayHeartbeatAck,
 };
 
 inline constexpr std::array<EventType, 11> kEventTypes {
@@ -149,6 +153,7 @@ inline constexpr std::string_view to_string(UdpMessageKind value) {
     case UdpMessageKind::TrackSummary: return "track_summary";
     case UdpMessageKind::Telemetry: return "telemetry";
     case UdpMessageKind::DisplayHeartbeat: return "display_heartbeat";
+    case UdpMessageKind::DisplayHeartbeatAck: return "display_heartbeat_ack";
     }
     return "unknown_udp_message";
 }

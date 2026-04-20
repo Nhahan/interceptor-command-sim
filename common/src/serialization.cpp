@@ -196,6 +196,7 @@ SnapshotHeader parse_snapshot_header(const FieldMap& fields) {
         parse_u64(require(fields, "tick")),
         parse_u64(require(fields, "timestamp_ms")),
         parse_u64(require(fields, "snapshot_sequence")),
+        parse_u64(require(fields, "capture_wall_time_ms")),
     };
 }
 
@@ -211,6 +212,7 @@ TelemetrySample parse_telemetry_sample(const FieldMap& fields) {
         parse_u32(tick_interval_text),
         parse_float(require(fields, "packet_loss_pct")),
         parse_u64(require(fields, "last_snapshot_timestamp_ms")),
+        parse_u64(require(fields, "last_snapshot_wall_time_ms")),
     };
 }
 
@@ -413,6 +415,7 @@ std::string serialize(const SnapshotPayload& payload) {
         {"tick", as_string(payload.header.tick)},
         {"timestamp_ms", as_string(payload.header.timestamp_ms)},
         {"snapshot_sequence", as_string(payload.header.snapshot_sequence)},
+        {"capture_wall_time_ms", as_string(payload.header.capture_wall_time_ms)},
         {"phase", payload.phase},
         {"world_width", as_string(static_cast<std::int64_t>(payload.world_width))},
         {"world_height", as_string(static_cast<std::int64_t>(payload.world_height))},
@@ -477,6 +480,7 @@ std::string serialize(const TelemetryPayload& payload) {
         {"tick_interval_ms", as_string(payload.sample.tick_interval_ms)},
         {"packet_loss_pct", as_string(payload.sample.packet_loss_pct)},
         {"last_snapshot_timestamp_ms", as_string(payload.sample.last_snapshot_timestamp_ms)},
+        {"last_snapshot_wall_time_ms", as_string(payload.sample.last_snapshot_wall_time_ms)},
         {"connection_state", payload.connection_state},
         {"event_tick", as_string(payload.event_tick)},
         {"event_type", payload.event_type},
@@ -491,6 +495,20 @@ std::string serialize(const DisplayHeartbeatPayload& payload) {
         {"sender_id", as_string(payload.envelope.sender_id)},
         {"sequence", as_string(payload.envelope.sequence)},
         {"heartbeat_id", as_string(payload.heartbeat_id)},
+        {"client_send_wall_time_ms", as_string(payload.client_send_wall_time_ms)},
+    });
+}
+
+std::string serialize(const DisplayHeartbeatAckPayload& payload) {
+    return join_fields({
+        {"kind", "display_heartbeat_ack"},
+        {"session_id", as_string(payload.envelope.session_id)},
+        {"sender_id", as_string(payload.envelope.sender_id)},
+        {"sequence", as_string(payload.envelope.sequence)},
+        {"heartbeat_id", as_string(payload.heartbeat_id)},
+        {"client_send_wall_time_ms", as_string(payload.client_send_wall_time_ms)},
+        {"server_receive_wall_time_ms", as_string(payload.server_receive_wall_time_ms)},
+        {"server_send_wall_time_ms", as_string(payload.server_send_wall_time_ms)},
     });
 }
 
@@ -690,7 +708,23 @@ AarRequestPayload parse_aar_request(std::string_view wire) {
 DisplayHeartbeatPayload parse_display_heartbeat(std::string_view wire) {
     const auto fields = parse_fields(wire);
     require_kind(fields, "display_heartbeat");
-    return {parse_envelope(fields), parse_u64(require(fields, "heartbeat_id"))};
+    return {
+        parse_envelope(fields),
+        parse_u64(require(fields, "heartbeat_id")),
+        parse_u64(require(fields, "client_send_wall_time_ms")),
+    };
+}
+
+DisplayHeartbeatAckPayload parse_display_heartbeat_ack(std::string_view wire) {
+    const auto fields = parse_fields(wire);
+    require_kind(fields, "display_heartbeat_ack");
+    return {
+        parse_envelope(fields),
+        parse_u64(require(fields, "heartbeat_id")),
+        parse_u64(require(fields, "client_send_wall_time_ms")),
+        parse_u64(require(fields, "server_receive_wall_time_ms")),
+        parse_u64(require(fields, "server_send_wall_time_ms")),
+    };
 }
 
 }  // namespace icss::protocol

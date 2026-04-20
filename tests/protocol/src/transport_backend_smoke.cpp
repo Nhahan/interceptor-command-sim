@@ -222,14 +222,6 @@ int main() {
     assert(snapshot_after_duplicate_start.target_world_position.x != 999.0F);
     assert(snapshot_after_duplicate_start.target_world_position.y != 999.0F);
 
-    const auto heartbeat_wire_1 = serialize(DisplayHeartbeatPayload{{1001U, 201U, 2U}, 1U});
-    assert(::sendto(udp_viewer.fd,
-                    heartbeat_wire_1.data(),
-                    heartbeat_wire_1.size(),
-                    0,
-                    reinterpret_cast<sockaddr*>(&udp_server_addr), sizeof(udp_server_addr)) >= 0);
-    live->poll_once();
-
     send_binary_frame(tcp_client.fd, "track_acquire", serialize(TrackAcquirePayload{{1001U, 101U, 3U}, "wrong-target"}));
     const auto bad_track_frame = wait_for_binary_frame(*live, tcp_client.fd);
     assert(bad_track_frame.kind == "command_ack");
@@ -243,13 +235,6 @@ int main() {
     assert(track_ack.accepted);
 
     live->advance_tick();
-    const auto heartbeat_wire_2 = serialize(DisplayHeartbeatPayload{{1001U, 201U, 3U}, 2U});
-    assert(::sendto(udp_viewer.fd,
-                    heartbeat_wire_2.data(),
-                    heartbeat_wire_2.size(),
-                    0,
-                    reinterpret_cast<sockaddr*>(&udp_server_addr), sizeof(udp_server_addr)) >= 0);
-    live->poll_once();
 
     send_binary_frame(tcp_client.fd, "interceptor_ready", serialize(InterceptorReadyPayload{{1001U, 101U, 5U}, "interceptor-alpha"}));
     const auto asset_frame = wait_for_binary_frame(*live, tcp_client.fd);
@@ -272,6 +257,7 @@ int main() {
     const auto command_ack = parse_command_ack(command_frame.payload);
     assert(command_ack.accepted);
 
+    (void)recv_udp_messages(udp_viewer.fd, 128);
     send_binary_frame(tcp_client.fd, "track_drop", serialize(TrackDropPayload{{1001U, 101U, 8U}, "target-alpha"}));
     const auto late_release_frame = wait_for_binary_frame(*live, tcp_client.fd);
     assert(late_release_frame.kind == "command_ack");

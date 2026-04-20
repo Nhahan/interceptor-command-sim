@@ -6,7 +6,7 @@ int main() {
     using namespace icss::protocol;
 
     static_assert(kTcpMessageKinds.size() == 14);
-    static_assert(kUdpMessageKinds.size() == 5);
+    static_assert(kUdpMessageKinds.size() == 6);
     static_assert(kEventTypes.size() == 11);
 
     assert(to_string(Transport::Tcp) == "tcp");
@@ -17,6 +17,7 @@ int main() {
     assert(to_string(UdpMessageKind::Telemetry) == "telemetry");
     assert(to_string(TcpMessageKind::AarResponse) == "aar_response");
     assert(to_string(UdpMessageKind::DisplayHeartbeat) == "display_heartbeat");
+    assert(to_string(UdpMessageKind::DisplayHeartbeatAck) == "display_heartbeat_ack");
     assert(to_string(EventType::AssessmentProduced) == "assessment_produced");
 
     return 0;

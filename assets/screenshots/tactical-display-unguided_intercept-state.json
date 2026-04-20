@@ -1,5 +1,6 @@
 {
   "schema_version": "icss-gui-viewer-golden-state-v1",
+  "layout_mode": "review_tactical",
   "phase": "archived",
   "phase_banner": "ARCHIVED",
   "assessment_code": "timeout_observed",

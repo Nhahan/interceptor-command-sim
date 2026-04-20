@@ -92,6 +92,13 @@ bool same_endpoint(const sockaddr_in& lhs, const sockaddr_in& rhs) {
         && lhs.sin_addr.s_addr == rhs.sin_addr.s_addr;
 }
 
+std::uint64_t wall_time_ms_now() {
+    return static_cast<std::uint64_t>(
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now().time_since_epoch())
+            .count());
+}
+
 SocketHandle bind_tcp_listener(const icss::core::ServerConfig& config) {
     const int fd = ::socket(AF_INET, SOCK_STREAM, 0);
     if (fd < 0) {
@@ -735,7 +742,17 @@ private:
                     if (viewer_endpoint_.has_value() && !same_endpoint(*viewer_endpoint_, addr)) {
                         continue;
                     }
+                    const auto server_receive_wall_time_ms = wall_time_ms_now();
                     last_display_heartbeat_at_ = std::chrono::steady_clock::now();
+                    queue_udp_datagram(
+                        icss::protocol::serialize(icss::protocol::DisplayHeartbeatAckPayload {
+                            {kDefaultSessionId, icss::core::kServerSenderId, ++server_sequence_},
+                            payload.heartbeat_id,
+                            payload.client_send_wall_time_ms,
+                            server_receive_wall_time_ms,
+                            wall_time_ms_now(),
+                        }),
+                        addr);
                     if (!session_.snapshots().empty() &&
                         session_.latest_snapshot().display_connection == icss::core::ConnectionState::TimedOut) {
                         session_.connect_client(icss::core::ClientRole::TacticalDisplay, viewer_sender_id_);
