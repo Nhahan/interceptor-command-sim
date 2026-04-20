@@ -35,10 +35,10 @@ Implementation anchors:
 - live transport backend: `common/src/transport_socket_live.cpp`
 - simulation API: `common/include/icss/core/simulation.hpp`
 - simulation runtime: `common/src/simulation.cpp`, `common/src/simulation_state.cpp`, `common/src/simulation_commands.cpp`, `common/src/simulation_clients.cpp`, `common/src/simulation_snapshot.cpp`, `common/src/simulation_summary.cpp`, `common/src/simulation_support.cpp`
-- replay cursor + ASCII tactical viewer renderer: `common/include/icss/view/replay_cursor.hpp`, `common/src/ascii_tactical_view.cpp`
+- replay cursor + ASCII tactical display renderer: `common/include/icss/view/replay_cursor.hpp`, `common/src/ascii_tactical_view.cpp`
 - server reference entrypoint: `server/src/main.cpp`
-- command console reference entrypoint: `clients/command-console/src/main.cpp`
-- tactical viewer reference entrypoint: `clients/tactical-viewer/src/main.cpp`
+- fire control console reference entrypoint: `clients/command-console/src/main.cpp`
+- tactical display reference entrypoint: `clients/tactical-viewer/src/main.cpp`
 - GUI viewer modules: `clients/tactical-viewer-gui/src/app_*.cpp`
 
 ### 2. Command Console Client
@@ -46,22 +46,22 @@ Responsibilities:
 - create session / join session
 - issue operator commands
 - display command acknowledgements and critical events
-- show connection health and important judgment outcomes
+- show connection health and important assessment outcomes
 
 ### 3. Minimal 2D Tactical Viewer
 Responsibilities:
-- render target / asset positions
+- render target / interceptor positions
 - show tracking residual/covariance state and snapshot freshness
 - display connection status and telemetry
 - surface event log panel
 - show AAR playback cursor/state during replay
-- expose richer command/judgment state panels
+- expose richer command/assessment state panels
 
 ## Authority Model
 
 - The server is the **single source of truth**.
 - Clients send requests and render state.
-- Final validation and judgment happen only on the server.
+- Final validation and assessment happen only on the server.
 - Replay/AAR is generated from server-side event history, not reconstructed from client guesses.
 
 ## Tick Model

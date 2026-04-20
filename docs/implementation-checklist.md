@@ -17,7 +17,7 @@ Use this checklist as a maintenance audit so follow-on changes do not silently d
 ## Pass 2
 - [x] define scenario state flow
 - [x] define entity list and command list
-- [x] define judgment outputs
+- [x] define assessment outputs
 
 ## Pass 3
 - [x] define TCP message families
@@ -27,7 +27,7 @@ Use this checklist as a maintenance audit so follow-on changes do not silently d
 ## Pass 4
 - [x] define event schema for AAR
 - [x] define sample replay timeline format
-- [x] define tactical viewer telemetry contract
+- [x] define tactical display telemetry contract
 
 ## Pass 5
 - [x] update README with locked structure

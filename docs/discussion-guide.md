@@ -11,7 +11,7 @@ This system is designed to show a clear separation between:
 ## Short Answers To Common Questions
 
 ### Why server-authoritative?
-To keep validation and judgment in one place. The server is the only source of truth.
+To keep validation and assessment in one place. The server is the only source of truth.
 
 ### Why split TCP and UDP?
 Control traffic needs reliability and ordering. Snapshot traffic needs freshness more than per-packet guarantees.
@@ -19,7 +19,7 @@ Control traffic needs reliability and ordering. Snapshot traffic needs freshness
 ### Why include AAR?
 Because post-run analysis is part of the system contract. Commands, judgments, and resilience events should be explainable after execution.
 
-### Why keep the tactical viewer read-only?
+### Why keep the tactical display read-only?
 The viewer exists to expose state, telemetry, and replay information. It is an observability surface, not a direct-control surface.
 
 ### Why keep the live backend single-session?
@@ -55,7 +55,7 @@ Through reconnect/resync, timeout visibility, degraded freshness under packet lo
 ### Why keep one scenario?
 It keeps the repository focused on transport, authority, resilience, and replay rather than spreading effort across content.
 
-### Why keep one command console and one viewer in live mode?
+### Why keep one fire control console and one viewer in live mode?
 It keeps ownership clear and makes the live path easy to reason about and verify.
 
 ### Why allow both JSON and binary framing?
@@ -70,8 +70,8 @@ The current scope values clear state convergence over protocol complexity. The n
 - `assets/sample-aar/session-summary.md` for post-run summary
 - `assets/sample-aar/replay-timeline.json` for replay/event history
 - `examples/sample-output.md` for viewer-facing output
-- `assets/sample-aar/straight/session-summary.md` for the straight-launch timeout comparison
-- `examples/sample-output-straight.md` for the viewer-facing straight-launch comparison
+- `assets/sample-aar/unguided_intercept/session-summary.md` for the unguided_intercept-launch timeout comparison
+- `examples/sample-output-unguided_intercept.md` for the viewer-facing unguided_intercept-launch comparison
 - `docs/test-report.md` for the regression surface
 
 ## Good Closing Summary

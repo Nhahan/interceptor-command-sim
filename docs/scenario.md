@@ -7,15 +7,15 @@ Use one representative training/control scenario.
 ### Narrative Shape
 1. session starts
 2. target appears / is detected
-3. guidance is enabled for pre-launch target-following
+3. track is acquired for pre-launch target-following
 4. interceptor becomes available / activated
-5. command is issued from the command console
+5. command is issued from the fire control console
 6. server validates and judges the outcome
 7. result is reviewed through AAR/replay
 
 ## Required Properties
 
-- shows command -> validation -> state transition -> judgment
+- shows command -> validation -> state transition -> assessment
 - shows multi-client visibility
 - can generate meaningful AAR output
 - can survive at least one abnormal network case in validation coverage
@@ -30,33 +30,33 @@ Use one representative training/control scenario.
 
 ## State Flow
 
-`Initialized -> Detecting -> Tracking -> AssetReady -> CommandIssued -> Engaging -> Judged -> Archived`
+`Standby -> Detecting -> Tracking -> InterceptorReady -> EngageOrdered -> Intercepting -> Assessed -> Archived`
 
-The runtime auto-archives on the tick after judgment, so the normal GUI flow is `Start -> Guidance -> Activate -> Command -> Review -> Reset`.
+The runtime auto-archives on the tick after assessment, so the normal GUI flow is `Start -> Track -> Ready -> Engage -> AAR -> Reset`.
 
 The runtime rejects out-of-order control steps:
-- `scenario_start` is only valid from `Initialized`
-- `asset_activate` is only valid from `Tracking`
-- `command_issue` is only valid from `AssetReady`
-- `Guidance On` / `Guidance Off` is only useful before `Command`; once the interceptor is launched, guidance control is locked
+- `scenario_start` is only valid from `Standby`
+- `interceptor_ready` is only valid from `Tracking`
+- `engage_order` is only valid from `InterceptorReady`
+- `Acquire Track` / `Drop Track` is only useful before `Engage`; once the interceptor is launched, track control is locked
 - post-archive control requests remain rejected while AAR stays available
 
 ## Entity Types
 
 - `Target`
-- `Interceptor asset`
-- `Guidance / track solution`
+- `Interceptor`
+- `Track / firing solution`
 - `Session`
 - `Command`
-- `Judgment`
+- `Assessment`
 
 ## Viewer Requirements
 
-The tactical viewer should make the scenario legible as an observability-first display. It should show:
+The tactical display should make the scenario legible as an observability-first display. It should show:
 - where targets/assets are
-- whether guidance is enabled
+- whether track is established
 - tracker quality/residual state
-- what interceptor status and command lifecycle state are active
+- what interceptor status and engage order status state are active
 - whether connection/snapshot status is healthy
 - where the AAR playback cursor is in replay mode
 

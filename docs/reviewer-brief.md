@@ -23,8 +23,8 @@ If you only have a few minutes:
 1. run `./build/icss_server --backend in_process`
 2. open `assets/sample-aar/session-summary.md`
 3. open `examples/sample-output.md`
-4. compare `assets/sample-aar/straight/session-summary.md`
-5. compare `examples/sample-output-straight.md`
+4. compare `assets/sample-aar/unguided_intercept/session-summary.md`
+5. compare `examples/sample-output-unguided_intercept.md`
 6. skim `docs/protocol.md` and `docs/test-report.md`
 
 ## Five-Minute Review Path
@@ -33,14 +33,14 @@ If you only have a few minutes:
 - live startup behavior: `./build/icss_server --backend socket_live --tick-limit 2`
 - artifact summary: `assets/sample-aar/session-summary.md`
 - viewer snapshot: `examples/sample-output.md`
-- straight comparison summary: `assets/sample-aar/straight/session-summary.md`
-- straight comparison output: `examples/sample-output-straight.md`
+- unguided_intercept comparison summary: `assets/sample-aar/unguided_intercept/session-summary.md`
+- unguided_intercept comparison output: `examples/sample-output-unguided_intercept.md`
 - verification surface: `docs/test-report.md`
 
 ## What To Look For
 
 ### 1. Authority Boundary
-- the server owns validation and judgment
+- the server owns validation and assessment
 - clients issue requests or render state
 - AAR is derived from server-side history
 
@@ -52,7 +52,7 @@ If you only have a few minutes:
 - structured runtime log under `logs/session.log`
 - generated AAR under `assets/sample-aar/`
 - generated viewer-oriented sample output under `examples/sample-output.md`
-- straight comparison artifacts under `assets/sample-aar/straight/` and `examples/sample-output-straight.md`
+- unguided_intercept comparison artifacts under `assets/sample-aar/unguided_intercept/` and `examples/sample-output-unguided_intercept.md`
 
 ### 4. Resilience
 - reconnect/resync visibility
@@ -69,16 +69,16 @@ If you only have a few minutes:
 
 ### Viewer / observability
 - renderer: `common/src/ascii_tactical_view.cpp`
-- tactical viewer entrypoint: `clients/tactical-viewer/src/main.cpp`
+- tactical display entrypoint: `clients/tactical-viewer/src/main.cpp`
 
 ### AAR / output artifacts
 - replay timeline: `assets/sample-aar/replay-timeline.json`
 - session summary: `assets/sample-aar/session-summary.md`
 - machine-readable summary: `assets/sample-aar/session-summary.json`
 - sample output: `examples/sample-output.md`
-- straight replay timeline: `assets/sample-aar/straight/replay-timeline.json`
-- straight session summary: `assets/sample-aar/straight/session-summary.md`
-- straight sample output: `examples/sample-output-straight.md`
+- unguided_intercept replay timeline: `assets/sample-aar/unguided_intercept/replay-timeline.json`
+- unguided_intercept session summary: `assets/sample-aar/unguided_intercept/session-summary.md`
+- unguided_intercept sample output: `examples/sample-output-unguided_intercept.md`
 
 ### Verification
 - test index: `docs/test-report.md`
@@ -119,8 +119,8 @@ ctest --test-dir build --output-on-failure -R 'runtime_config_invalid_values_smo
 - Session summary: `assets/sample-aar/session-summary.md`
 - Replay timeline: `assets/sample-aar/replay-timeline.json`
 - Sample viewer output: `examples/sample-output.md`
-- Straight session summary: `assets/sample-aar/straight/session-summary.md`
-- Straight sample viewer output: `examples/sample-output-straight.md`
+- UnguidedIntercept session summary: `assets/sample-aar/unguided_intercept/session-summary.md`
+- UnguidedIntercept sample viewer output: `examples/sample-output-unguided_intercept.md`
 - Runtime log: `logs/session.log`
 
 ## Current Verification Snapshot

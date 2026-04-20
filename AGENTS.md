@@ -30,10 +30,10 @@ Keep the system compact and do not silently expand scope.
 ### Core shape
 - **1 server**
 - **2 clients**
-  - command console
-  - minimal 2D tactical viewer
+  - fire control console
+  - minimal 2D tactical display
 - **1 representative scenario**
-- server-side validation / judgment
+- server-side validation / assessment
 - TCP/UDP split with documented responsibilities
 - replayable event logging / AAR
 - **at least 1 resilience case**
@@ -54,11 +54,11 @@ Keep the system compact and do not silently expand scope.
 
 ## 4) Viewer role
 
-The tactical viewer exists to make UDP/state propagation and AAR legible.
+The tactical display exists to make UDP/state propagation and AAR legible.
 It stays **read-only / observability-first**.
 
 ### Required viewer elements
-- target / asset position icons
+- target / interceptor position icons
 - tracking status
 - connection status
 - freshness state
@@ -87,7 +87,7 @@ Current shape:
 - executable server modes for `in_process` and `socket_live`
 - process-level live smoke coverage for the executable `socket_live` path
 - graceful shutdown coverage for long-running `socket_live` execution
-- single-session live transport with one command console and one tactical viewer
+- single-session live transport with one fire control console and one tactical display
 - replay, timeout, batching, and logging coverage in tests
 
 Therefore:

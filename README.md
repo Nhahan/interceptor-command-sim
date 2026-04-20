@@ -26,7 +26,7 @@ This repository contains an implemented system with deterministic local verifica
 - executable server modes for `in_process` and `socket_live`
 - process-level live smoke for the executable `socket_live` server path
 - live server mode writes runtime log and AAR/sample outputs when snapshots exist
-- single-session live transport policy with one command console and one tactical viewer
+- single-session live transport policy with one fire control console and one tactical display
 - command, snapshot, telemetry, AAR, and timeout flows exercised in code
 - regression coverage for protocol, runtime, transport, logging, replay, and resilience paths
 
@@ -43,10 +43,10 @@ Both server modes now print backend, bind, heartbeat, and delivery settings at s
 ### Runtime Shape
 - 1 C++ server
 - 2 clients
-  - command console
-  - minimal 2D tactical viewer
+  - fire control console
+  - minimal 2D tactical display
 - 1 representative scenario
-- server-authoritative validation and judgment
+- server-authoritative validation and assessment
 - TCP/UDP split with documented responsibilities
 - replayable event logging / AAR
 - at least 1 resilience case
@@ -54,7 +54,7 @@ Both server modes now print backend, bind, heartbeat, and delivery settings at s
 
 ### Viewer Surface
 - target / interceptor position icons
-- guidance state
+- track state
 - tracker estimate/covariance state
 - connection status
 - freshness state
@@ -63,7 +63,7 @@ Both server modes now print backend, bind, heartbeat, and delivery settings at s
 - last snapshot timestamp
 - event log panel
 - AAR playback cursor
-- asset status / command lifecycle / judgment state
+- interceptor status / engage order status / assessment state
 
 ### Explicit Non-Goals
 - flashy effects or entertainment-oriented presentation
@@ -96,8 +96,8 @@ Both server modes now print backend, bind, heartbeat, and delivery settings at s
 1. `./build/icss_server --backend in_process`
 2. `assets/sample-aar/session-summary.md`
 3. `examples/sample-output.md`
-4. `assets/sample-aar/straight/session-summary.md`
-5. `examples/sample-output-straight.md`
+4. `assets/sample-aar/unguided_intercept/session-summary.md`
+5. `examples/sample-output-unguided_intercept.md`
 6. `docs/protocol.md`
 7. `docs/test-report.md`
 
@@ -135,12 +135,12 @@ ctest --test-dir build --output-on-failure
 ### Live Clients
 
 ```bash
-./build/icss_tactical_viewer_gui --host 127.0.0.1 --udp-port 4001
-./build/icss_command_console --backend socket_live --host 127.0.0.1 --tcp-port 4000
-./build/icss_command_console --backend socket_live --host 127.0.0.1 --tcp-port 4000 --repo-root /path/to/repo-root
+./build/icss_tactical_display_gui --host 127.0.0.1 --udp-port 4001
+./build/icss_fire_control_console --backend socket_live --host 127.0.0.1 --tcp-port 4000
+./build/icss_fire_control_console --backend socket_live --host 127.0.0.1 --tcp-port 4000 --repo-root /path/to/repo-root
 ```
 
-`icss_tactical_viewer_gui` is not just a position plot. The window emphasizes:
+`icss_tactical_display_gui` is not just a position plot. The window emphasizes:
 - the current mission phase/state-machine step
 - the latest authoritative server decision or rejection reason via a compact status badge and `Authoritative Status` panel
 - resilience/telemetry state (`fresh`, `degraded`, `resync`, `stale`)
@@ -155,21 +155,21 @@ ctest --test-dir build --output-on-failure
 - time-of-command outcome branching: the same scenario can end in `intercept_success` or `timeout_observed` depending on timing and kinematics
 - on `intercept_success`, the authoritative runtime deactivates the target and freezes both target/interceptor motion before the run auto-archives
 - each GUI `Start` randomizes the actual target start geometry and target velocity within a small bounded envelope around the planned setup values, while keeping the interceptor origin anchored to its planned coordinates
-- the GUI exposes `Guidance On` / `Guidance Off` as the operator-facing pre-command guidance toggle; protocol/internal names remain `track_request` / `track_release`, and guidance control locks once `Command` launches the interceptor
+- the GUI exposes `Track`, with `Acquire Track` / `Drop Track` stateful labeling, as the operator-facing pre-launch track toggle; protocol/internal names remain `track_acquire` / `track_drop`, and track control locks once `Engage` launches the interceptor
 - the GUI now uses an explicit camera/viewport transform: world origin is treated as bottom-left with +x right / +y up, and the renderer flips Y only when mapping world coordinates into SDL screen space
 
 Defaults:
 - `icss_server --backend socket_live` uses `json` TCP framing unless `--tcp-frame-format` overrides it
-- `icss_tactical_viewer_gui` and `icss_command_console` now default to the same `json` framing
-- `icss_tactical_viewer_gui` now defaults to a 100 ms heartbeat interval so live progression does not stall waiting on viewer keepalive traffic
-- if the server uses `--tcp-frame-format binary`, pass `--tcp-frame-format binary` to the GUI viewer and command console too
-- `icss_command_console` can use `--repo-root` to load the same scenario config as the server before sending `scenario_start`
-- `run_live_demo.sh` forwards `--runtime-root` to the command console, so a custom runtime config changes both server and console behavior instead of only the server
+- `icss_tactical_display_gui` and `icss_fire_control_console` now default to the same `json` framing
+- `icss_tactical_display_gui` now defaults to a 100 ms heartbeat interval so live progression does not stall waiting on viewer keepalive traffic
+- if the server uses `--tcp-frame-format binary`, pass `--tcp-frame-format binary` to the GUI viewer and fire control console too
+- `icss_fire_control_console` can use `--repo-root` to load the same scenario config as the server before sending `scenario_start`
+- `run_live_demo.sh` forwards `--runtime-root` to the fire control console, so a custom runtime config changes both server and console behavior instead of only the server
 
 For a manual live run:
 1. start `icss_server --backend socket_live --run-forever`
-2. start `icss_tactical_viewer_gui`
-3. run `icss_command_console --backend socket_live ...` to drive the scripted command flow
+2. start `icss_tactical_display_gui`
+3. run `icss_fire_control_console --backend socket_live ...` to drive the scripted command flow
 
 ### One-Command Live Demo
 
@@ -179,7 +179,7 @@ For a manual live run:
 
 `run_live_demo.sh` now does two defensive things by default:
 - configures/builds the required demo binaries before launch
-- kills existing repo-local `icss_server`, `icss_tactical_viewer_gui`, and `icss_command_console` processes so you do not end up looking at an old window or stale server
+- kills existing repo-local `icss_server`, `icss_tactical_display_gui`, and `icss_fire_control_console` processes so you do not end up looking at an old window or stale server
 
 Opt out only if you need it:
 ```bash
@@ -188,11 +188,11 @@ Opt out only if you need it:
 
 Default behavior:
 - starts `icss_server --backend socket_live --run-forever`
-- starts `icss_tactical_viewer_gui`
+- starts `icss_tactical_display_gui`
 - leaves control to the GUI panel
-- GUI live control order: `Start -> Guidance -> Activate -> Command -> Review -> Reset -> Start`
-- `Review` is intentionally separate from the live control chain; request it after judgment/archive to inspect server-side AAR data
-- the bottom timeline panel now shows live server events plus control acknowledgements; `Review` switches that panel into post-action review mode
+- GUI live control order: `Start -> Track -> Ready -> Engage -> AAR -> Reset -> Start`
+- `AAR` is intentionally separate from the live control chain; request it after assessment/archive to inspect server-side AAR data
+- the bottom timeline panel now shows live server events plus control acknowledgements; `AAR` switches that panel into post-action AAR mode
 - the timeline panel now clips overflowing log lines, draws a scrollbar, and supports mouse-wheel / PageUp / PageDown / Home / End scrolling
 - the GUI highlights mission phase, authoritative decision state, and resilience telemetry while you step through the flow
 
@@ -202,7 +202,7 @@ For a fully scripted visible run:
 ./scripts/run_live_demo.sh --scripted
 ```
 
-Headless mode also runs the scripted command console flow automatically and prints the artifact summary when it completes.
+Headless mode also runs the scripted fire control console flow automatically and prints the artifact summary when it completes.
 
 Useful options:
 
@@ -212,21 +212,21 @@ Useful options:
 ./scripts/run_live_demo.sh --headless --viewer-duration-ms 1500
 ```
 
-Regenerate the checked-in guided/straight comparison bundle:
+Regenerate the checked-in tracked_intercept/unguided_intercept comparison bundle:
 
 ```bash
 ./scripts/run_live_demo.sh --regen-samples --sample-mode all
 ```
 
 That command refreshes:
-- guided AAR/sample output under `assets/sample-aar/` and `examples/sample-output.md`
-- straight comparison artifacts under `assets/sample-aar/straight/` and `examples/sample-output-straight.md`
-- deterministic viewer-state goldens under `assets/screenshots/tactical-viewer-guidance-state.json` and `assets/screenshots/tactical-viewer-straight-state.json`
-- GUI screenshots under `assets/screenshots/tactical-viewer-guidance.bmp` and `assets/screenshots/tactical-viewer-straight.bmp`
+- tracked_intercept AAR/sample output under `assets/sample-aar/` and `examples/sample-output.md`
+- unguided_intercept comparison artifacts under `assets/sample-aar/unguided_intercept/` and `examples/sample-output-unguided_intercept.md`
+- deterministic viewer-state goldens under `assets/screenshots/tactical-display-tracked_intercept-state.json` and `assets/screenshots/tactical-display-unguided_intercept-state.json`
+- GUI screenshots under `assets/screenshots/tactical-display-tracked_intercept.bmp` and `assets/screenshots/tactical-display-unguided_intercept.bmp`
 
 The regression suite now keeps repo-root review assets stable:
 - server CLI success smokes run against temp runtime roots instead of writing into the checked-in bundle
-- a dedicated drift smoke regenerates guided/straight text artifacts and viewer-state goldens into a temp runtime root and checks them against the checked-in canonical files
+- a dedicated drift smoke regenerates tracked_intercept/unguided_intercept text artifacts and viewer-state goldens into a temp runtime root and checks them against the checked-in canonical files
 
 ### Artifact Summary
 
@@ -234,7 +234,7 @@ The regression suite now keeps repo-root review assets stable:
 ./build/icss_artifact_summary
 ```
 
-`icss_artifact_summary` now reports the guided bundle by default, adds straight comparison lines when `assets/sample-aar/straight/` is present, and also supports explicit compare mode via `--guided-root PATH --straight-root PATH`.
+`icss_artifact_summary` now reports the tracked_intercept bundle by default, adds unguided_intercept comparison lines when `assets/sample-aar/unguided_intercept/` is present, and also supports explicit compare mode via `--tracked_intercept-root PATH --unguided_intercept-root PATH`.
 
 ## Code Paths
 
@@ -244,11 +244,11 @@ The regression suite now keeps repo-root review assets stable:
 - `common/include/icss/protocol/serialization.hpp` — textual payload serialization/parse helpers
 - `common/include/icss/net/transport.hpp` — transport abstraction and backend factory
 - `common/include/icss/core/` — shared session/domain types and simulation API
-- `common/src/` — config loader, split transport backends, runtime orchestration, split simulation/runtime lifecycle, AAR writer, ASCII tactical viewer renderer
+- `common/src/` — config loader, split transport backends, runtime orchestration, split simulation/runtime lifecycle, AAR writer, ASCII tactical display renderer
 - `server/src/main.cpp` — authoritative reference entrypoint
-- `clients/command-console/src/main.cpp` — command console reference flow and socket-live client path
-- `clients/tactical-viewer/src/main.cpp` — minimal 2D tactical viewer reference flow
-- `clients/tactical-viewer-gui/src/main.cpp` — SDL-based live tactical viewer window
+- `clients/command-console/src/main.cpp` — fire control console reference flow and socket-live client path
+- `clients/tactical-viewer/src/main.cpp` — minimal 2D tactical display reference flow
+- `clients/tactical-viewer-gui/src/main.cpp` — SDL-based live tactical display window
 - `clients/tactical-viewer-gui/src/app_*.cpp` — split GUI support, setup, visual-state, render, and network helpers
 - `tests/protocol/src/protocol_smoke.cpp` — protocol smoke verification
 - `tests/protocol/src/payload_codec_smoke.cpp` — payload serialization regression
@@ -292,4 +292,4 @@ Start with `docs/implementation-checklist.md` and lock:
 2. protocol categories
 3. event schema
 4. scenario timeline
-5. tactical viewer telemetry contract
+5. tactical display telemetry contract

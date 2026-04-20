@@ -6,7 +6,7 @@ Because the runtime is centered on command validation, state authority, resilien
 
 ## Why server-authoritative?
 
-To keep validation and judgment in one place. The server is the only source of truth.
+To keep validation and assessment in one place. The server is the only source of truth.
 
 ## Why TCP and UDP both?
 
@@ -18,11 +18,11 @@ So the runtime can separate command/snapshot intent from the backend that carrie
 
 ## Why add viewer heartbeat handling?
 
-So transport-level liveness is observable independently from authoritative command/judgment state. A viewer timeout should affect connection/resilience state, not mission outcome.
+So transport-level liveness is observable independently from authoritative command/assessment state. A viewer timeout should affect connection/resilience state, not mission outcome.
 
 ## Why keep the live backend single-session?
 
-Because the current scope optimizes for clear transport ownership and explainable behavior. One active command console and one active tactical viewer keep the live path easy to reason about and easy to verify.
+Because the current scope optimizes for clear transport ownership and explainable behavior. One active fire control console and one active tactical display keep the live path easy to reason about and easy to verify.
 
 ## Why separate framing from payload serialization?
 
@@ -32,9 +32,9 @@ So the logical schema remains independent from how bytes move over the wire. The
 
 So a late-joining or slower viewer can catch up quickly when only the latest state matters.
 
-## Why does the protocol still say `track_*` while the GUI says `Guidance`?
+## Why does the protocol still say `track_*` while the GUI says `Track`?
 
-Because the protocol names are stable implementation identifiers, while the GUI wording is tuned for operator legibility. The authoritative runtime still enters the internal `Tracking` phase, but the operator-facing control is a guidance toggle: `Guidance On` enables target-follow guidance before launch and `Guidance Off` leaves the interceptor on a straight launch path.
+Because the protocol names are stable implementation identifiers, while the GUI wording is tuned for operator legibility. The authoritative runtime still enters the internal `Tracking` phase, but the operator-facing control is a track toggle: `Acquire Track` establishes a pre-launch firing solution and `Drop Track` leaves the interceptor on an `unguided_intercept` launch path.
 
 ## Why include AAR?
 
@@ -46,8 +46,8 @@ To make state propagation and telemetry legible without drifting into interactio
 
 ## Why show richer state panels?
 
-So the viewer can expose tracker estimate/covariance state, asset status, command lifecycle, judgment state, and replay position without forcing operators to reconstruct system state from raw logs alone.
+So the viewer can expose tracker estimate/covariance state, interceptor status, engage order status, assessment state, and replay position without forcing operators to reconstruct system state from raw logs alone.
 
 ## Why remove the Stop button from the GUI flow?
 
-Because the current scenario has no meaningful post-command operator action before review. Once judgment is produced, the runtime auto-archives the run and leaves `Review` / `Reset` as the only useful next actions.
+Because the current scenario has no meaningful post-command operator action before review. Once assessment is produced, the runtime auto-archives the run and leaves `AAR` / `Reset` as the only useful next actions.

@@ -20,7 +20,7 @@ If they diverge, update both in the same change.
 
 | Transport | Use | Why |
 |---|---|---|
-| TCP | session control, command submission, acknowledgements, critical judgment events | reliability and ordering matter |
+| TCP | session control, command submission, acknowledgements, critical assessment events | reliability and ordering matter |
 | UDP | state snapshots, telemetry, non-critical frequent updates | freshness matters more than per-packet reliability |
 
 ## TCP Message Kinds (`TcpMessageKind`)
@@ -32,29 +32,29 @@ If they diverge, update both in the same change.
 | `session_leave` | leave session / operator disconnect flow |
 | `scenario_start` | start the representative scenario |
 | `scenario_stop` | stop or finalize scenario execution |
-| `scenario_reset` | reset the session back to initialized so a new run can start cleanly |
-| `track_request` | enable target tracking / interceptor guidance before launch |
-| `track_release` | disable target tracking / interceptor guidance before launch |
-| `asset_activate` | activate or ready an asset |
-| `command_issue` | submit a command for validation/judgment |
+| `scenario_reset` | reset the session back to standby so a new run can start cleanly |
+| `track_acquire` | acquire target track for pre-launch interceptor fire control |
+| `track_drop` | drop target track before launch |
+| `interceptor_ready` | activate or ready an interceptor |
+| `engage_order` | submit a command for validation/assessment |
 | `command_ack` | acknowledge accepted or processed command flow |
-| `judgment_event` | emit critical server-side judgment result |
+| `assessment_event` | emit critical server-side assessment result |
 | `aar_request` | request replay/AAR cursor movement or summary output |
 | `aar_response` | return replay/AAR cursor state and summary metadata over TCP |
 
 Operator-facing note:
-- the GUI labels `track_request` / `track_release` as `Guidance On` / `Guidance Off`
-- the runtime phase remains `Tracking` internally even though the viewer presents that state as `Guidance Locked`
+- the GUI labels `track_acquire` / `track_drop` as `Acquire Track` / `Drop Track`
+- the runtime phase remains `Tracking` internally even though the viewer presents that state as `Track Established`
 
 ## UDP Message Kinds (`UdpMessageKind`)
 
 | Kind | Purpose |
 |---|---|
 | `world_snapshot` | periodic world snapshot |
-| `entity_state` | target/asset state summary |
-| `tracking_summary` | tracking-specific state summary |
+| `entity_state` | target/interceptor state summary |
+| `track_summary` | tracking-specific state summary |
 | `telemetry` | tick/latency/packet-loss/last-snapshot telemetry |
-| `viewer_heartbeat` | viewer liveness heartbeat over UDP |
+| `display_heartbeat` | viewer liveness heartbeat over UDP |
 
 ## Event Types (`EventType`)
 
@@ -65,10 +65,10 @@ Current event categories:
 - `client_left`
 - `client_reconnected`
 - `track_updated`
-- `asset_updated`
-- `command_accepted`
-- `command_rejected`
-- `judgment_produced`
+- `interceptor_updated`
+- `engage_order_accepted`
+- `engage_order_rejected`
+- `assessment_produced`
 - `resilience_triggered`
 
 ## Shared Structures
@@ -88,24 +88,24 @@ Current payload structs:
 - `ScenarioStartPayload`
 - `ScenarioStopPayload`
 - `ScenarioResetPayload`
-- `TrackRequestPayload`
-- `TrackReleasePayload`
-- `AssetActivatePayload`
-- `CommandIssuePayload`
-- `JudgmentPayload`
+- `TrackAcquirePayload`
+- `TrackDropPayload`
+- `InterceptorReadyPayload`
+- `EngageOrderPayload`
+- `AssessmentPayload`
 - `CommandAckPayload`
 - `AarResponsePayload`
 - `SnapshotPayload`
 - `TelemetryPayload`
-- `ViewerHeartbeatPayload`
+- `DisplayHeartbeatPayload`
 - `AarRequestPayload`
 
 `SnapshotPayload` carries richer state fields for:
-- guidance state
+- track state
 - track measurement residual
-- asset status
-- command lifecycle status
-- judgment readiness/code
+- interceptor status
+- engage order status status
+- assessment readiness/code
 - launch angle metadata
 
 ## Serialization Format
@@ -121,7 +121,7 @@ Format rules:
 Example:
 
 ```text
-kind=command_issue;session_id=1001;sender_id=101;sequence=7;asset_id=asset-interceptor;target_id=target-alpha
+kind=engage_order;session_id=1001;sender_id=101;sequence=7;interceptor_id=interceptor-alpha;target_id=target-alpha
 ```
 
 ## Framing Layer
@@ -141,19 +141,19 @@ Backend kinds:
 - `socket_live` — bind/listen-capable backend for the live transport direction, kept separate from the deterministic in-process runtime
 
 Current live backend scope:
-- keeps one active command console connection per runtime instance
-- keeps one active tactical viewer registration per runtime instance
+- keeps one active fire control console connection per runtime instance
+- keeps one active tactical display registration per runtime instance
 - accepts a TCP command connection
 - receives UDP viewer registration datagrams
-- processes framed command payloads over TCP, including launch-angle-bearing `scenario_start` and pre-launch guidance toggles
+- processes framed command payloads over TCP, including launch-angle-bearing `scenario_start` and pre-launch track toggles
 - emits UDP snapshot/telemetry datagrams to the registered viewer endpoint
-- handles `scenario_stop`, `scenario_reset`, `track_release`, and `aar_request` over TCP; the current GUI/scripted flow usually relies on automatic archive after judgment instead of issuing `scenario_stop`, and uses `scenario_reset` to return to `initialized` for the next run
+- handles `scenario_stop`, `scenario_reset`, `track_drop`, and `aar_request` over TCP; the current GUI/scripted flow usually relies on automatic archive after assessment instead of issuing `scenario_stop`, and uses `scenario_reset` to return to `standby` for the next run
 - tracks viewer heartbeat datagrams and raises timeout visibility when the heartbeat window expires
 - applies batching/filtering controls when multiple snapshots are pending for a late-joining viewer
 
 ## Validation Behavior
 
-The authoritative runtime records rejected command attempts as `command_rejected` events. Validation is part of the system boundary, not a UI detail.
+The authoritative runtime records rejected command attempts as `engage_order_rejected` events. Validation is part of the system boundary, not a UI detail.
 That includes duplicate command-console joins and duplicate tactical-viewer registrations on the live path.
 Malformed or unsupported `aar_request` controls are rejected explicitly on the TCP command path.
 

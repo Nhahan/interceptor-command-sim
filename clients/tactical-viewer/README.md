@@ -17,7 +17,7 @@ Required elements:
 - last snapshot timestamp
 - event log panel
 - AAR playback cursor
-- interceptor status / command lifecycle / judgment state
+- interceptor status / engage order status / assessment state
 
 Non-goals:
 - direct-control interaction loops

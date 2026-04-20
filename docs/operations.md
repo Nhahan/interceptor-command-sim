@@ -71,7 +71,7 @@ Current log output:
 - runtime writes `logs/session.log`
 - AAR artifacts are written under `assets/sample-aar/`
 - `logs/session.log` now contains one session-summary record plus structured event records
-- the summary log includes backend name, judgment code, and resilience summary
+- the summary log includes backend name, assessment code, and resilience summary
 - runtime log and generated artifacts carry explicit schema/version fields
 
 Live mode output parity:
@@ -82,11 +82,11 @@ Live mode output parity:
 - successful intercepts deactivate the target before archive so post-run artifacts show the target as removed rather than still moving
 
 Current live transport operational concerns:
-- one active command console connection per runtime instance
-- one active tactical viewer registration per runtime instance
+- one active fire control console connection per runtime instance
+- one active tactical display registration per runtime instance
 - TCP command clients disconnect explicitly on EOF and clear stale sender state
 - UDP viewer endpoints register separately from TCP command endpoints
-- viewer heartbeat timeout can raise visible timeout state without contaminating authoritative judgment
+- viewer heartbeat timeout can raise visible timeout state without contaminating authoritative assessment
 
 ### Session Cleanup
 On shutdown or disconnect:
@@ -102,7 +102,7 @@ At minimum, make abnormal states visible for:
 - snapshot loss convergence
 
 ### Telemetry Visibility
-The tactical viewer or command console should expose at least:
+The tactical display or fire control console should expose at least:
 - connection status
 - freshness state
 - tick
@@ -110,7 +110,7 @@ The tactical viewer or command console should expose at least:
 - packet loss estimate
 - snapshot sequence
 - last snapshot timestamp
-- richer track/asset/command/judgment state
+- richer track/interceptor/command/assessment state
 
 Recommended freshness labels:
 - `fresh` for current snapshots
