@@ -16,8 +16,8 @@
       "event_type": "client_joined",
       "source": "fire_control_console",
       "entity_ids": [],
-      "summary": "Client joined session",
-      "details": "Client registered before scenario activity."
+      "summary": "Station on net",
+      "details": "The station registered before scenario activity."
     },
     {
       "timestamp_ms": 1776327000400,
@@ -25,8 +25,8 @@
       "event_type": "client_joined",
       "source": "tactical_display",
       "entity_ids": [],
-      "summary": "Client joined session",
-      "details": "Client registered before scenario activity."
+      "summary": "Station on net",
+      "details": "The station registered before scenario activity."
     },
     {
       "timestamp_ms": 1776327000600,
@@ -34,8 +34,8 @@
       "event_type": "session_started",
       "source": "simulation_server",
       "entity_ids": ["target-alpha"],
-      "summary": "Scenario started",
-      "details": "The authoritative loop is now in detecting state."
+      "summary": "Engagement initiated",
+      "details": "The authoritative loop is now in the detection state."
     },
     {
       "timestamp_ms": 1776327001000,
@@ -43,8 +43,8 @@
       "event_type": "track_updated",
       "source": "fire_control_console",
       "entity_ids": ["target-alpha"],
-      "summary": "Track acquired",
-      "details": "A target track is now established for pre-launch fire control."
+      "summary": "Track file established",
+      "details": "A target track file is now available for pre-launch fire control."
     },
     {
       "timestamp_ms": 1776327001600,
@@ -52,8 +52,8 @@
       "event_type": "interceptor_updated",
       "source": "fire_control_console",
       "entity_ids": ["interceptor-alpha"],
-      "summary": "Interceptor readied",
-      "details": "Interceptor is readied for an engage order."
+      "summary": "Weapon ready",
+      "details": "The interceptor is armed and ready for a fire order."
     },
     {
       "timestamp_ms": 1776327002000,
@@ -61,7 +61,7 @@
       "event_type": "client_left",
       "source": "tactical_display",
       "entity_ids": [],
-      "summary": "Client disconnected",
+      "summary": "Station off net",
       "details": "viewer reconnect exercised for resilience evidence"
     },
     {
@@ -70,8 +70,8 @@
       "event_type": "client_reconnected",
       "source": "tactical_display",
       "entity_ids": [],
-      "summary": "Client reconnected",
-      "details": "Client resumed control-plane visibility and should resync on the next snapshot."
+      "summary": "Station back on net",
+      "details": "The station resumed control-plane visibility and should rebuild the tactical picture on the next snapshot."
     },
     {
       "timestamp_ms": 1776327002400,
@@ -79,8 +79,8 @@
       "event_type": "resilience_triggered",
       "source": "simulation_server",
       "entity_ids": [],
-      "summary": "Reconnect/resync path exercised",
-      "details": "The baseline resilience case uses reconnect + latest-snapshot convergence."
+      "summary": "Reconnect/reacquire path exercised",
+      "details": "The baseline resilience case uses reconnect plus latest-snapshot convergence."
     },
     {
       "timestamp_ms": 1776327002600,
@@ -88,8 +88,8 @@
       "event_type": "engage_order_accepted",
       "source": "fire_control_console",
       "entity_ids": ["interceptor-alpha", "target-alpha"],
-      "summary": "Launch accepted",
-      "details": "Authoritative server accepted the operator command and launched the interceptor on a tracked_intercept path at 45 deg."
+      "summary": "Fire order executed",
+      "details": "The authoritative server executed the fire order and launched the interceptor on a tracked_intercept path at 45 deg."
     },
     {
       "timestamp_ms": 1776327003000,
@@ -106,8 +106,8 @@
       "event_type": "assessment_produced",
       "source": "simulation_server",
       "entity_ids": ["interceptor-alpha", "target-alpha"],
-      "summary": "Assessment produced",
-      "details": "Server-authoritative assessment marked the intercept attempt as successful and the target as intercepted."
+      "summary": "Engagement assessed",
+      "details": "The authoritative assessment marked the intercept attempt as successful and the target as intercepted."
     },
     {
       "timestamp_ms": 1776327011400,
@@ -115,8 +115,8 @@
       "event_type": "session_ended",
       "source": "simulation_server",
       "entity_ids": ["target-alpha", "interceptor-alpha"],
-      "summary": "Session archived",
-      "details": "Scenario completed and artifacts are ready for AAR."
+      "summary": "Run archived",
+      "details": "The engagement run completed and artifacts are ready for post-engagement review."
     }
   ]
 }

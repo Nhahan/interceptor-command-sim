@@ -9,7 +9,7 @@
 - effective_track_state: untracked
 - intercept_profile: unguided_intercept
 - launch_angle_deg: 45
-- latest_freshness: fresh
+- latest_picture_status: current
 - latest_snapshot_sequence: 67
 - last_event_type: session_ended
 - resilience_case: reconnect_and_resync,udp_snapshot_gap_convergence
@@ -38,13 +38,13 @@ Entities:
 State:
 - phase=archived, track=untracked, tracker_residual=n/a, tracker_covariance=0.0, measurement_age=0, measurement_valid=no, tracker_estimate=(0.0, 0.0), measurement=(0.0, 0.0), interceptor_status=complete, engage_order_status=completed, assessment=timeout_observed
 - target_heading_deg=-31.0, interceptor_heading_deg=45.0, launch_angle_deg=45.0, intercept_profile=unguided_intercept, tti_s=0.0, predicted_intercept_valid=no
-Telemetry:
-- connection=connected, freshness=fresh, snapshot_sequence=67, tick=61, latency_ms=101, packet_loss_pct=0.0, last_snapshot_ms=1776327016000
-AAR:
+Link / Picture Status:
+- connection=connected, picture_status=current, snapshot_sequence=67, tick=61, tick_interval_ms=50, packet_loss_pct=0.0, last_snapshot_ms=1776327016000
+Post-Engagement Review:
 - cursor_index=12/13
 Recent events:
-- [tick 1] Launch accepted (engage_order_accepted)
+- [tick 1] Fire order executed (engage_order_accepted)
 - [tick 2] Snapshot gap exercised (resilience_triggered)
-- [tick 61] Assessment produced (assessment_produced)
-- [tick 61] Session archived (session_ended)
+- [tick 61] Engagement assessed (assessment_produced)
+- [tick 61] Run archived (session_ended)
 ```

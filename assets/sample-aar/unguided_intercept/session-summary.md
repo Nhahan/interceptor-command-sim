@@ -1,4 +1,4 @@
-# Sample AAR Session Summary
+# Sample Post-Engagement Review Summary
 
 ## Summary
 
@@ -18,11 +18,11 @@
 - resilience_case: reconnect_and_resync,udp_snapshot_gap_convergence
 - latest_snapshot_sequence: 67
 - latest_display_connection: connected
-- latest_freshness: fresh
+- latest_picture_status: current
 
 ## Recent Events
 
-- [tick 1] Launch accepted (engage_order_accepted)
+- [tick 1] Fire order executed (engage_order_accepted)
 - [tick 2] Snapshot gap exercised (resilience_triggered)
-- [tick 61] Assessment produced (assessment_produced)
-- [tick 61] Session archived (session_ended)
+- [tick 61] Engagement assessed (assessment_produced)
+- [tick 61] Run archived (session_ended)

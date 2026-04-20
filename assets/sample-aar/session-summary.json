@@ -15,12 +15,12 @@
   "resilience_case": "reconnect_and_resync,udp_snapshot_gap_convergence",
   "latest_snapshot_sequence": 46,
   "latest_display_connection": "connected",
-  "latest_freshness": "fresh",
+  "latest_picture_status": "current",
   "recent_events": [
     {
       "tick": 1,
       "event_type": "engage_order_accepted",
-      "summary": "Launch accepted"
+      "summary": "Fire order executed"
     },
     {
       "tick": 2,
@@ -30,12 +30,12 @@
     {
       "tick": 41,
       "event_type": "assessment_produced",
-      "summary": "Assessment produced"
+      "summary": "Engagement assessed"
     },
     {
       "tick": 41,
       "event_type": "session_ended",
-      "summary": "Session archived"
+      "summary": "Run archived"
     }
   ]
 }
