@@ -4,6 +4,11 @@
 #include <cmath>
 
 namespace icss::viewer_gui {
+namespace {
+
+constexpr std::size_t kMaxHistoryPoints = 72;
+
+}  // namespace
 
 void apply_snapshot(ViewerState& state, const icss::protocol::SnapshotPayload& payload) {
     if (state.received_snapshot
@@ -72,7 +77,7 @@ void apply_snapshot(ViewerState& state, const icss::protocol::SnapshotPayload& p
         || std::abs(state.target_history.back().x - target_history_point.x) > 0.01F
         || std::abs(state.target_history.back().y - target_history_point.y) > 0.01F) {
         state.target_history.push_back(target_history_point);
-        while (state.target_history.size() > 24) {
+        while (state.target_history.size() > kMaxHistoryPoints) {
             state.target_history.pop_front();
         }
     }
@@ -80,7 +85,7 @@ void apply_snapshot(ViewerState& state, const icss::protocol::SnapshotPayload& p
         || std::abs(state.interceptor_history.back().x - interceptor_history_point.x) > 0.01F
         || std::abs(state.interceptor_history.back().y - interceptor_history_point.y) > 0.01F) {
         state.interceptor_history.push_back(interceptor_history_point);
-        while (state.interceptor_history.size() > 24) {
+        while (state.interceptor_history.size() > kMaxHistoryPoints) {
             state.interceptor_history.pop_front();
         }
     }

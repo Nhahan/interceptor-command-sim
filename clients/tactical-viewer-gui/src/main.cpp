@@ -131,6 +131,7 @@ int main(int argc, char** argv) {
                 }
             }
             const auto now = SDL_GetTicks64();
+            state.now_ms = now;
             if (options.duration_ms > 0 && now - start_ticks >= options.duration_ms) {
                 running = false;
             }
@@ -178,7 +179,7 @@ int main(int argc, char** argv) {
         std::printf("received_telemetry=%s\n", state.received_telemetry ? "true" : "false");
         std::printf("snapshot_sequence=%llu\n", static_cast<unsigned long long>(state.snapshot.header.snapshot_sequence));
         std::printf("connection_state=%s\n", icss::core::to_string(state.snapshot.display_connection));
-        std::printf("freshness=%s\n", icss::view::freshness_label(state.snapshot).c_str());
+        std::printf("picture_status=%s\n", icss::view::freshness_label(state.snapshot).c_str());
 
         TTF_CloseFont(title_font);
         TTF_CloseFont(body_font);

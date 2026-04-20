@@ -14,27 +14,27 @@ bool rects_overlap(const SDL_Rect& lhs, const SDL_Rect& rhs) {
 }
 
 std::vector<Button> make_live_control_buttons(const SDL_Rect& control_panel) {
-    const int row1_y = control_panel.y + 74;
-    const int row2_y = control_panel.y + 108;
-    const int row3_y = control_panel.y + 142;
+    const int row1_y = control_panel.y + 126;
+    const int row2_y = control_panel.y + 164;
+    const int button_gap = 10;
+    const int button_w = (control_panel.w - 24 - (button_gap * 2)) / 3;
     return {
-        {"Track", "Track", {control_panel.x + control_panel.w - 140, row1_y, 128, 28}},
-        {"Start", "Start", {control_panel.x + 12, row2_y, 82, 28}},
-        {"Ready", "Ready", {control_panel.x + 102, row2_y, 96, 28}},
-        {"Engage", "Engage", {control_panel.x + 206, row2_y, 96, 28}},
-        {"Reset", "Reset", {control_panel.x + 12, row3_y, 82, 28}},
-        {"AAR", "AAR", {control_panel.x + 102, row3_y, 82, 28}},
+        {"Start", "Start", {control_panel.x + 12, row1_y, button_w, 30}},
+        {"Track", "Track", {control_panel.x + 12 + button_w + button_gap, row1_y, button_w, 30}},
+        {"Ready", "Ready", {control_panel.x + 12 + (button_w + button_gap) * 2, row1_y, button_w, 30}},
+        {"Engage", "Engage", {control_panel.x + 12, row2_y, button_w, 30}},
+        {"Reset", "Reset", {control_panel.x + 12 + button_w + button_gap, row2_y, button_w, 30}},
+        {"AAR", "AAR", {control_panel.x + 12 + (button_w + button_gap) * 2, row2_y, button_w, 30}},
     };
 }
 
 std::vector<Button> make_setup_buttons(const SDL_Rect& setup_panel) {
-    const int box_w = setup_panel.w - 24;
     const int row1_y = setup_panel.y + 60;
-    const int row2_y = setup_panel.y + 88;
-    const int row3_y = setup_panel.y + 116;
-    const int row4_y = setup_panel.y + 144;
-    const int button_w = 30;
-    const int button_h = 20;
+    const int row2_y = setup_panel.y + 86;
+    const int row3_y = setup_panel.y + 112;
+    const int row4_y = setup_panel.y + 138;
+    const int button_w = 32;
+    const int button_h = 18;
     const int button_gap = 4;
 
     auto row_buttons = [&](int row_y,
@@ -46,7 +46,7 @@ std::vector<Button> make_setup_buttons(const SDL_Rect& setup_panel) {
                            std::string_view x_inc_label,
                            std::string_view y_dec_label,
                            std::string_view y_inc_label) {
-        const int start_x = setup_panel.x + 12 + box_w - ((button_w * 4) + (button_gap * 3)) - 8;
+        const int start_x = setup_panel.x + setup_panel.w - 12 - ((button_w * 4) + (button_gap * 3));
         return std::array<Button, 4>{
             Button{std::string(x_dec), std::string(x_dec_label), {start_x + 0 * (button_w + button_gap), row_y + 4, button_w, button_h}},
             Button{std::string(x_inc), std::string(x_inc_label), {start_x + 1 * (button_w + button_gap), row_y + 4, button_w, button_h}},
@@ -56,13 +56,13 @@ std::vector<Button> make_setup_buttons(const SDL_Rect& setup_panel) {
     };
 
     std::vector<Button> buttons;
-    const auto target_pos = row_buttons(row1_y, "target_pos_x_dec", "target_pos_x_inc", "target_pos_y_dec", "target_pos_y_inc", "-X", "+X", "-Y", "+Y");
-    const auto target_vel = row_buttons(row2_y, "target_vel_x_dec", "target_vel_x_inc", "target_vel_y_dec", "target_vel_y_inc", "-X", "+X", "-Y", "+Y");
+    const auto target_pos = row_buttons(row1_y, "target_pos_x_dec", "target_pos_x_inc", "target_pos_y_dec", "target_pos_y_inc", "X-", "X+", "Y-", "Y+");
+    const auto target_vel = row_buttons(row2_y, "target_vel_x_dec", "target_vel_x_inc", "target_vel_y_dec", "target_vel_y_inc", "X-", "X+", "Y-", "Y+");
     const auto angle_buttons = std::array<Button, 2>{
-        Button{"launch_angle_dec", "-A", {setup_panel.x + setup_panel.w - 84, row3_y + 4, button_w, button_h}},
-        Button{"launch_angle_inc", "+A", {setup_panel.x + setup_panel.w - 50, row3_y + 4, button_w, button_h}},
+        Button{"launch_angle_dec", "-A", {setup_panel.x + setup_panel.w - 12 - ((button_w * 2) + button_gap), row3_y + 4, button_w, button_h}},
+        Button{"launch_angle_inc", "+A", {setup_panel.x + setup_panel.w - 12 - button_w, row3_y + 4, button_w, button_h}},
     };
-    const auto asset_dyn = row_buttons(row4_y, "interceptor_speed_dec", "interceptor_speed_inc", "timeout_dec", "timeout_inc", "-S", "+S", "-T", "+T");
+    const auto asset_dyn = row_buttons(row4_y, "interceptor_speed_dec", "interceptor_speed_inc", "timeout_dec", "timeout_inc", "S-", "S+", "T-", "T+");
     buttons.insert(buttons.end(), target_pos.begin(), target_pos.end());
     buttons.insert(buttons.end(), target_vel.begin(), target_vel.end());
     buttons.insert(buttons.end(), angle_buttons.begin(), angle_buttons.end());

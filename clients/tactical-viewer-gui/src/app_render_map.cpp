@@ -219,11 +219,28 @@ void draw_predicted_marker(SDL_Renderer* renderer, SDL_FPoint center) {
                         false);
 }
 
+void draw_launch_origin_marker(SDL_Renderer* renderer,
+                               const RenderContext& ctx,
+                               const ViewportTransform& transform,
+                               const SDL_Rect& map_rect) {
+    const auto origin = world_to_screen(transform, {0.0F, 0.0F});
+    const int cx = static_cast<int>(std::lround(origin.x));
+    const int cy = static_cast<int>(std::lround(origin.y));
+    SDL_SetRenderDrawColor(renderer, 120, 190, 255, 200);
+    SDL_RenderDrawLine(renderer, cx - 8, cy, cx + 8, cy);
+    SDL_RenderDrawLine(renderer, cx, cy - 8, cx, cy + 8);
+    SDL_Rect halo {cx - 4, cy - 4, 8, 8};
+    SDL_RenderDrawRect(renderer, &halo);
+    const int label_x = std::min(map_rect.x + map_rect.w - 70, cx + 10);
+    const int label_y = std::max(map_rect.y + 8, cy - 18);
+    draw_text(renderer, ctx.body_font, label_x, label_y, rgba(120, 190, 255), "ORIGIN");
+}
+
 }  // namespace
 
 void render_map_panel(SDL_Renderer* renderer, const RenderContext& ctx) {
     const auto& map_rect = ctx.layout.map_rect;
-    const auto transform = make_viewport_transform(map_rect, ctx.state.snapshot.world_width, ctx.state.snapshot.world_height, ctx.options);
+    const auto transform = make_viewport_transform(map_rect, ctx.state, ctx.options);
     const auto grid_step_x = major_grid_step(transform.visible_max_x - transform.visible_min_x);
     const auto grid_step_y = major_grid_step(transform.visible_max_y - transform.visible_min_y);
     fill_panel(renderer, map_rect, rgba(36, 41, 52), rgba(74, 80, 96));
@@ -249,6 +266,7 @@ void render_map_panel(SDL_Renderer* renderer, const RenderContext& ctx) {
         draw_text(renderer, ctx.body_font, map_rect.x - 24, py + 2, rgba(140, 149, 168), std::to_string(y));
     }
 
+    draw_launch_origin_marker(renderer, ctx, transform, map_rect);
     draw_history(renderer, transform, ctx.state.target_history, rgba(244, 67, 54, 110));
     draw_history(renderer, transform, ctx.state.interceptor_history, rgba(66, 165, 245, 110));
     const auto target_center = world_to_screen(transform, ctx.state.snapshot.target_world_position);
@@ -270,7 +288,7 @@ void render_map_panel(SDL_Renderer* renderer, const RenderContext& ctx) {
                   static_cast<int>(std::lround(target_center.x)) + 18,
                   static_cast<int>(std::lround(target_center.y)) - 26,
                   rgba(255, 214, 102),
-                  "TRACK ESTABLISHED");
+                  "TRACK FILE");
         draw_text(renderer,
                   ctx.body_font,
                   static_cast<int>(std::lround(target_center.x)) + 18,

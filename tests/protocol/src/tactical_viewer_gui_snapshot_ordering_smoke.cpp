@@ -56,13 +56,13 @@ icss::protocol::SnapshotPayload make_snapshot(std::uint64_t sequence,
 }
 
 icss::protocol::TelemetryPayload make_telemetry(std::uint64_t tick,
-                                                std::uint32_t latency_ms,
+                                                std::uint32_t tick_interval_ms,
                                                 std::uint64_t event_tick,
                                                 const char* event_type,
                                                 const char* summary) {
     icss::protocol::TelemetryPayload payload;
     payload.sample.tick = tick;
-    payload.sample.latency_ms = latency_ms;
+    payload.sample.tick_interval_ms = tick_interval_ms;
     payload.sample.packet_loss_pct = 0.0F;
     payload.sample.last_snapshot_timestamp_ms = 5000U + tick;
     payload.connection_state = "connected";
@@ -110,13 +110,13 @@ int main() {
     apply_telemetry(state, make_telemetry(11U, 33U, 11U, "track_updated", "track ok"));
     assert(state.received_telemetry);
     assert(state.snapshot.telemetry.tick == 11U);
-    assert(state.snapshot.telemetry.latency_ms == 33U);
+    assert(state.snapshot.telemetry.tick_interval_ms == 33U);
     assert(state.last_server_event_type == "track_updated");
     assert(state.recent_server_events.size() == 1);
 
     apply_telemetry(state, make_telemetry(9U, 99U, 9U, "client_left", "stale telemetry"));
     assert(state.snapshot.telemetry.tick == 11U);
-    assert(state.snapshot.telemetry.latency_ms == 33U);
+    assert(state.snapshot.telemetry.tick_interval_ms == 33U);
     assert(state.last_server_event_type == "track_updated");
     assert(state.recent_server_events.size() == 1);
 
@@ -124,7 +124,7 @@ int main() {
     reset_style_telemetry.sample.last_snapshot_timestamp_ms = 7000U;
     apply_telemetry(state, reset_style_telemetry);
     assert(state.snapshot.telemetry.tick == 0U);
-    assert(state.snapshot.telemetry.latency_ms == 19U);
+    assert(state.snapshot.telemetry.tick_interval_ms == 19U);
     assert(state.last_server_event_type == "session_started");
     assert(state.recent_server_events.size() == 2);
 
@@ -132,7 +132,7 @@ int main() {
     newer_after_reset.sample.last_snapshot_timestamp_ms = 7100U;
     apply_telemetry(state, newer_after_reset);
     assert(state.snapshot.telemetry.tick == 12U);
-    assert(state.snapshot.telemetry.latency_ms == 21U);
+    assert(state.snapshot.telemetry.tick_interval_ms == 21U);
     assert(state.last_server_event_type == "interceptor_updated");
     assert(state.recent_server_events.size() == 3);
 
@@ -140,7 +140,7 @@ int main() {
     same_snapshot_older_event.sample.last_snapshot_timestamp_ms = 7100U;
     apply_telemetry(state, same_snapshot_older_event);
     assert(state.snapshot.telemetry.tick == 12U);
-    assert(state.snapshot.telemetry.latency_ms == 21U);
+    assert(state.snapshot.telemetry.tick_interval_ms == 21U);
     assert(state.last_server_event_type == "interceptor_updated");
     assert(state.recent_server_events.size() == 3);
 
@@ -148,7 +148,7 @@ int main() {
     same_snapshot_newer_event.sample.last_snapshot_timestamp_ms = 7100U;
     apply_telemetry(state, same_snapshot_newer_event);
     assert(state.snapshot.telemetry.tick == 12U);
-    assert(state.snapshot.telemetry.latency_ms == 19U);
+    assert(state.snapshot.telemetry.tick_interval_ms == 19U);
     assert(state.last_server_event_type == "engage_order_accepted");
     assert(state.recent_server_events.size() == 4);
 

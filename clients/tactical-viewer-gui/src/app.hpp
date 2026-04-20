@@ -76,6 +76,7 @@ struct ViewerState {
     std::uint64_t heartbeat_count {0};
     std::uint64_t snapshot_count_received {0};
     std::uint64_t telemetry_count_received {0};
+    std::uint64_t now_ms {0};
     std::uint64_t last_datagram_received_ms {0};
     std::uint64_t last_join_attempt_ms {0};
     std::uint64_t last_server_event_tick {0};
@@ -142,6 +143,8 @@ SDL_Color authoritative_badge_color(const ViewerState& state);
 bool aar_available(const ViewerState& state);
 std::string aar_panel_text(const ViewerState& state);
 std::string control_display_label(std::string_view action, const ViewerState& state);
+bool control_button_enabled(std::string_view action, const ViewerState& state);
+std::string control_panel_hint(const ViewerState& state);
 std::string terminal_timeline_text(const ViewerState& state, bool aar_mode);
 std::vector<std::string> terminal_timeline_lines(const ViewerState& state, bool aar_mode);
 std::string control_timeline_message(std::string_view label, bool ok, std::string_view message);

@@ -29,20 +29,22 @@ void write_dump_state(const std::filesystem::path& path, const ViewerState& stat
         std::filesystem::create_directories(parent);
     }
     std::ofstream out(path);
-    const auto transform = make_viewport_transform(build_layout(options).map_rect,
-                                                   state.snapshot.world_width,
-                                                   state.snapshot.world_height,
-                                                   options);
+    const auto transform = make_viewport_transform(build_layout(options).map_rect, state, options);
     out << "{\n";
     out << "  \"schema_version\": \"icss-gui-viewer-state-v1\",\n";
     out << "  \"received_snapshot\": " << (state.received_snapshot ? "true" : "false") << ",\n";
     out << "  \"received_telemetry\": " << (state.received_telemetry ? "true" : "false") << ",\n";
+    out << "  \"now_ms\": " << state.now_ms << ",\n";
+    out << "  \"last_datagram_received_ms\": " << state.last_datagram_received_ms << ",\n";
+    out << "  \"picture_age_ms\": " << ((state.last_datagram_received_ms > 0 && state.now_ms >= state.last_datagram_received_ms)
+        ? (state.now_ms - state.last_datagram_received_ms)
+        : 0) << ",\n";
     out << "  \"snapshot_sequence\": " << state.snapshot.header.snapshot_sequence << ",\n";
     out << "  \"tick\": " << state.snapshot.telemetry.tick << ",\n";
     out << "  \"phase\": \"" << icss::core::to_string(state.snapshot.phase) << "\",\n";
     out << "  \"phase_banner\": \"" << escape_json(phase_banner_label(state.snapshot.phase)) << "\",\n";
     out << "  \"connection_state\": \"" << icss::core::to_string(state.snapshot.display_connection) << "\",\n";
-    out << "  \"freshness\": \"" << icss::view::freshness_label(state.snapshot) << "\",\n";
+    out << "  \"picture_status\": \"" << icss::view::freshness_label(state.snapshot) << "\",\n";
     out << "  \"resilience_summary\": \"" << escape_json(resilience_summary(state)) << "\",\n";
     out << "  \"assessment_code\": \"" << icss::core::to_string(state.snapshot.assessment.code) << "\",\n";
     out << "  \"heartbeat_count\": " << state.heartbeat_count << ",\n";
@@ -83,6 +85,12 @@ void write_dump_state(const std::filesystem::path& path, const ViewerState& stat
     out << "  \"aar_event_summary\": \"" << escape_json(state.aar.event_summary) << "\",\n";
     out << "  \"last_control_label\": \"" << escape_json(state.control.last_label) << "\",\n";
     out << "  \"last_control_message\": \"" << escape_json(state.control.last_message) << "\",\n";
+    out << "  \"start_enabled\": " << (control_button_enabled("Start", state) ? "true" : "false") << ",\n";
+    out << "  \"track_enabled\": " << (control_button_enabled("Track", state) ? "true" : "false") << ",\n";
+    out << "  \"ready_enabled\": " << (control_button_enabled("Ready", state) ? "true" : "false") << ",\n";
+    out << "  \"engage_enabled\": " << (control_button_enabled("Engage", state) ? "true" : "false") << ",\n";
+    out << "  \"reset_enabled\": " << (control_button_enabled("Reset", state) ? "true" : "false") << ",\n";
+    out << "  \"aar_enabled\": " << (control_button_enabled("AAR", state) ? "true" : "false") << ",\n";
     out << "  \"interceptor_status\": \"" << icss::core::to_string(state.snapshot.interceptor_status) << "\",\n";
     out << "  \"engage_order_status\": \"" << icss::core::to_string(state.snapshot.engage_order_status) << "\",\n";
     out << "  \"command_visual_active\": " << (command_visual_active(state) ? "true" : "false") << ",\n";

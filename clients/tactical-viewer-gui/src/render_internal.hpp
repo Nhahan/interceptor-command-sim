@@ -27,8 +27,7 @@ struct RenderContext {
 };
 
 ViewportTransform make_viewport_transform(const SDL_Rect& map_rect,
-                                         int world_width,
-                                         int world_height,
+                                         const ViewerState& state,
                                          const ViewerOptions& options);
 SDL_FPoint world_to_screen(const ViewportTransform& transform, icss::core::Vec2f position);
 SDL_FPoint world_delta_to_pixels(const ViewportTransform& transform, icss::core::Vec2f delta);

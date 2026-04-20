@@ -161,9 +161,9 @@ void perform_control_action(std::string_view action_label,
     if (action_label == "AAR") {
         if (!aar_available(state)) {
             state.control.last_ok = false;
-            state.control.last_label = "AAR";
-            state.control.last_message = "aar available after assessment or archive";
-            push_timeline_entry(state, control_timeline_message("AAR", false, state.control.last_message));
+            state.control.last_label = "Review";
+            state.control.last_message = "review available after assessment or archive";
+            push_timeline_entry(state, control_timeline_message("Review", false, state.control.last_message));
             return;
         }
         send_frame(control_socket,
@@ -176,9 +176,9 @@ void perform_control_action(std::string_view action_label,
         }
         const auto response = icss::protocol::parse_aar_response(frame.payload);
         state.control.last_ok = true;
-        state.control.last_label = "AAR";
-        state.control.last_message = "server-side aar loaded";
-        push_timeline_entry(state, control_timeline_message("AAR", true, state.control.last_message));
+        state.control.last_label = "Review";
+        state.control.last_message = "post-engagement review loaded";
+        push_timeline_entry(state, control_timeline_message("Review", true, state.control.last_message));
         state.aar.available = true;
         state.aar.loaded = true;
         state.aar.visible = true;

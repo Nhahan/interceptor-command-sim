@@ -2,23 +2,167 @@
 
 #include <array>
 #include <cmath>
+#include <string_view>
 
 #include "icss/view/ascii_tactical_view.hpp"
 
 namespace icss::viewer_gui {
+namespace {
+
+std::string upper_label(std::string_view text) {
+    return uppercase_words(text);
+}
+
+std::string connection_value(const RenderContext& ctx) {
+    switch (ctx.state.snapshot.display_connection) {
+    case icss::core::ConnectionState::Connected:
+        return "ON NET";
+    case icss::core::ConnectionState::Reconnected:
+        return "LINK RESTORED";
+    case icss::core::ConnectionState::TimedOut:
+        return "TIMED OUT";
+    case icss::core::ConnectionState::Disconnected:
+        return "OFF NET";
+    }
+    return "UNKNOWN";
+}
+
+std::string picture_status_value(std::string_view freshness) {
+    if (freshness == "current") {
+        return "CURRENT";
+    }
+    if (freshness == "degraded") {
+        return "DEGRADED";
+    }
+    if (freshness == "reacquiring") {
+        return "REACQUIRING";
+    }
+    if (freshness == "stale") {
+        return "STALE";
+    }
+    return "UNKNOWN";
+}
+
+SDL_Color freshness_color(std::string_view freshness) {
+    if (freshness == "current") {
+        return rgba(120, 208, 140);
+    }
+    if (freshness == "degraded") {
+        return rgba(255, 189, 89);
+    }
+    if (freshness == "reacquiring") {
+        return rgba(110, 190, 255);
+    }
+    return rgba(255, 110, 110);
+}
+
+std::uint64_t picture_age_ms(const RenderContext& ctx) {
+    if (ctx.state.last_datagram_received_ms == 0 || ctx.state.now_ms < ctx.state.last_datagram_received_ms) {
+        return 0;
+    }
+    return ctx.state.now_ms - ctx.state.last_datagram_received_ms;
+}
+
+SDL_Color picture_age_color(const RenderContext& ctx, std::uint64_t age_ms) {
+    const auto freshness = icss::view::freshness_label(ctx.state.snapshot);
+    if (freshness == "stale") {
+        return rgba(255, 110, 110);
+    }
+    if (freshness == "degraded" || age_ms > (ctx.state.snapshot.telemetry.tick > 0 ? 500U : 250U)) {
+        return rgba(255, 189, 89);
+    }
+    if (freshness == "reacquiring") {
+        return rgba(110, 190, 255);
+    }
+    return rgba(120, 208, 140);
+}
+
+SDL_Color status_color(std::string_view value) {
+    if (value == "pending") {
+        return rgba(255, 189, 89);
+    }
+    if (value == "intercept_success" || value == "complete" || value == "executing" || value == "tracked") {
+        return rgba(120, 208, 140);
+    }
+    if (value == "accepted") {
+        return rgba(110, 190, 255);
+    }
+    if (value == "timeout_observed" || value == "rejected" || value == "invalid_transition") {
+        return rgba(255, 110, 110);
+    }
+    return rgba(188, 198, 214);
+}
+
+void render_metric_tile(SDL_Renderer* renderer,
+                        const RenderContext& ctx,
+                        const SDL_Rect& rect,
+                        std::string_view title,
+                        const std::string& value,
+                        SDL_Color accent,
+                        SDL_Color value_color = rgba(236, 239, 244),
+                        int value_wrap = 0) {
+    fill_panel(renderer, rect, rgba(18, 23, 32), rgba(56, 66, 86));
+    SDL_Rect band {rect.x, rect.y, rect.w, 3};
+    SDL_SetRenderDrawColor(renderer, accent.r, accent.g, accent.b, accent.a);
+    SDL_RenderFillRect(renderer, &band);
+    draw_text(renderer, ctx.body_font, rect.x + 10, rect.y + 8, rgba(140, 149, 168), std::string(title));
+    draw_text(renderer,
+              ctx.body_font,
+              rect.x + 10,
+              rect.y + 24,
+              value_color,
+              value,
+              value_wrap > 0 ? value_wrap : rect.w - 20);
+}
+
+SDL_Color timeline_line_color(std::string_view line, bool aar_mode) {
+    if (line.empty()) {
+        return rgba(148, 156, 172);
+    }
+    if (line.rfind("mode=", 0) == 0 || line.rfind("----------------------------------------", 0) == 0) {
+        return rgba(126, 201, 126);
+    }
+    if (aar_mode) {
+        if (line.find("Assessment:") != std::string_view::npos) {
+            return rgba(255, 189, 89);
+        }
+        if (line.find("Resilience:") != std::string_view::npos) {
+            return rgba(110, 190, 255);
+        }
+        if (line.find("Current event:") != std::string_view::npos) {
+            return rgba(120, 208, 140);
+        }
+        return rgba(204, 255, 204);
+    }
+    if (line.find("[control rejected]") != std::string_view::npos || line.find("rejected") != std::string_view::npos) {
+        return rgba(255, 136, 136);
+    }
+    if (line.find("[control accepted]") != std::string_view::npos) {
+        return rgba(110, 190, 255);
+    }
+    if (line.find("Fire order executed") != std::string_view::npos || line.find("Engagement assessed") != std::string_view::npos) {
+        return rgba(255, 206, 112);
+    }
+    if (line.find("[tick ") != std::string_view::npos) {
+        return rgba(187, 255, 187);
+    }
+    return rgba(188, 198, 214);
+}
+
+}  // namespace
 
 void render_phase_panel(SDL_Renderer* renderer, const RenderContext& ctx) {
     const auto& panel = ctx.layout.phase_panel;
     fill_panel(renderer, panel, rgba(12, 14, 20), rgba(54, 60, 78));
-    draw_text(renderer, ctx.title_font, panel.x + 12, panel.y + 10, rgba(141, 211, 199), "Mission Phase");
+    draw_text(renderer, ctx.title_font, panel.x + 12, panel.y + 10, rgba(141, 211, 199), "Engagement State");
     const std::array<std::pair<icss::core::SessionPhase, const char*>, 8> phase_flow {{
         {icss::core::SessionPhase::Standby, "STANDBY"},
         {icss::core::SessionPhase::Detecting, "DETECTING"},
-        {icss::core::SessionPhase::Tracking, "TRACK ESTABLISHED"},
-        {icss::core::SessionPhase::InterceptorReady, "INTERCEPTOR READY"},
-        {icss::core::SessionPhase::EngageOrdered, "ENGAGE ORDERED"},
+        {icss::core::SessionPhase::Tracking, "TRACK FILE"},
+        {icss::core::SessionPhase::InterceptorReady, "WEAPON READY"},
+        {icss::core::SessionPhase::EngageOrdered, "FIRE ORDERED"},
         {icss::core::SessionPhase::Intercepting, "INTERCEPTING"},
-        {icss::core::SessionPhase::Assessed, "ASSESSMENT COMPLETE"},
+        {icss::core::SessionPhase::Assessed, "ENGAGEMENT ASSESSED"},
         {icss::core::SessionPhase::Archived, "ARCHIVED"},
     }};
     for (std::size_t index = 0; index < phase_flow.size(); ++index) {
@@ -48,43 +192,113 @@ void render_phase_panel(SDL_Renderer* renderer, const RenderContext& ctx) {
 void render_decision_panel(SDL_Renderer* renderer, const RenderContext& ctx) {
     const auto& panel = ctx.layout.decision_panel;
     fill_panel(renderer, panel, rgba(12, 14, 20), rgba(54, 60, 78));
-    draw_text(renderer, ctx.title_font, panel.x + 12, panel.y + 10, rgba(255, 179, 102), "Assessment / Orders");
-    std::string block;
-    block += std::string(ctx.state.control.last_ok ? "Action: accepted | " : "Action: rejected | ")
-        + ctx.state.control.last_label + " | " + ctx.state.control.last_message + "\n";
-    block += "Assessment: " + std::string(icss::core::to_string(ctx.state.snapshot.assessment.code)) + "\n";
-    block += "Engage order: " + std::string(icss::core::to_string(ctx.state.snapshot.engage_order_status)) + "\n";
-    block += "Interceptor status: " + std::string(icss::core::to_string(ctx.state.snapshot.interceptor_status));
-    draw_text(renderer, ctx.body_font, panel.x + 12, panel.y + 44, rgba(220, 223, 230), block, panel.w - 24);
+    draw_text(renderer, ctx.title_font, panel.x + 12, panel.y + 10, rgba(255, 179, 102), "Fire Control / Assessment");
+    const int gap = 10;
+    const int tile_w = (panel.w - 36 - gap) / 2;
+    const int tile_h = 50;
+    const int top_y = panel.y + 42;
+    const int second_y = top_y + tile_h + 10;
+    render_metric_tile(renderer,
+                       ctx,
+                       {panel.x + 12, top_y, tile_w, tile_h},
+                       "Assessment",
+                       upper_label(icss::core::to_string(ctx.state.snapshot.assessment.code)),
+                       rgba(255, 179, 102),
+                       status_color(icss::core::to_string(ctx.state.snapshot.assessment.code)));
+    render_metric_tile(renderer,
+                       ctx,
+                       {panel.x + 22 + tile_w, top_y, tile_w, tile_h},
+                       "Fire Order",
+                       upper_label(icss::core::to_string(ctx.state.snapshot.engage_order_status)),
+                       rgba(255, 149, 0),
+                       status_color(icss::core::to_string(ctx.state.snapshot.engage_order_status)));
+    render_metric_tile(renderer,
+                       ctx,
+                       {panel.x + 12, second_y, tile_w, tile_h},
+                       "Interceptor",
+                       upper_label(icss::core::to_string(ctx.state.snapshot.interceptor_status)),
+                       rgba(110, 190, 255),
+                       status_color(icss::core::to_string(ctx.state.snapshot.interceptor_status)));
+    render_metric_tile(renderer,
+                       ctx,
+                       {panel.x + 22 + tile_w, second_y, tile_w, tile_h},
+                       "Intercept Mode",
+                       ctx.state.effective_track_active ? "TRACKED" : "UNGUIDED",
+                       rgba(141, 211, 199),
+                       status_color(ctx.state.effective_track_active ? "tracked" : "untracked"));
+    const SDL_Rect footer {panel.x + 12, panel.y + panel.h - 58, panel.w - 24, 44};
+    const SDL_Color footer_accent = ctx.state.control.last_ok ? rgba(110, 190, 255) : rgba(255, 110, 110);
+    render_metric_tile(renderer,
+                       ctx,
+                       footer,
+                       "Latest Console Action",
+                       upper_label(ctx.state.control.last_label) + "  |  " + ctx.state.control.last_message,
+                       footer_accent,
+                       rgba(220, 223, 230),
+                       footer.w - 20);
 }
 
 void render_resilience_panel(SDL_Renderer* renderer, const RenderContext& ctx) {
     const auto& panel = ctx.layout.resilience_panel;
     fill_panel(renderer, panel, rgba(12, 14, 20), rgba(54, 60, 78));
-    draw_text(renderer, ctx.title_font, panel.x + 12, panel.y + 10, rgba(129, 199, 255), "Resilience / Telemetry");
-    std::string block;
-    block += "Connection: " + std::string(icss::core::to_string(ctx.state.snapshot.display_connection))
-        + " | Freshness: " + icss::view::freshness_label(ctx.state.snapshot) + "\n";
-    block += "Tick: " + std::to_string(ctx.state.snapshot.telemetry.tick)
-        + " | Snapshot: " + std::to_string(ctx.state.snapshot.header.snapshot_sequence) + "\n";
-    block += "Last snapshot: " + std::to_string(ctx.state.snapshot.header.timestamp_ms) + " ms\n";
-    block += "Link Delay: " + format_fixed_0(ctx.state.snapshot.telemetry.latency_ms)
-        + " ms | Loss: " + format_fixed_1(ctx.state.snapshot.telemetry.packet_loss_pct) + " %";
-    block += ctx.state.snapshot.telemetry.packet_loss_pct > 0.0F ? " | degraded" : " | stable";
-    draw_text(renderer, ctx.body_font, panel.x + 12, panel.y + 44, rgba(220, 223, 230), block, panel.w - 24);
+    draw_text(renderer, ctx.title_font, panel.x + 12, panel.y + 10, rgba(129, 199, 255), "Link / Picture Status");
+    const int gap = 10;
+    const int tile_w = (panel.w - 36 - gap) / 2;
+    const int tile_h = 48;
+    const int top_y = panel.y + 42;
+    const int second_y = top_y + tile_h + 10;
+    const auto freshness = icss::view::freshness_label(ctx.state.snapshot);
+    const auto age_ms = picture_age_ms(ctx);
+    render_metric_tile(renderer,
+                       ctx,
+                       {panel.x + 12, top_y, tile_w, tile_h},
+                       "Picture Status",
+                       picture_status_value(freshness),
+                       freshness_color(freshness),
+                       freshness_color(freshness));
+    render_metric_tile(renderer,
+                       ctx,
+                       {panel.x + 22 + tile_w, top_y, tile_w, tile_h},
+                       "Link State",
+                       connection_value(ctx),
+                       rgba(129, 199, 255),
+                       rgba(236, 239, 244));
+    render_metric_tile(renderer,
+                       ctx,
+                       {panel.x + 12, second_y, tile_w, tile_h},
+                       "Picture Age",
+                       std::to_string(age_ms) + " ms",
+                       picture_age_color(ctx, age_ms),
+                       picture_age_color(ctx, age_ms));
+    render_metric_tile(renderer,
+                       ctx,
+                       {panel.x + 22 + tile_w, second_y, tile_w, tile_h},
+                       "Loss / Sequence",
+                       format_fixed_1(ctx.state.snapshot.telemetry.packet_loss_pct) + " %  |  #"
+                           + std::to_string(ctx.state.snapshot.header.snapshot_sequence),
+                       rgba(141, 211, 199));
+    const SDL_Rect footer {panel.x + 12, panel.y + panel.h - 58, panel.w - 24, 44};
+    render_metric_tile(renderer,
+                       ctx,
+                       footer,
+                       "Latest Event",
+                       telemetry_event_status(ctx.state),
+                       rgba(129, 199, 255),
+                       rgba(220, 223, 230),
+                       footer.w - 20);
 }
 
 void render_entity_panel(SDL_Renderer* renderer, const RenderContext& ctx) {
     const auto& panel = ctx.layout.entity_panel;
     fill_panel(renderer, panel, rgba(12, 14, 20), rgba(54, 60, 78));
-    draw_text(renderer, ctx.title_font, panel.x + 12, panel.y + 10, rgba(220, 223, 230), "Tactical Display");
+    draw_text(renderer, ctx.title_font, panel.x + 12, panel.y + 10, rgba(220, 223, 230), "Tactical Picture");
     draw_text(renderer,
               ctx.body_font,
-              panel.x + 150,
-              panel.y + 14,
+              panel.x + 12,
+              panel.y + 30,
               rgba(140, 149, 168),
               "red=target | blue=interceptor | dashed=trail",
-              panel.w - 162);
+              panel.w - 24);
     std::string block;
     block += "T=(" + std::to_string(static_cast<int>(std::lround(ctx.state.snapshot.target_world_position.x)))
         + "," + std::to_string(static_cast<int>(std::lround(ctx.state.snapshot.target_world_position.y))) + ") "
@@ -105,14 +319,14 @@ void render_entity_panel(SDL_Renderer* renderer, const RenderContext& ctx) {
         + " | launch=" + format_fixed_1(ctx.state.snapshot.launch_angle_deg) + " deg"
         + " | TTI=" + (ctx.state.snapshot.predicted_intercept_valid ? format_fixed_1(ctx.state.snapshot.time_to_intercept_s) + "s" : std::string("pending"))
         + " | seeker=" + (ctx.state.snapshot.predicted_intercept_valid ? (ctx.state.snapshot.seeker_lock ? "yes" : "no") : "n/a");
-    draw_text(renderer, ctx.body_font, panel.x + 12, panel.y + 42, rgba(220, 223, 230), block, panel.w - 24);
+    draw_text(renderer, ctx.body_font, panel.x + 12, panel.y + 50, rgba(220, 223, 230), block, panel.w - 24);
 }
 
 void render_event_panel(SDL_Renderer* renderer, const RenderContext& ctx) {
     const auto& panel = ctx.layout.event_panel;
     fill_panel(renderer, panel, rgba(8, 10, 14), rgba(54, 60, 78));
     const bool showing_aar = ctx.state.aar.visible && ctx.state.aar.loaded;
-    draw_text(renderer, ctx.title_font, panel.x + 12, panel.y + 10, rgba(164, 215, 150), "Event Timeline");
+    draw_text(renderer, ctx.title_font, panel.x + 12, panel.y + 10, rgba(164, 215, 150), "Event Log");
     draw_text(renderer,
               ctx.body_font,
               panel.x + 190,
@@ -135,7 +349,7 @@ void render_event_panel(SDL_Renderer* renderer, const RenderContext& ctx) {
                   ctx.body_font,
                   body_rect.x,
                   body_rect.y + static_cast<int>((index - scroll) * line_height),
-                  rgba(187, 255, 187),
+                  timeline_line_color(lines[index], showing_aar),
                   lines[index]);
     }
     SDL_RenderSetClipRect(renderer, nullptr);

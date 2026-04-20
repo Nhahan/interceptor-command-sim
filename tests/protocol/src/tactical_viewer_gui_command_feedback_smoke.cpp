@@ -106,7 +106,7 @@ int main() {
     const auto phase = icss::testsupport::minijson::require_field(object, "phase").as_string();
     assert(phase == "engage_ordered" || phase == "intercepting" || phase == "assessed" || phase == "archived");
     const auto phase_banner = icss::testsupport::minijson::require_field(object, "phase_banner").as_string();
-    assert(phase_banner == "ENGAGE ORDERED" || phase_banner == "INTERCEPTING" || phase_banner == "ASSESSMENT COMPLETE" || phase_banner == "ARCHIVED");
+    assert(phase_banner == "FIRE ORDERED" || phase_banner == "INTERCEPTING" || phase_banner == "ENGAGEMENT ASSESSED" || phase_banner == "ARCHIVED");
     const auto target_active = icss::testsupport::minijson::require_field(object, "target_active").as_bool();
     assert(icss::testsupport::minijson::require_field(object, "interceptor_active").as_bool());
     assert(icss::testsupport::minijson::require_field(object, "last_control_label").as_string() == "Engage");
@@ -115,7 +115,7 @@ int main() {
     assert(authoritative_headline.find("INTERCEPT IN PROGRESS") != std::string::npos
            || authoritative_headline.find("ASSESSMENT") != std::string::npos
            || authoritative_headline.find("ENGAGE ORDER ACCEPTED") != std::string::npos);
-    assert(icss::testsupport::minijson::require_field(object, "recommended_control").as_string().empty() || icss::testsupport::minijson::require_field(object, "recommended_control").as_string() == "AAR");
+    assert(icss::testsupport::minijson::require_field(object, "recommended_control").as_string().empty() || icss::testsupport::minijson::require_field(object, "recommended_control").as_string() == "Review");
     assert(icss::testsupport::minijson::require_field(object, "last_server_event_tick").is_int());
     const auto engage_order_status = icss::testsupport::minijson::require_field(object, "engage_order_status").as_string();
     assert(engage_order_status == "accepted" || engage_order_status == "executing" || engage_order_status == "completed");

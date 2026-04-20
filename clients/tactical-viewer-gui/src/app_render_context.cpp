@@ -1,12 +1,63 @@
 #include "render_internal.hpp"
 
 #include <algorithm>
+#include <cmath>
+
+namespace {
+
+constexpr float kCameraEpsilon = 0.001F;
+constexpr std::size_t kLiveAutoFrameHistoryPoints = 18;
+
+bool has_manual_camera_override(const icss::viewer_gui::ViewerOptions& options) {
+    return options.camera_zoom > 1.001F
+        || std::abs(options.camera_pan_x) > kCameraEpsilon
+        || std::abs(options.camera_pan_y) > kCameraEpsilon;
+}
+
+bool should_auto_frame(const icss::viewer_gui::ViewerState& state,
+                       const icss::viewer_gui::ViewerOptions& options) {
+    if (has_manual_camera_override(options)) {
+        return false;
+    }
+    using Phase = icss::core::SessionPhase;
+    switch (state.snapshot.phase) {
+    case Phase::Detecting:
+    case Phase::Tracking:
+    case Phase::InterceptorReady:
+    case Phase::EngageOrdered:
+    case Phase::Intercepting:
+    case Phase::Assessed:
+    case Phase::Archived:
+        return state.received_snapshot;
+    case Phase::Standby:
+        return false;
+    }
+    return false;
+}
+
+bool use_full_history_for_frame(const icss::viewer_gui::ViewerState& state) {
+    return state.snapshot.phase == icss::core::SessionPhase::Assessed
+        || state.snapshot.phase == icss::core::SessionPhase::Archived
+        || state.aar.visible;
+}
+
+void include_point(float& min_x,
+                   float& min_y,
+                   float& max_x,
+                   float& max_y,
+                   icss::core::Vec2f point) {
+    min_x = std::min(min_x, point.x);
+    min_y = std::min(min_y, point.y);
+    max_x = std::max(max_x, point.x);
+    max_y = std::max(max_y, point.y);
+}
+
+}  // namespace
 
 namespace icss::viewer_gui {
 
 ViewportTransform make_viewport_transform(const SDL_Rect& map_rect,
-                                         int world_width,
-                                         int world_height,
+                                         const ViewerState& state,
                                          const ViewerOptions& options) {
     ViewportTransform transform;
     transform.screen_bounds = SDL_FRect {
@@ -15,36 +66,102 @@ ViewportTransform make_viewport_transform(const SDL_Rect& map_rect,
         static_cast<float>(map_rect.w),
         static_cast<float>(map_rect.h),
     };
-    transform.world_width = std::max(world_width, 1);
-    transform.world_height = std::max(world_height, 1);
+    transform.world_width = std::max(state.snapshot.world_width, 1);
+    transform.world_height = std::max(state.snapshot.world_height, 1);
     const float full_span_x = static_cast<float>(std::max(transform.world_width - 1, 1));
     const float full_span_y = static_cast<float>(std::max(transform.world_height - 1, 1));
-    const float zoom = std::max(1.0F, options.camera_zoom);
-    const float visible_span_x = full_span_x / zoom;
-    const float visible_span_y = full_span_y / zoom;
-    const float half_span_x = visible_span_x * 0.5F;
-    const float half_span_y = visible_span_y * 0.5F;
     const float full_center_x = full_span_x * 0.5F;
     const float full_center_y = full_span_y * 0.5F;
 
-    float center_x = full_center_x + options.camera_pan_x;
-    float center_y = full_center_y + options.camera_pan_y;
+    if (should_auto_frame(state, options)) {
+        float min_x = full_span_x;
+        float min_y = full_span_y;
+        float max_x = 0.0F;
+        float max_y = 0.0F;
+        bool has_points = false;
+        auto add_point = [&](icss::core::Vec2f point) {
+            include_point(min_x, min_y, max_x, max_y, point);
+            has_points = true;
+        };
 
-    if (visible_span_x >= full_span_x) {
-        center_x = full_center_x;
+        if (state.snapshot.phase != icss::core::SessionPhase::Intercepting
+            && state.snapshot.phase != icss::core::SessionPhase::Assessed
+            && state.snapshot.phase != icss::core::SessionPhase::Archived) {
+            add_point({0.0F, 0.0F});
+        }
+        add_point(state.snapshot.target_world_position);
+        if (state.snapshot.interceptor.active
+            || state.snapshot.phase == icss::core::SessionPhase::InterceptorReady
+            || state.snapshot.phase == icss::core::SessionPhase::EngageOrdered
+            || state.snapshot.phase == icss::core::SessionPhase::Intercepting
+            || state.snapshot.phase == icss::core::SessionPhase::Assessed
+            || state.snapshot.phase == icss::core::SessionPhase::Archived) {
+            add_point(state.snapshot.interceptor_world_position);
+        }
+        if (state.snapshot.predicted_intercept_valid) {
+            add_point(state.snapshot.predicted_intercept_position);
+        }
+        const auto include_history_tail = [&](const std::deque<icss::core::Vec2f>& history) {
+            const auto start = use_full_history_for_frame(state) || history.size() <= kLiveAutoFrameHistoryPoints
+                ? std::size_t {0}
+                : history.size() - kLiveAutoFrameHistoryPoints;
+            for (std::size_t index = start; index < history.size(); ++index) {
+                add_point(history[index]);
+            }
+        };
+        include_history_tail(state.target_history);
+        include_history_tail(state.interceptor_history);
+
+        if (has_points) {
+            const float map_aspect = transform.screen_bounds.w / std::max(1.0F, transform.screen_bounds.h);
+            float span_x = std::max(320.0F, (max_x - min_x) + 180.0F);
+            float span_y = std::max(220.0F, (max_y - min_y) + 180.0F);
+            const float span_aspect = span_x / std::max(1.0F, span_y);
+            if (span_aspect > map_aspect) {
+                span_y = span_x / map_aspect;
+            } else {
+                span_x = span_y * map_aspect;
+            }
+            span_x = std::min(span_x, full_span_x);
+            span_y = std::min(span_y, full_span_y);
+            const float center_x = std::clamp((min_x + max_x) * 0.5F, span_x * 0.5F, full_span_x - span_x * 0.5F);
+            const float center_y = std::clamp((min_y + max_y) * 0.5F, span_y * 0.5F, full_span_y - span_y * 0.5F);
+            transform.visible_min_x = std::max(0.0F, center_x - span_x * 0.5F);
+            transform.visible_max_x = std::min(full_span_x, center_x + span_x * 0.5F);
+            transform.visible_min_y = std::max(0.0F, center_y - span_y * 0.5F);
+            transform.visible_max_y = std::min(full_span_y, center_y + span_y * 0.5F);
+        } else {
+            transform.visible_min_x = 0.0F;
+            transform.visible_max_x = full_span_x;
+            transform.visible_min_y = 0.0F;
+            transform.visible_max_y = full_span_y;
+        }
     } else {
-        center_x = std::clamp(center_x, half_span_x, full_span_x - half_span_x);
-    }
-    if (visible_span_y >= full_span_y) {
-        center_y = full_center_y;
-    } else {
-        center_y = std::clamp(center_y, half_span_y, full_span_y - half_span_y);
+        const float zoom = std::max(1.0F, options.camera_zoom);
+        const float visible_span_x = full_span_x / zoom;
+        const float visible_span_y = full_span_y / zoom;
+        const float half_span_x = visible_span_x * 0.5F;
+        const float half_span_y = visible_span_y * 0.5F;
+        float center_x = full_center_x + options.camera_pan_x;
+        float center_y = full_center_y + options.camera_pan_y;
+
+        if (visible_span_x >= full_span_x) {
+            center_x = full_center_x;
+        } else {
+            center_x = std::clamp(center_x, half_span_x, full_span_x - half_span_x);
+        }
+        if (visible_span_y >= full_span_y) {
+            center_y = full_center_y;
+        } else {
+            center_y = std::clamp(center_y, half_span_y, full_span_y - half_span_y);
+        }
+
+        transform.visible_min_x = std::max(0.0F, center_x - half_span_x);
+        transform.visible_max_x = std::min(full_span_x, center_x + half_span_x);
+        transform.visible_min_y = std::max(0.0F, center_y - half_span_y);
+        transform.visible_max_y = std::min(full_span_y, center_y + half_span_y);
     }
 
-    transform.visible_min_x = std::max(0.0F, center_x - half_span_x);
-    transform.visible_max_x = std::min(full_span_x, center_x + half_span_x);
-    transform.visible_min_y = std::max(0.0F, center_y - half_span_y);
-    transform.visible_max_y = std::min(full_span_y, center_y + half_span_y);
     const float effective_span_x = std::max(1.0F, transform.visible_max_x - transform.visible_min_x);
     const float effective_span_y = std::max(1.0F, transform.visible_max_y - transform.visible_min_y);
     transform.pixels_per_world_x = (transform.screen_bounds.w - 1.0F) / effective_span_x;
@@ -136,7 +253,7 @@ void render_header_panel(SDL_Renderer* renderer, const RenderContext& ctx) {
               ctx.authoritative_color,
               ctx.authoritative_badge,
               status_badge.w - 20);
-    draw_text(renderer, ctx.title_font, header_panel.x + 360, ctx.header_text_y, rgba(236, 239, 244), "ICSS Tactical Viewer");
+    draw_text(renderer, ctx.title_font, header_panel.x + 360, ctx.header_text_y, rgba(236, 239, 244), "ICSS Tactical Picture");
     draw_text(renderer,
               ctx.body_font,
               header_panel.x + 360,

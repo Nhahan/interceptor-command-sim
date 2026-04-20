@@ -101,8 +101,8 @@ int main() {
     const auto dump_json = icss::testsupport::minijson::parse(read_text(dump_path));
     assert(dump_json.is_object());
     const auto& object = dump_json.as_object();
-    assert(icss::testsupport::minijson::require_field(object, "last_control_label").as_string() == "AAR");
-    assert(icss::testsupport::minijson::require_field(object, "last_control_message").as_string() == "server-side aar loaded");
+    assert(icss::testsupport::minijson::require_field(object, "last_control_label").as_string() == "Review");
+    assert(icss::testsupport::minijson::require_field(object, "last_control_message").as_string() == "post-engagement review loaded");
     assert(icss::testsupport::minijson::require_field(object, "phase").as_string() == "archived");
     assert(icss::testsupport::minijson::require_field(object, "aar_available").as_bool());
     assert(icss::testsupport::minijson::require_field(object, "aar_loaded").as_bool());

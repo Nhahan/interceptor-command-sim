@@ -1,5 +1,7 @@
 #include "render_internal.hpp"
 
+#include <algorithm>
+
 namespace icss::viewer_gui {
 namespace {
 
@@ -7,17 +9,14 @@ void draw_button(SDL_Renderer* renderer,
                  const RenderContext& ctx,
                  const Button& button,
                  bool is_live_control) {
-    const bool is_aar_button = button.action == "AAR";
     const bool is_reset_button = button.action == "Reset";
-    const bool is_track_button = button.action == "Track";
-    const bool post_command_track_locked = is_track_button
-        && (ctx.state.snapshot.phase == icss::core::SessionPhase::EngageOrdered
-            || ctx.state.snapshot.phase == icss::core::SessionPhase::Intercepting
-            || ctx.state.snapshot.phase == icss::core::SessionPhase::Assessed
-            || ctx.state.snapshot.phase == icss::core::SessionPhase::Archived);
-    const bool enabled = (!is_aar_button || aar_available(ctx.state)) && !post_command_track_locked;
+    const bool enabled = is_live_control
+        ? control_button_enabled(button.action, ctx.state)
+        : true;
     const bool recommended = is_live_control && enabled && button.action == ctx.recommended_control;
-    const std::string button_label = control_display_label(button.action, ctx.state);
+    const std::string button_label = is_live_control
+        ? control_display_label(button.action, ctx.state)
+        : button.label;
     const auto fill = is_reset_button
         ? (enabled ? rgba(92, 42, 52) : rgba(56, 36, 40))
         : (is_live_control
@@ -52,8 +51,12 @@ void draw_button(SDL_Renderer* renderer,
         SDL_SetRenderDrawColor(renderer, 255, 255, 255, 180);
         SDL_RenderDrawRect(renderer, &glow);
     }
-    const int text_x = is_live_control ? button.rect.x + 10 : button.rect.x + 5;
-    draw_text(renderer, ctx.body_font, text_x, button.rect.y + (is_live_control ? 5 : 3), text, button_label);
+    int text_w = 0;
+    int text_h = 0;
+    TTF_SizeUTF8(ctx.body_font, button_label.c_str(), &text_w, &text_h);
+    const int text_x = button.rect.x + std::max(6, (button.rect.w - text_w) / 2);
+    const int text_y = button.rect.y + std::max(3, (button.rect.h - text_h) / 2);
+    draw_text(renderer, ctx.body_font, text_x, text_y, text, button_label);
 }
 
 }  // namespace
@@ -61,21 +64,36 @@ void draw_button(SDL_Renderer* renderer,
 void render_control_panel(SDL_Renderer* renderer, const RenderContext& ctx) {
     const auto& panel = ctx.layout.control_panel;
     fill_panel(renderer, panel, rgba(12, 14, 20), rgba(54, 60, 78));
-    draw_text(renderer, ctx.title_font, panel.x + 12, panel.y + 10, rgba(141, 211, 199), "Fire Control Console");
-    const SDL_Rect next_hint_box {panel.x + 12, panel.y + 40, panel.w - 24, 26};
+    draw_text(renderer, ctx.title_font, panel.x + 12, panel.y + 10, rgba(141, 211, 199), "Fire Control");
+    const SDL_Rect next_hint_box {panel.x + 12, panel.y + 40, panel.w - 24, 24};
     fill_panel(renderer, next_hint_box, rgba(22, 27, 36), rgba(56, 66, 86));
     const auto recommended_label = ctx.recommended_control.empty()
-        ? std::string("none")
+        ? std::string("wait")
         : control_display_label(ctx.recommended_control, ctx.state);
     draw_text(renderer,
               ctx.body_font,
               next_hint_box.x + 10,
-              next_hint_box.y + 5,
+              next_hint_box.y + 4,
               rgba(148, 156, 172),
-              "Next recommended action: " + recommended_label,
+              "Next Control: " + recommended_label,
               next_hint_box.w - 20);
-
-    draw_text(renderer, ctx.body_font, panel.x + 12, panel.y + 79, rgba(148, 156, 172), "Track Control");
+    const SDL_Rect status_box {panel.x + 12, panel.y + 70, panel.w - 24, 42};
+    fill_panel(renderer, status_box, rgba(18, 23, 32), rgba(56, 66, 86));
+    draw_text(renderer,
+              ctx.body_font,
+              status_box.x + 10,
+              status_box.y + 6,
+              rgba(188, 198, 214),
+              "Mode  " + std::string(ctx.state.effective_track_active ? "tracked" : "unguided")
+                  + "  |  Track  " + std::string(ctx.state.snapshot.track.active ? "live" : "dropped"),
+              status_box.w - 20);
+    draw_text(renderer,
+              ctx.body_font,
+              status_box.x + 10,
+              status_box.y + 20,
+              rgba(148, 156, 172),
+              control_panel_hint(ctx.state),
+              status_box.w - 20);
 
     for (const auto& button : ctx.layout.buttons) {
         if (is_live_control_action(button.action)) {
@@ -88,39 +106,47 @@ void render_setup_panel(SDL_Renderer* renderer, const RenderContext& ctx) {
     const auto& panel = ctx.layout.setup_panel;
     fill_panel(renderer, panel, rgba(12, 14, 20), rgba(54, 60, 78));
     draw_text(renderer, ctx.title_font, panel.x + 12, panel.y + 10, rgba(141, 211, 199), "Scenario Setup");
-    draw_text(renderer, ctx.body_font, panel.x + 12, panel.y + 38, rgba(148, 156, 172), "Target jitter only; origin fixed at (0,0)");
-    const SDL_Rect target_pos_box {panel.x + 12, panel.y + 60, panel.w - 24, 28};
-    const SDL_Rect target_vel_box {panel.x + 12, panel.y + 88, panel.w - 24, 28};
-    const SDL_Rect launch_box {panel.x + 12, panel.y + 116, panel.w - 24, 28};
-    const SDL_Rect asset_dyn_box {panel.x + 12, panel.y + 144, panel.w - 24, 28};
+    draw_text(renderer,
+              ctx.body_font,
+              panel.x + 12,
+              panel.y + 38,
+              rgba(148, 156, 172),
+              "Applies on next Start. Origin stays fixed at (0,0).",
+              panel.w - 24);
+    const SDL_Rect target_pos_box {panel.x + 12, panel.y + 60, panel.w - 24, 24};
+    const SDL_Rect target_vel_box {panel.x + 12, panel.y + 86, panel.w - 24, 24};
+    const SDL_Rect launch_box {panel.x + 12, panel.y + 112, panel.w - 24, 24};
+    const SDL_Rect asset_dyn_box {panel.x + 12, panel.y + 138, panel.w - 24, 24};
     for (const auto& box : {target_pos_box, target_vel_box, launch_box, asset_dyn_box}) {
         fill_panel(renderer, box, rgba(22, 27, 36), rgba(56, 66, 86));
     }
-    draw_text(renderer,
-              ctx.body_font,
-              target_pos_box.x + 8,
-              target_pos_box.y + 5,
-              rgba(188, 198, 214),
-              "Target  " + std::to_string(ctx.state.planned_scenario.target_start_x) + "," + std::to_string(ctx.state.planned_scenario.target_start_y));
-    draw_text(renderer,
-              ctx.body_font,
-              target_vel_box.x + 8,
-              target_vel_box.y + 5,
-              rgba(188, 198, 214),
-              "Velocity  " + std::to_string(ctx.state.planned_scenario.target_velocity_x) + "," + std::to_string(ctx.state.planned_scenario.target_velocity_y));
-    draw_text(renderer,
-              ctx.body_font,
-              launch_box.x + 8,
-              launch_box.y + 5,
-              rgba(188, 198, 214),
-              "Origin  0,0 | Launch  " + std::to_string(ctx.state.planned_scenario.launch_angle_deg) + " deg");
-    draw_text(renderer,
-              ctx.body_font,
-              asset_dyn_box.x + 8,
-              asset_dyn_box.y + 5,
-              rgba(188, 198, 214),
-              "Speed  " + std::to_string(ctx.state.planned_scenario.interceptor_speed_per_tick)
-                  + " | Timeout  " + std::to_string(ctx.state.planned_scenario.engagement_timeout_ticks));
+    const int label_x = panel.x + 18;
+    const int value_x = panel.x + 112;
+    const int button_gutter_x = panel.x + panel.w - 12 - ((32 * 4) + (4 * 3));
+    SDL_SetRenderDrawColor(renderer, 56, 66, 86, 255);
+    SDL_RenderDrawLine(renderer, button_gutter_x - 8, target_pos_box.y + 2, button_gutter_x - 8, asset_dyn_box.y + asset_dyn_box.h - 2);
+    auto draw_setup_row = [&](const SDL_Rect& box,
+                              std::string_view label,
+                              const std::string& value,
+                              SDL_Color value_color = rgba(188, 198, 214)) {
+        draw_text(renderer, ctx.body_font, label_x, box.y + 6, rgba(148, 156, 172), std::string(label));
+        draw_text(renderer, ctx.body_font, value_x, box.y + 6, value_color, value, (button_gutter_x - 16) - value_x);
+    };
+    draw_setup_row(target_pos_box,
+                   "Target",
+                   std::to_string(ctx.state.planned_scenario.target_start_x)
+                       + ", " + std::to_string(ctx.state.planned_scenario.target_start_y));
+    draw_setup_row(target_vel_box,
+                   "Velocity",
+                   std::to_string(ctx.state.planned_scenario.target_velocity_x)
+                       + ", " + std::to_string(ctx.state.planned_scenario.target_velocity_y));
+    draw_setup_row(launch_box,
+                   "Launch",
+                   std::to_string(ctx.state.planned_scenario.launch_angle_deg) + " deg");
+    draw_setup_row(asset_dyn_box,
+                   "Speed/TO",
+                   std::to_string(ctx.state.planned_scenario.interceptor_speed_per_tick)
+                       + " / " + std::to_string(ctx.state.planned_scenario.engagement_timeout_ticks));
     for (const auto& button : ctx.layout.buttons) {
         if (!is_live_control_action(button.action)) {
             draw_button(renderer, ctx, button, false);

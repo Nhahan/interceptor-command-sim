@@ -71,11 +71,11 @@ std::string phase_banner_label(icss::core::SessionPhase phase) {
     switch (phase) {
     case icss::core::SessionPhase::Standby: return "STANDBY";
     case icss::core::SessionPhase::Detecting: return "DETECTING";
-    case icss::core::SessionPhase::Tracking: return "TRACK ESTABLISHED";
-    case icss::core::SessionPhase::InterceptorReady: return "INTERCEPTOR READY";
-    case icss::core::SessionPhase::EngageOrdered: return "ENGAGE ORDERED";
+    case icss::core::SessionPhase::Tracking: return "TRACK FILE";
+    case icss::core::SessionPhase::InterceptorReady: return "WEAPON READY";
+    case icss::core::SessionPhase::EngageOrdered: return "FIRE ORDERED";
     case icss::core::SessionPhase::Intercepting: return "INTERCEPTING";
-    case icss::core::SessionPhase::Assessed: return "ASSESSMENT COMPLETE";
+    case icss::core::SessionPhase::Assessed: return "ENGAGEMENT ASSESSED";
     case icss::core::SessionPhase::Archived: return "ARCHIVED";
     }
     return "UNKNOWN";
@@ -86,19 +86,19 @@ std::string phase_operator_note(icss::core::SessionPhase phase) {
     case icss::core::SessionPhase::Standby:
         return "Ready to initialize the intercept scenario.";
     case icss::core::SessionPhase::Detecting:
-        return "Target detected. Acquire track to build a firing solution.";
+        return "Target detected. Build the track file before weapon preparation.";
     case icss::core::SessionPhase::Tracking:
-        return "Track established. Ready the interceptor.";
+        return "Track file valid. Ready the weapon.";
     case icss::core::SessionPhase::InterceptorReady:
-        return "Interceptor ready. Issue engage order when authorized.";
+        return "Weapon ready. Issue fire order, or drop track before launch.";
     case icss::core::SessionPhase::EngageOrdered:
-        return "Engage order accepted by the authoritative server.";
+        return "Fire order accepted by the authoritative server.";
     case icss::core::SessionPhase::Intercepting:
-        return "Interceptor in flight. Awaiting server assessment.";
+        return "Weapon in flight. Awaiting engagement assessment.";
     case icss::core::SessionPhase::Assessed:
-        return "Assessment complete. Open AAR or reset the run.";
+        return "Engagement assessed. Open Review or reset the run.";
     case icss::core::SessionPhase::Archived:
-        return "Session archived. Reset to begin a new run.";
+        return "Run archived. Open Review or reset to begin a new run.";
     }
     return "Unknown phase.";
 }
@@ -119,16 +119,16 @@ SDL_Color phase_accent(icss::core::SessionPhase phase) {
 
 std::string resilience_summary(const ViewerState& state) {
     const auto freshness = icss::view::freshness_label(state.snapshot);
-    if (freshness == "resync") {
-        return "Viewer reconnected. Latest snapshot is resynchronizing state.";
+    if (freshness == "reacquiring") {
+        return "Link restored. The tactical picture is rebuilding from authoritative updates.";
     }
     if (freshness == "degraded") {
-        return "Packet loss observed. Viewer converged using latest valid snapshot.";
+        return "Picture degraded. Packet loss is present, but the feed is still updating.";
     }
     if (freshness == "stale") {
-        return "Viewer state is stale. Treat positional data as low confidence.";
+        return "Picture stale. Treat geometry and timing as low-confidence data.";
     }
-    return "Steady-state propagation. Viewer is following authoritative snapshots.";
+    return "Picture current. Feed is aligned with authoritative snapshots.";
 }
 
 std::string authoritative_headline(const ViewerState& state) {
@@ -199,26 +199,32 @@ bool aar_available(const ViewerState& state) {
 
 std::string aar_panel_text(const ViewerState& state) {
     if (!aar_available(state)) {
-        return "AAR unavailable until authoritative assessment or archive.\n"
-               "Use the live log during active control.";
+        return "Post-engagement review unavailable until assessment or archive.\n"
+               "Use the live event log during active control.";
     }
     if (!state.aar.loaded) {
-        return "Server-side AAR is available.\n"
-               "Press AAR to load cursor, assessment, resilience, and event summary.";
+        return "Post-engagement review available.\n"
+               "Press Review to load the authoritative review cursor and event summary.";
     }
 
     std::string text;
-    text += "AAR cursor: " + std::to_string(state.aar.cursor_index) + "/" + std::to_string(state.aar.total_events) + "\n";
+    text += "Review cursor: " + std::to_string(state.aar.cursor_index) + "/" + std::to_string(state.aar.total_events) + "\n";
     text += "Assessment: " + state.aar.assessment_code + "\n";
-    text += "Resilience: " + state.aar.resilience_case + "\n";
-    text += "Current event: " + state.aar.event_type + "\n";
+    text += "Link/Picture: " + state.aar.resilience_case + "\n";
+    text += "Current record: " + state.aar.event_type + "\n";
     text += "Summary: " + state.aar.event_summary;
     return text;
 }
 
 std::string control_display_label(std::string_view action, const ViewerState& state) {
     if (action == "Track") {
-        return state.snapshot.track.active ? "Drop Track" : "Acquire Track";
+        if (state.snapshot.phase == icss::core::SessionPhase::EngageOrdered
+            || state.snapshot.phase == icss::core::SessionPhase::Intercepting
+            || state.snapshot.phase == icss::core::SessionPhase::Assessed
+            || state.snapshot.phase == icss::core::SessionPhase::Archived) {
+            return "Locked";
+        }
+        return state.snapshot.track.active ? "Drop" : "Acquire";
     }
     if (action == "Ready") {
         return "Ready";
@@ -227,14 +233,73 @@ std::string control_display_label(std::string_view action, const ViewerState& st
         return "Engage";
     }
     if (action == "AAR") {
-        return "AAR";
+        return "Review";
     }
     return std::string(action);
 }
 
+bool control_button_enabled(std::string_view action, const ViewerState& state) {
+    if (action == "Start") {
+        return state.snapshot.phase == icss::core::SessionPhase::Standby;
+    }
+    if (action == "Track") {
+        return state.snapshot.phase == icss::core::SessionPhase::Detecting
+            || state.snapshot.phase == icss::core::SessionPhase::Tracking
+            || state.snapshot.phase == icss::core::SessionPhase::InterceptorReady;
+    }
+    if (action == "Ready") {
+        return state.snapshot.phase == icss::core::SessionPhase::Tracking
+            && state.snapshot.track.active;
+    }
+    if (action == "Engage") {
+        return state.snapshot.phase == icss::core::SessionPhase::InterceptorReady
+            && state.snapshot.interceptor_status == icss::core::InterceptorStatus::Ready;
+    }
+    if (action == "Reset") {
+        return state.snapshot.phase != icss::core::SessionPhase::Standby
+            || state.received_snapshot
+            || state.control.last_label != "idle";
+    }
+    if (action == "AAR") {
+        return aar_available(state);
+    }
+    return true;
+}
+
+std::string control_panel_hint(const ViewerState& state) {
+    if (!state.control.last_ok && state.control.last_label != "idle") {
+        return "Last command was rejected: " + state.control.last_message;
+    }
+    switch (state.snapshot.phase) {
+    case icss::core::SessionPhase::Standby:
+        return "Start opens a new run. The rest unlock as the phase advances.";
+    case icss::core::SessionPhase::Detecting:
+        return "Acquire Track first. Engage stays disabled until Ready succeeds.";
+    case icss::core::SessionPhase::Tracking:
+        return "Track is live. Ready the interceptor before launch.";
+    case icss::core::SessionPhase::InterceptorReady:
+        if (state.snapshot.track.active) {
+            return "Ready to launch. Engage fires now; Track can still drop the lock.";
+        }
+        return "Unguided launch is possible. Reacquire Track for a guided intercept.";
+    case icss::core::SessionPhase::EngageOrdered:
+    case icss::core::SessionPhase::Intercepting:
+        return "The interceptor is committed. Controls stay locked until assessment.";
+    case icss::core::SessionPhase::Assessed:
+        return "Assessment complete. Open the post-engagement review or reset the run.";
+    case icss::core::SessionPhase::Archived:
+        if (state.aar.loaded) {
+            return "Post-engagement review loaded. Reset to start another run.";
+        }
+        return "Run archived. Open Review or reset for another iteration.";
+    }
+    return "Control availability follows the authoritative mission phase.";
+}
+
 std::string terminal_timeline_text(const ViewerState& state, bool aar_mode) {
     std::string out;
-    out += aar_mode ? "mode=aar | source=server_aar\n" : "mode=live | source=server_events\n";
+    out += aar_mode ? "mode=post_engagement_review | source=authoritative_history\n"
+                    : "mode=live_tactical_feed | source=authoritative_events\n";
     out += "----------------------------------------\n";
     if (aar_mode) {
         const auto body = aar_panel_text(state);

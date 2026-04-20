@@ -142,14 +142,14 @@ std::string recommended_control_label(const ViewerState& state) {
     case icss::core::SessionPhase::Tracking:
         return "Ready";
     case icss::core::SessionPhase::InterceptorReady:
-        return "Engage";
+        return state.snapshot.track.active ? "Engage" : "Track";
     case icss::core::SessionPhase::EngageOrdered:
     case icss::core::SessionPhase::Intercepting:
         return "";
     case icss::core::SessionPhase::Assessed:
     case icss::core::SessionPhase::Archived:
         if (aar_available(state) && !state.aar.loaded) {
-            return "AAR";
+            return "Review";
         }
         return "Reset";
     }

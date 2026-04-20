@@ -136,8 +136,8 @@ int main() {
     assert(icss::testsupport::minijson::require_field(object, "phase").as_string() == "detecting");
     assert(icss::testsupport::minijson::require_field(object, "phase_banner").as_string() == "DETECTING");
     assert(icss::testsupport::minijson::require_field(object, "connection_state").as_string() == "connected");
-    const auto freshness = icss::testsupport::minijson::require_field(object, "freshness").as_string();
-    assert(freshness == "fresh" || freshness == "degraded");
+    const auto picture_status = icss::testsupport::minijson::require_field(object, "picture_status").as_string();
+    assert(picture_status == "current" || picture_status == "degraded");
     assert(!icss::testsupport::minijson::require_field(object, "resilience_summary").as_string().empty());
     assert(icss::testsupport::minijson::require_field(object, "assessment_code").as_string() == "pending");
     assert(icss::testsupport::minijson::require_field(object, "heartbeat_count").is_int());
