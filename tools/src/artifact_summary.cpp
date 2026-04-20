@@ -16,21 +16,21 @@ struct CliOptions {
 
     Mode mode {Mode::RepoRoot};
     std::filesystem::path repo_root {ICSS_REPO_ROOT};
-    std::filesystem::path guided_root;
-    std::filesystem::path straight_root;
+    std::filesystem::path tracked_intercept_root;
+    std::filesystem::path unguided_intercept_root;
     std::filesystem::path runtime_log_root;
 };
 
 [[noreturn]] void throw_usage() {
     throw std::runtime_error(
-        "usage: icss_artifact_summary [--repo-root PATH] | [--guided-root PATH --straight-root PATH [--runtime-log-root PATH]]");
+        "usage: icss_artifact_summary [--repo-root PATH] | [--tracked_intercept-root PATH --unguided_intercept-root PATH [--runtime-log-root PATH]]");
 }
 
 CliOptions parse_args(int argc, char** argv) {
     CliOptions options;
     std::optional<std::filesystem::path> repo_root;
-    std::optional<std::filesystem::path> guided_root;
-    std::optional<std::filesystem::path> straight_root;
+    std::optional<std::filesystem::path> tracked_intercept_root;
+    std::optional<std::filesystem::path> unguided_intercept_root;
     std::optional<std::filesystem::path> runtime_log_root;
 
     for (int index = 1; index < argc; ++index) {
@@ -45,12 +45,12 @@ CliOptions parse_args(int argc, char** argv) {
             repo_root = require_value(arg);
             continue;
         }
-        if (arg == "--guided-root") {
-            guided_root = require_value(arg);
+        if (arg == "--tracked_intercept-root") {
+            tracked_intercept_root = require_value(arg);
             continue;
         }
-        if (arg == "--straight-root") {
-            straight_root = require_value(arg);
+        if (arg == "--unguided_intercept-root") {
+            unguided_intercept_root = require_value(arg);
             continue;
         }
         if (arg == "--runtime-log-root") {
@@ -61,7 +61,7 @@ CliOptions parse_args(int argc, char** argv) {
     }
 
     const bool repo_mode_requested = repo_root.has_value();
-    const bool compare_mode_requested = guided_root.has_value() || straight_root.has_value() || runtime_log_root.has_value();
+    const bool compare_mode_requested = tracked_intercept_root.has_value() || unguided_intercept_root.has_value() || runtime_log_root.has_value();
     if (repo_mode_requested && compare_mode_requested) {
         throw std::runtime_error("--repo-root cannot be combined with compare-root flags");
     }
@@ -73,41 +73,41 @@ CliOptions parse_args(int argc, char** argv) {
         return options;
     }
 
-    if (!guided_root.has_value() || !straight_root.has_value()) {
-        throw std::runtime_error("--guided-root and --straight-root must be provided together");
+    if (!tracked_intercept_root.has_value() || !unguided_intercept_root.has_value()) {
+        throw std::runtime_error("--tracked_intercept-root and --unguided_intercept-root must be provided together");
     }
 
     options.mode = CliOptions::Mode::CompareRoots;
-    options.guided_root = *guided_root;
-    options.straight_root = *straight_root;
-    options.runtime_log_root = runtime_log_root.value_or(*guided_root);
+    options.tracked_intercept_root = *tracked_intercept_root;
+    options.unguided_intercept_root = *unguided_intercept_root;
+    options.runtime_log_root = runtime_log_root.value_or(*tracked_intercept_root);
     return options;
 }
 
-bool straight_bundle_exists(const std::filesystem::path& repo_root) {
-    const auto straight_root = repo_root / "assets/sample-aar/straight";
-    const bool has_summary = std::filesystem::exists(straight_root / "session-summary.json");
-    const bool has_timeline = std::filesystem::exists(straight_root / "replay-timeline.json");
+bool unguided_intercept_bundle_exists(const std::filesystem::path& repo_root) {
+    const auto unguided_intercept_root = repo_root / "assets/sample-aar/unguided_intercept";
+    const bool has_summary = std::filesystem::exists(unguided_intercept_root / "session-summary.json");
+    const bool has_timeline = std::filesystem::exists(unguided_intercept_root / "replay-timeline.json");
     if (has_summary != has_timeline) {
-        throw std::runtime_error("straight artifact bundle is incomplete");
+        throw std::runtime_error("unguided_intercept artifact bundle is incomplete");
     }
     return has_summary && has_timeline;
 }
 
-icss::core::SessionSummaryArtifact read_guided_summary_from_repo(const std::filesystem::path& repo_root) {
+icss::core::SessionSummaryArtifact read_tracked_intercept_summary_from_repo(const std::filesystem::path& repo_root) {
     return icss::core::read_session_summary_json(repo_root / "assets/sample-aar/session-summary.json");
 }
 
-icss::core::ReplayTimelineArtifact read_guided_timeline_from_repo(const std::filesystem::path& repo_root) {
+icss::core::ReplayTimelineArtifact read_tracked_intercept_timeline_from_repo(const std::filesystem::path& repo_root) {
     return icss::core::read_replay_timeline_json(repo_root / "assets/sample-aar/replay-timeline.json");
 }
 
-icss::core::SessionSummaryArtifact read_straight_summary_from_repo(const std::filesystem::path& repo_root) {
-    return icss::core::read_session_summary_json(repo_root / "assets/sample-aar/straight/session-summary.json");
+icss::core::SessionSummaryArtifact read_unguided_intercept_summary_from_repo(const std::filesystem::path& repo_root) {
+    return icss::core::read_session_summary_json(repo_root / "assets/sample-aar/unguided_intercept/session-summary.json");
 }
 
-icss::core::ReplayTimelineArtifact read_straight_timeline_from_repo(const std::filesystem::path& repo_root) {
-    return icss::core::read_replay_timeline_json(repo_root / "assets/sample-aar/straight/replay-timeline.json");
+icss::core::ReplayTimelineArtifact read_unguided_intercept_timeline_from_repo(const std::filesystem::path& repo_root) {
+    return icss::core::read_replay_timeline_json(repo_root / "assets/sample-aar/unguided_intercept/replay-timeline.json");
 }
 
 icss::core::SessionSummaryArtifact read_summary_from_runtime_root(const std::filesystem::path& root) {
@@ -123,33 +123,33 @@ icss::core::RuntimeLogArtifact read_runtime_log_from_runtime_root(const std::fil
 }
 
 template <typename Summary, typename Timeline, typename Log>
-void print_guided_block(const Summary& summary, const Timeline& timeline, const Log& runtime_log) {
-    std::cout << "guided.summary.session_id=" << summary.session_id << '\n';
-    std::cout << "guided.summary.judgment_code=" << summary.judgment_code << '\n';
-    std::cout << "guided.summary.resilience_case=" << summary.resilience_case << '\n';
-    std::cout << "guided.summary.latest_freshness=" << summary.latest_freshness << '\n';
-    std::cout << "guided.timeline.event_count=" << timeline.event_count << '\n';
-    std::cout << "guided.timeline.last_event_type=" << (timeline.events.empty() ? "none" : timeline.events.back().event_type) << '\n';
-    std::cout << "guided.log.backend=" << runtime_log.backend << '\n';
-    std::cout << "guided.log.event_record_count=" << runtime_log.event_record_count << '\n';
-    std::cout << "guided.log.last_event_type=" << runtime_log.last_recorded_event_type << '\n';
+void print_tracked_intercept_block(const Summary& summary, const Timeline& timeline, const Log& runtime_log) {
+    std::cout << "tracked_intercept.summary.session_id=" << summary.session_id << '\n';
+    std::cout << "tracked_intercept.summary.assessment_code=" << summary.assessment_code << '\n';
+    std::cout << "tracked_intercept.summary.resilience_case=" << summary.resilience_case << '\n';
+    std::cout << "tracked_intercept.summary.latest_freshness=" << summary.latest_freshness << '\n';
+    std::cout << "tracked_intercept.timeline.event_count=" << timeline.event_count << '\n';
+    std::cout << "tracked_intercept.timeline.last_event_type=" << (timeline.events.empty() ? "none" : timeline.events.back().event_type) << '\n';
+    std::cout << "tracked_intercept.log.backend=" << runtime_log.backend << '\n';
+    std::cout << "tracked_intercept.log.event_record_count=" << runtime_log.event_record_count << '\n';
+    std::cout << "tracked_intercept.log.last_event_type=" << runtime_log.last_recorded_event_type << '\n';
 }
 
 template <typename Summary, typename Timeline>
-void print_straight_compare_block(const Summary& guided_summary,
-                                  const Summary& straight_summary,
-                                  const Timeline& straight_timeline) {
-    std::cout << "straight.available=true\n";
-    std::cout << "straight.summary.session_id=" << straight_summary.session_id << '\n';
-    std::cout << "straight.summary.judgment_code=" << straight_summary.judgment_code << '\n';
-    std::cout << "straight.summary.resilience_case=" << straight_summary.resilience_case << '\n';
-    std::cout << "straight.summary.latest_freshness=" << straight_summary.latest_freshness << '\n';
-    std::cout << "straight.timeline.event_count=" << straight_timeline.event_count << '\n';
-    std::cout << "straight.timeline.last_event_type=" << (straight_timeline.events.empty() ? "none" : straight_timeline.events.back().event_type) << '\n';
-    std::cout << "compare.guided_judgment=" << guided_summary.judgment_code << '\n';
-    std::cout << "compare.straight_judgment=" << straight_summary.judgment_code << '\n';
-    std::cout << "compare.guided_launch_mode=" << guided_summary.launch_mode << '\n';
-    std::cout << "compare.straight_launch_mode=" << straight_summary.launch_mode << '\n';
+void print_unguided_intercept_compare_block(const Summary& tracked_intercept_summary,
+                                  const Summary& unguided_intercept_summary,
+                                  const Timeline& unguided_intercept_timeline) {
+    std::cout << "unguided_intercept.available=true\n";
+    std::cout << "unguided_intercept.summary.session_id=" << unguided_intercept_summary.session_id << '\n';
+    std::cout << "unguided_intercept.summary.assessment_code=" << unguided_intercept_summary.assessment_code << '\n';
+    std::cout << "unguided_intercept.summary.resilience_case=" << unguided_intercept_summary.resilience_case << '\n';
+    std::cout << "unguided_intercept.summary.latest_freshness=" << unguided_intercept_summary.latest_freshness << '\n';
+    std::cout << "unguided_intercept.timeline.event_count=" << unguided_intercept_timeline.event_count << '\n';
+    std::cout << "unguided_intercept.timeline.last_event_type=" << (unguided_intercept_timeline.events.empty() ? "none" : unguided_intercept_timeline.events.back().event_type) << '\n';
+    std::cout << "compare.tracked_intercept_judgment=" << tracked_intercept_summary.assessment_code << '\n';
+    std::cout << "compare.unguided_intercept_judgment=" << unguided_intercept_summary.assessment_code << '\n';
+    std::cout << "compare.tracked_intercept_intercept_profile=" << tracked_intercept_summary.intercept_profile << '\n';
+    std::cout << "compare.unguided_intercept_intercept_profile=" << unguided_intercept_summary.intercept_profile << '\n';
 }
 
 }  // namespace
@@ -160,30 +160,30 @@ int main(int argc, char** argv) {
         std::cout << "ICSS Artifact Summary\n";
 
         if (options.mode == CliOptions::Mode::RepoRoot) {
-            const auto guided_summary = read_guided_summary_from_repo(options.repo_root);
-            const auto guided_timeline = read_guided_timeline_from_repo(options.repo_root);
+            const auto tracked_intercept_summary = read_tracked_intercept_summary_from_repo(options.repo_root);
+            const auto tracked_intercept_timeline = read_tracked_intercept_timeline_from_repo(options.repo_root);
             const auto runtime_log = read_runtime_log_from_runtime_root(options.repo_root);
-            print_guided_block(guided_summary, guided_timeline, runtime_log);
+            print_tracked_intercept_block(tracked_intercept_summary, tracked_intercept_timeline, runtime_log);
 
-            if (!straight_bundle_exists(options.repo_root)) {
-                std::cout << "straight.available=false\n";
+            if (!unguided_intercept_bundle_exists(options.repo_root)) {
+                std::cout << "unguided_intercept.available=false\n";
                 return 0;
             }
 
-            const auto straight_summary = read_straight_summary_from_repo(options.repo_root);
-            const auto straight_timeline = read_straight_timeline_from_repo(options.repo_root);
-            print_straight_compare_block(guided_summary, straight_summary, straight_timeline);
+            const auto unguided_intercept_summary = read_unguided_intercept_summary_from_repo(options.repo_root);
+            const auto unguided_intercept_timeline = read_unguided_intercept_timeline_from_repo(options.repo_root);
+            print_unguided_intercept_compare_block(tracked_intercept_summary, unguided_intercept_summary, unguided_intercept_timeline);
             return 0;
         }
 
-        const auto guided_summary = read_summary_from_runtime_root(options.guided_root);
-        const auto guided_timeline = read_timeline_from_runtime_root(options.guided_root);
+        const auto tracked_intercept_summary = read_summary_from_runtime_root(options.tracked_intercept_root);
+        const auto tracked_intercept_timeline = read_timeline_from_runtime_root(options.tracked_intercept_root);
         const auto runtime_log = read_runtime_log_from_runtime_root(options.runtime_log_root);
-        const auto straight_summary = read_summary_from_runtime_root(options.straight_root);
-        const auto straight_timeline = read_timeline_from_runtime_root(options.straight_root);
+        const auto unguided_intercept_summary = read_summary_from_runtime_root(options.unguided_intercept_root);
+        const auto unguided_intercept_timeline = read_timeline_from_runtime_root(options.unguided_intercept_root);
 
-        print_guided_block(guided_summary, guided_timeline, runtime_log);
-        print_straight_compare_block(guided_summary, straight_summary, straight_timeline);
+        print_tracked_intercept_block(tracked_intercept_summary, tracked_intercept_timeline, runtime_log);
+        print_unguided_intercept_compare_block(tracked_intercept_summary, unguided_intercept_summary, unguided_intercept_timeline);
         return 0;
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';

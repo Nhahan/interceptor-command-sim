@@ -10,14 +10,14 @@ namespace icss::core {
 void SimulationSession::record_snapshot(float packet_loss_pct) {
     ++sequence_;
     const auto timestamp = next_timestamp_ms();
-    const auto viewer_connection = tactical_viewer_.connection;
+    const auto display_connection = tactical_display_.connection;
     const auto target_heading = detail::heading_deg(target_velocity_world_);
-    const auto asset_heading = detail::heading_deg(asset_velocity_world_);
+    const auto asset_heading = detail::heading_deg(interceptor_velocity_world_);
     const bool engagement_context = asset_.active
-        && (command_status_ == CommandLifecycle::Accepted
-            || command_status_ == CommandLifecycle::Executing
-            || command_status_ == CommandLifecycle::Completed
-            || judgment_.ready);
+        && (engage_order_status_ == EngageOrderStatus::Accepted
+            || engage_order_status_ == EngageOrderStatus::Executing
+            || engage_order_status_ == EngageOrderStatus::Completed
+            || assessment_.ready);
     auto predicted = Vec2f {};
     auto tti = 0.0F;
     auto predicted_valid = false;
@@ -46,7 +46,7 @@ void SimulationSession::record_snapshot(float packet_loss_pct) {
         static_cast<int>(std::lround(target_velocity_world_.x)),
         static_cast<int>(std::lround(target_velocity_world_.y)),
         target_velocity_world_,
-        asset_velocity_world_,
+        interceptor_velocity_world_,
         target_heading,
         asset_heading,
         scenario_.interceptor_speed_per_tick,
@@ -60,15 +60,15 @@ void SimulationSession::record_snapshot(float packet_loss_pct) {
         predicted,
         tti,
         track_,
-        asset_status_,
-        command_status_,
-        judgment_,
-        viewer_connection,
+        interceptor_status_,
+        engage_order_status_,
+        assessment_,
+        display_connection,
         {tick_, static_cast<std::uint32_t>((telemetry_interval_ms_ / 10) + tick_rate_hz_ + static_cast<int>(tick_)), packet_loss_pct, timestamp},
         static_cast<float>(scenario_.launch_angle_deg),
     });
-    if (viewer_connection == ConnectionState::Reconnected) {
-        tactical_viewer_.connection = ConnectionState::Connected;
+    if (display_connection == ConnectionState::Reconnected) {
+        tactical_display_.connection = ConnectionState::Connected;
     }
 }
 

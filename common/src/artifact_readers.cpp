@@ -46,17 +46,17 @@ SessionSummaryArtifact read_session_summary_json(const std::filesystem::path& pa
     artifact.final_phase = icss::testsupport::minijson::require_field(object, "final_phase").as_string();
     artifact.snapshot_count = to_size(icss::testsupport::minijson::require_field(object, "snapshot_count"));
     artifact.event_count = to_size(icss::testsupport::minijson::require_field(object, "event_count"));
-    artifact.command_console_connection = icss::testsupport::minijson::require_field(object, "command_console_connection").as_string();
-    artifact.viewer_connection = icss::testsupport::minijson::require_field(object, "viewer_connection").as_string();
-    artifact.judgment_ready = icss::testsupport::minijson::require_field(object, "judgment_ready").as_bool();
-    artifact.judgment_code = icss::testsupport::minijson::require_field(object, "judgment_code").as_string();
-    artifact.guidance_state = icss::testsupport::minijson::require_field(object, "guidance_state").as_string();
-    artifact.launch_mode = icss::testsupport::minijson::require_field(object, "launch_mode").as_string();
+    artifact.fire_control_console_connection = icss::testsupport::minijson::require_field(object, "fire_control_console_connection").as_string();
+    artifact.display_connection = icss::testsupport::minijson::require_field(object, "display_connection").as_string();
+    artifact.assessment_ready = icss::testsupport::minijson::require_field(object, "assessment_ready").as_bool();
+    artifact.assessment_code = icss::testsupport::minijson::require_field(object, "assessment_code").as_string();
+    artifact.effective_track_state = icss::testsupport::minijson::require_field(object, "effective_track_state").as_string();
+    artifact.intercept_profile = icss::testsupport::minijson::require_field(object, "intercept_profile").as_string();
     artifact.launch_angle_deg = to_u32(icss::testsupport::minijson::require_field(object, "launch_angle_deg"));
     artifact.last_event_type = icss::testsupport::minijson::require_field(object, "last_event_type").as_string();
     artifact.resilience_case = icss::testsupport::minijson::require_field(object, "resilience_case").as_string();
     artifact.latest_snapshot_sequence = to_u64(icss::testsupport::minijson::require_field(object, "latest_snapshot_sequence"));
-    artifact.latest_viewer_connection = icss::testsupport::minijson::require_field(object, "latest_viewer_connection").as_string();
+    artifact.latest_display_connection = icss::testsupport::minijson::require_field(object, "latest_display_connection").as_string();
     artifact.latest_freshness = icss::testsupport::minijson::require_field(object, "latest_freshness").as_string();
 
     const auto& recent = icss::testsupport::minijson::require_field(object, "recent_events").as_array();
@@ -82,9 +82,9 @@ ReplayTimelineArtifact read_replay_timeline_json(const std::filesystem::path& pa
     artifact.final_phase = icss::testsupport::minijson::require_field(object, "final_phase").as_string();
     artifact.snapshot_count = to_size(icss::testsupport::minijson::require_field(object, "snapshot_count"));
     artifact.event_count = to_size(icss::testsupport::minijson::require_field(object, "event_count"));
-    artifact.judgment_code = icss::testsupport::minijson::require_field(object, "judgment_code").as_string();
-    artifact.guidance_state = icss::testsupport::minijson::require_field(object, "guidance_state").as_string();
-    artifact.launch_mode = icss::testsupport::minijson::require_field(object, "launch_mode").as_string();
+    artifact.assessment_code = icss::testsupport::minijson::require_field(object, "assessment_code").as_string();
+    artifact.effective_track_state = icss::testsupport::minijson::require_field(object, "effective_track_state").as_string();
+    artifact.intercept_profile = icss::testsupport::minijson::require_field(object, "intercept_profile").as_string();
     artifact.launch_angle_deg = to_u32(icss::testsupport::minijson::require_field(object, "launch_angle_deg"));
     artifact.resilience_case = icss::testsupport::minijson::require_field(object, "resilience_case").as_string();
 
@@ -127,11 +127,11 @@ RuntimeLogArtifact read_runtime_log(const std::filesystem::path& path) {
             artifact.phase = icss::testsupport::minijson::require_field(object, "phase").as_string();
             artifact.snapshot_count = to_size(icss::testsupport::minijson::require_field(object, "snapshot_count"));
             artifact.event_count = to_size(icss::testsupport::minijson::require_field(object, "event_count"));
-            artifact.command_console_connection = icss::testsupport::minijson::require_field(object, "command_console_connection").as_string();
-            artifact.viewer_connection = icss::testsupport::minijson::require_field(object, "viewer_connection").as_string();
-            artifact.judgment_code = icss::testsupport::minijson::require_field(object, "judgment_code").as_string();
-            artifact.guidance_state = icss::testsupport::minijson::require_field(object, "guidance_state").as_string();
-            artifact.launch_mode = icss::testsupport::minijson::require_field(object, "launch_mode").as_string();
+            artifact.fire_control_console_connection = icss::testsupport::minijson::require_field(object, "fire_control_console_connection").as_string();
+            artifact.display_connection = icss::testsupport::minijson::require_field(object, "display_connection").as_string();
+            artifact.assessment_code = icss::testsupport::minijson::require_field(object, "assessment_code").as_string();
+            artifact.effective_track_state = icss::testsupport::minijson::require_field(object, "effective_track_state").as_string();
+            artifact.intercept_profile = icss::testsupport::minijson::require_field(object, "intercept_profile").as_string();
             artifact.launch_angle_deg = to_u32(icss::testsupport::minijson::require_field(object, "launch_angle_deg"));
             artifact.last_event_type = icss::testsupport::minijson::require_field(object, "last_event_type").as_string();
             artifact.resilience_case = icss::testsupport::minijson::require_field(object, "resilience").as_string();

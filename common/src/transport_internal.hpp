@@ -11,7 +11,7 @@ namespace icss::net::detail {
 
 inline constexpr std::uint32_t kDefaultSessionId = 1001U;
 inline constexpr std::string_view kTargetId = "target-alpha";
-inline constexpr std::string_view kAssetId = "asset-interceptor";
+inline constexpr std::string_view kAssetId = "interceptor-alpha";
 inline constexpr std::string_view kSampleOutputSchemaVersion = "icss-sample-output-v1";
 
 icss::protocol::FrameFormat parse_frame_format(std::string_view value);

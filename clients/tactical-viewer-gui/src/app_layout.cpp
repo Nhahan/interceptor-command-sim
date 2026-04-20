@@ -18,12 +18,12 @@ std::vector<Button> make_live_control_buttons(const SDL_Rect& control_panel) {
     const int row2_y = control_panel.y + 108;
     const int row3_y = control_panel.y + 142;
     return {
-        {"Guidance", "Guidance", {control_panel.x + control_panel.w - 140, row1_y, 128, 28}},
+        {"Track", "Track", {control_panel.x + control_panel.w - 140, row1_y, 128, 28}},
         {"Start", "Start", {control_panel.x + 12, row2_y, 82, 28}},
-        {"Activate", "Activate", {control_panel.x + 102, row2_y, 96, 28}},
-        {"Command", "Command", {control_panel.x + 206, row2_y, 96, 28}},
+        {"Ready", "Ready", {control_panel.x + 102, row2_y, 96, 28}},
+        {"Engage", "Engage", {control_panel.x + 206, row2_y, 96, 28}},
         {"Reset", "Reset", {control_panel.x + 12, row3_y, 82, 28}},
-        {"Review", "Review", {control_panel.x + 102, row3_y, 82, 28}},
+        {"AAR", "AAR", {control_panel.x + 102, row3_y, 82, 28}},
     };
 }
 
@@ -62,7 +62,7 @@ std::vector<Button> make_setup_buttons(const SDL_Rect& setup_panel) {
         Button{"launch_angle_dec", "-A", {setup_panel.x + setup_panel.w - 84, row3_y + 4, button_w, button_h}},
         Button{"launch_angle_inc", "+A", {setup_panel.x + setup_panel.w - 50, row3_y + 4, button_w, button_h}},
     };
-    const auto asset_dyn = row_buttons(row4_y, "asset_speed_dec", "asset_speed_inc", "timeout_dec", "timeout_inc", "-S", "+S", "-T", "+T");
+    const auto asset_dyn = row_buttons(row4_y, "interceptor_speed_dec", "interceptor_speed_inc", "timeout_dec", "timeout_inc", "-S", "+S", "-T", "+T");
     buttons.insert(buttons.end(), target_pos.begin(), target_pos.end());
     buttons.insert(buttons.end(), target_vel.begin(), target_vel.end());
     buttons.insert(buttons.end(), angle_buttons.begin(), angle_buttons.end());

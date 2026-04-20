@@ -6,10 +6,10 @@
 int main() {
     using namespace icss::protocol;
 
-    const auto json_frame = encode_json_frame("command_issue", "kind=command_issue;target_id=target-alpha");
+    const auto json_frame = encode_json_frame("engage_order", "kind=engage_order;target_id=target-alpha");
     const auto parsed_json = decode_json_frame(json_frame);
-    assert(parsed_json.kind == "command_issue");
-    assert(parsed_json.payload == "kind=command_issue;target_id=target-alpha");
+    assert(parsed_json.kind == "engage_order");
+    assert(parsed_json.payload == "kind=engage_order;target_id=target-alpha");
 
     const auto binary_frame = encode_binary_frame("telemetry", "payload-body");
     const auto parsed_binary = decode_binary_frame(binary_frame);

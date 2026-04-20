@@ -217,26 +217,26 @@ std::string require_enum_string(const FieldMap& fields, const std::string& key, 
     return value;
 }
 
-bool is_valid_asset_status(std::string_view value) {
-    return value == "idle" || value == "ready" || value == "engaging" || value == "complete";
+bool is_valid_interceptor_status(std::string_view value) {
+    return value == "idle" || value == "ready" || value == "intercepting" || value == "complete";
 }
 
 bool is_valid_session_phase(std::string_view value) {
-    return value == "initialized"
+    return value == "standby"
         || value == "detecting"
         || value == "tracking"
-        || value == "asset_ready"
-        || value == "command_issued"
-        || value == "engaging"
-        || value == "judged"
+        || value == "interceptor_ready"
+        || value == "engage_ordered"
+        || value == "intercepting"
+        || value == "assessed"
         || value == "archived";
 }
 
-bool is_valid_command_status(std::string_view value) {
+bool is_valid_engage_order_status(std::string_view value) {
     return value == "none" || value == "accepted" || value == "executing" || value == "completed" || value == "rejected";
 }
 
-bool is_valid_judgment_code(std::string_view value) {
+bool is_valid_assessment_code(std::string_view value) {
     return value == "pending" || value == "intercept_success" || value == "invalid_transition" || value == "timeout_observed";
 }
 
@@ -317,9 +317,9 @@ std::string serialize(const ScenarioResetPayload& payload) {
     });
 }
 
-std::string serialize(const TrackRequestPayload& payload) {
+std::string serialize(const TrackAcquirePayload& payload) {
     return join_fields({
-        {"kind", "track_request"},
+        {"kind", "track_acquire"},
         {"session_id", as_string(payload.envelope.session_id)},
         {"sender_id", as_string(payload.envelope.sender_id)},
         {"sequence", as_string(payload.envelope.sequence)},
@@ -327,9 +327,9 @@ std::string serialize(const TrackRequestPayload& payload) {
     });
 }
 
-std::string serialize(const TrackReleasePayload& payload) {
+std::string serialize(const TrackDropPayload& payload) {
     return join_fields({
-        {"kind", "track_release"},
+        {"kind", "track_drop"},
         {"session_id", as_string(payload.envelope.session_id)},
         {"sender_id", as_string(payload.envelope.sender_id)},
         {"sequence", as_string(payload.envelope.sequence)},
@@ -337,30 +337,30 @@ std::string serialize(const TrackReleasePayload& payload) {
     });
 }
 
-std::string serialize(const AssetActivatePayload& payload) {
+std::string serialize(const InterceptorReadyPayload& payload) {
     return join_fields({
-        {"kind", "asset_activate"},
+        {"kind", "interceptor_ready"},
         {"session_id", as_string(payload.envelope.session_id)},
         {"sender_id", as_string(payload.envelope.sender_id)},
         {"sequence", as_string(payload.envelope.sequence)},
-        {"asset_id", payload.asset_id},
+        {"interceptor_id", payload.interceptor_id},
     });
 }
 
-std::string serialize(const CommandIssuePayload& payload) {
+std::string serialize(const EngageOrderPayload& payload) {
     return join_fields({
-        {"kind", "command_issue"},
+        {"kind", "engage_order"},
         {"session_id", as_string(payload.envelope.session_id)},
         {"sender_id", as_string(payload.envelope.sender_id)},
         {"sequence", as_string(payload.envelope.sequence)},
-        {"asset_id", payload.asset_id},
+        {"interceptor_id", payload.interceptor_id},
         {"target_id", payload.target_id},
     });
 }
 
-std::string serialize(const JudgmentPayload& payload) {
+std::string serialize(const AssessmentPayload& payload) {
     return join_fields({
-        {"kind", "judgment"},
+        {"kind", "assessment"},
         {"session_id", as_string(payload.envelope.session_id)},
         {"sender_id", as_string(payload.envelope.sender_id)},
         {"sequence", as_string(payload.envelope.sequence)},
@@ -390,7 +390,7 @@ std::string serialize(const AarResponsePayload& payload) {
         {"control", payload.control},
         {"requested_index", as_string(payload.requested_index)},
         {"clamped", as_string(payload.clamped)},
-        {"judgment_code", payload.judgment_code},
+        {"assessment_code", payload.assessment_code},
         {"resilience_case", payload.resilience_case},
         {"total_events", as_string(static_cast<std::uint64_t>(payload.total_events))},
         {"event_type", payload.event_type},
@@ -421,15 +421,15 @@ std::string serialize(const SnapshotPayload& payload) {
         {"target_velocity_world_x", as_string(payload.target_velocity_world_x)},
         {"target_velocity_world_y", as_string(payload.target_velocity_world_y)},
         {"target_heading_deg", as_string(payload.target_heading_deg)},
-        {"asset_id", payload.asset_id},
-        {"asset_active", as_string(payload.asset_active)},
-        {"asset_x", as_string(static_cast<std::int64_t>(payload.asset_x))},
-        {"asset_y", as_string(static_cast<std::int64_t>(payload.asset_y))},
-        {"asset_world_x", as_string(payload.asset_world_x)},
-        {"asset_world_y", as_string(payload.asset_world_y)},
-        {"asset_velocity_world_x", as_string(payload.asset_velocity_world_x)},
-        {"asset_velocity_world_y", as_string(payload.asset_velocity_world_y)},
-        {"asset_heading_deg", as_string(payload.asset_heading_deg)},
+        {"interceptor_id", payload.interceptor_id},
+        {"interceptor_active", as_string(payload.interceptor_active)},
+        {"interceptor_x", as_string(static_cast<std::int64_t>(payload.interceptor_x))},
+        {"interceptor_y", as_string(static_cast<std::int64_t>(payload.interceptor_y))},
+        {"interceptor_world_x", as_string(payload.interceptor_world_x)},
+        {"interceptor_world_y", as_string(payload.interceptor_world_y)},
+        {"interceptor_velocity_world_x", as_string(payload.interceptor_velocity_world_x)},
+        {"interceptor_velocity_world_y", as_string(payload.interceptor_velocity_world_y)},
+        {"interceptor_heading_deg", as_string(payload.interceptor_heading_deg)},
         {"interceptor_speed_per_tick", as_string(static_cast<std::int64_t>(payload.interceptor_speed_per_tick))},
         {"interceptor_acceleration_per_tick", as_string(payload.interceptor_acceleration_per_tick)},
         {"intercept_radius", as_string(static_cast<std::int64_t>(payload.intercept_radius))},
@@ -441,7 +441,7 @@ std::string serialize(const SnapshotPayload& payload) {
         {"predicted_intercept_x", as_string(payload.predicted_intercept_x)},
         {"predicted_intercept_y", as_string(payload.predicted_intercept_y)},
         {"time_to_intercept_s", as_string(payload.time_to_intercept_s)},
-        {"tracking_active", as_string(payload.tracking_active)},
+        {"track_active", as_string(payload.track_active)},
         {"track_estimated_x", as_string(payload.track_estimated_x)},
         {"track_estimated_y", as_string(payload.track_estimated_y)},
         {"track_estimated_vx", as_string(payload.track_estimated_vx)},
@@ -453,10 +453,10 @@ std::string serialize(const SnapshotPayload& payload) {
         {"track_covariance_trace", as_string(payload.track_covariance_trace)},
         {"track_measurement_age_ticks", as_string(static_cast<std::int64_t>(payload.track_measurement_age_ticks))},
         {"track_missed_updates", as_string(static_cast<std::int64_t>(payload.track_missed_updates))},
-        {"asset_status", payload.asset_status},
-        {"command_status", payload.command_status},
-        {"judgment_ready", as_string(payload.judgment_ready)},
-        {"judgment_code", payload.judgment_code},
+        {"interceptor_status", payload.interceptor_status},
+        {"engage_order_status", payload.engage_order_status},
+        {"assessment_ready", as_string(payload.assessment_ready)},
+        {"assessment_code", payload.assessment_code},
         {"launch_angle_deg", as_string(payload.launch_angle_deg)},
     });
 }
@@ -478,9 +478,9 @@ std::string serialize(const TelemetryPayload& payload) {
     });
 }
 
-std::string serialize(const ViewerHeartbeatPayload& payload) {
+std::string serialize(const DisplayHeartbeatPayload& payload) {
     return join_fields({
-        {"kind", "viewer_heartbeat"},
+        {"kind", "display_heartbeat"},
         {"session_id", as_string(payload.envelope.session_id)},
         {"sender_id", as_string(payload.envelope.sender_id)},
         {"sequence", as_string(payload.envelope.sequence)},
@@ -551,33 +551,33 @@ ScenarioResetPayload parse_scenario_reset(std::string_view wire) {
     return {parse_envelope(fields), require(fields, "reason")};
 }
 
-TrackRequestPayload parse_track_request(std::string_view wire) {
+TrackAcquirePayload parse_track_acquire(std::string_view wire) {
     const auto fields = parse_fields(wire);
-    require_kind(fields, "track_request");
+    require_kind(fields, "track_acquire");
     return {parse_envelope(fields), require(fields, "target_id")};
 }
 
-TrackReleasePayload parse_track_release(std::string_view wire) {
+TrackDropPayload parse_track_drop(std::string_view wire) {
     const auto fields = parse_fields(wire);
-    require_kind(fields, "track_release");
+    require_kind(fields, "track_drop");
     return {parse_envelope(fields), require(fields, "target_id")};
 }
 
-AssetActivatePayload parse_asset_activate(std::string_view wire) {
+InterceptorReadyPayload parse_interceptor_ready(std::string_view wire) {
     const auto fields = parse_fields(wire);
-    require_kind(fields, "asset_activate");
-    return {parse_envelope(fields), require(fields, "asset_id")};
+    require_kind(fields, "interceptor_ready");
+    return {parse_envelope(fields), require(fields, "interceptor_id")};
 }
 
-CommandIssuePayload parse_command_issue(std::string_view wire) {
+EngageOrderPayload parse_engage_order(std::string_view wire) {
     const auto fields = parse_fields(wire);
-    require_kind(fields, "command_issue");
-    return {parse_envelope(fields), require(fields, "asset_id"), require(fields, "target_id")};
+    require_kind(fields, "engage_order");
+    return {parse_envelope(fields), require(fields, "interceptor_id"), require(fields, "target_id")};
 }
 
-JudgmentPayload parse_judgment(std::string_view wire) {
+AssessmentPayload parse_assessment(std::string_view wire) {
     const auto fields = parse_fields(wire);
-    require_kind(fields, "judgment");
+    require_kind(fields, "assessment");
     return {parse_envelope(fields), parse_bool(require(fields, "accepted")), require(fields, "outcome")};
 }
 
@@ -594,7 +594,7 @@ AarResponsePayload parse_aar_response(std::string_view wire) {
             require_enum_string(fields, "control", is_valid_aar_control),
             parse_u64(require(fields, "requested_index")),
             parse_bool(require(fields, "clamped")),
-            require_enum_string(fields, "judgment_code", is_valid_judgment_code),
+            require_enum_string(fields, "assessment_code", is_valid_assessment_code),
             require(fields, "resilience_case"),
             parse_u64(require(fields, "total_events")),
             require(fields, "event_type"),
@@ -621,15 +621,15 @@ SnapshotPayload parse_snapshot(std::string_view wire) {
         parse_float(require_or(fields, "target_velocity_world_x", "0")),
         parse_float(require_or(fields, "target_velocity_world_y", "0")),
         parse_float(require_or(fields, "target_heading_deg", "0")),
-        require(fields, "asset_id"),
-        parse_bool(require(fields, "asset_active")),
-        static_cast<int>(parse_i64(require(fields, "asset_x"))),
-        static_cast<int>(parse_i64(require(fields, "asset_y"))),
-        parse_float(require_or(fields, "asset_world_x", "0")),
-        parse_float(require_or(fields, "asset_world_y", "0")),
-        parse_float(require_or(fields, "asset_velocity_world_x", "0")),
-        parse_float(require_or(fields, "asset_velocity_world_y", "0")),
-        parse_float(require_or(fields, "asset_heading_deg", "0")),
+        require(fields, "interceptor_id"),
+        parse_bool(require(fields, "interceptor_active")),
+        static_cast<int>(parse_i64(require(fields, "interceptor_x"))),
+        static_cast<int>(parse_i64(require(fields, "interceptor_y"))),
+        parse_float(require_or(fields, "interceptor_world_x", "0")),
+        parse_float(require_or(fields, "interceptor_world_y", "0")),
+        parse_float(require_or(fields, "interceptor_velocity_world_x", "0")),
+        parse_float(require_or(fields, "interceptor_velocity_world_y", "0")),
+        parse_float(require_or(fields, "interceptor_heading_deg", "0")),
         static_cast<int>(parse_i64(require_or(fields, "interceptor_speed_per_tick", "0"))),
         parse_float(require_or(fields, "interceptor_acceleration_per_tick", "0")),
         static_cast<int>(parse_i64(require_or(fields, "intercept_radius", "0"))),
@@ -641,7 +641,7 @@ SnapshotPayload parse_snapshot(std::string_view wire) {
         parse_float(require_or(fields, "predicted_intercept_x", "0")),
         parse_float(require_or(fields, "predicted_intercept_y", "0")),
         parse_float(require_or(fields, "time_to_intercept_s", "0")),
-        parse_bool(require(fields, "tracking_active")),
+        parse_bool(require(fields, "track_active")),
         parse_float(require_or(fields, "track_estimated_x", "0")),
         parse_float(require_or(fields, "track_estimated_y", "0")),
         parse_float(require_or(fields, "track_estimated_vx", "0")),
@@ -653,10 +653,10 @@ SnapshotPayload parse_snapshot(std::string_view wire) {
         parse_float(require_or(fields, "track_covariance_trace", "0")),
         static_cast<int>(parse_i64(require_or(fields, "track_measurement_age_ticks", "0"))),
         static_cast<int>(parse_i64(require_or(fields, "track_missed_updates", "0"))),
-        require_enum_string(fields, "asset_status", is_valid_asset_status),
-        require_enum_string(fields, "command_status", is_valid_command_status),
-        parse_bool(require(fields, "judgment_ready")),
-        require_enum_string(fields, "judgment_code", is_valid_judgment_code),
+        require_enum_string(fields, "interceptor_status", is_valid_interceptor_status),
+        require_enum_string(fields, "engage_order_status", is_valid_engage_order_status),
+        parse_bool(require(fields, "assessment_ready")),
+        require_enum_string(fields, "assessment_code", is_valid_assessment_code),
         parse_float(require_or(fields, "launch_angle_deg", "45")),
     };
 }
@@ -681,9 +681,9 @@ AarRequestPayload parse_aar_request(std::string_view wire) {
             require_enum_string(fields, "control", is_valid_aar_control)};
 }
 
-ViewerHeartbeatPayload parse_viewer_heartbeat(std::string_view wire) {
+DisplayHeartbeatPayload parse_display_heartbeat(std::string_view wire) {
     const auto fields = parse_fields(wire);
-    require_kind(fields, "viewer_heartbeat");
+    require_kind(fields, "display_heartbeat");
     return {parse_envelope(fields), parse_u64(require(fields, "heartbeat_id"))};
 }
 

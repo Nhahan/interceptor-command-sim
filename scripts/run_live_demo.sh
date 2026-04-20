@@ -28,8 +28,8 @@ usage() {
   cat <<'EOF'
 usage: ./scripts/run_live_demo.sh [options]
 
-Starts the live server and GUI tactical viewer with one command.
-In headless mode it also runs the scripted command console flow automatically.
+Starts the live server and GUI tactical display with one command.
+In headless mode it also runs the scripted fire control console flow automatically.
 
 Options:
   --runtime-root PATH       Runtime/artifact root (default: repo root)
@@ -42,10 +42,10 @@ Options:
   --font PATH               Override GUI viewer font path
   --skip-build              Do not configure/build before launching the demo
   --preserve-existing       Do not kill repo-local server/viewer/console processes before launching
-  --scripted                Also run the scripted command console flow in visible mode
+  --scripted                Also run the scripted fire control console flow in visible mode
   --headless                Run viewer with SDL dummy driver and dump state instead of opening a visible window
-  --regen-samples           Regenerate guided/straight sample artifacts, viewer-state goldens, and screenshots under the runtime root
-  --sample-mode MODE        guided|straight|all for --regen-samples (default: all)
+  --regen-samples           Regenerate tracked_intercept/unguided_intercept sample artifacts, viewer-state goldens, and screenshots under the runtime root
+  --sample-mode MODE        tracked_intercept|unguided_intercept|all for --regen-samples (default: all)
   --help                    Show this help
 EOF
 }
@@ -72,7 +72,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 case "${sample_mode}" in
-  guided|straight|all) ;;
+  tracked_intercept|unguided_intercept|all) ;;
   *) echo "unsupported sample mode: ${sample_mode}" >&2; exit 1 ;;
 esac
 
@@ -81,13 +81,13 @@ ensure_latest_binaries() {
     cmake -S "${repo_root}" -B "${repo_root}/build" -DCMAKE_BUILD_TYPE=Debug
   fi
   cmake --build "${repo_root}/build" \
-    --target icss_server icss_tactical_viewer_gui icss_command_console icss_artifact_summary
+    --target icss_server icss_tactical_display_gui icss_fire_control_console icss_artifact_summary
 }
 
 stop_existing_demo_processes() {
   pkill -f "${repo_root}/build/icss_server" 2>/dev/null || true
-  pkill -f "${repo_root}/build/icss_tactical_viewer_gui" 2>/dev/null || true
-  pkill -f "${repo_root}/build/icss_command_console" 2>/dev/null || true
+  pkill -f "${repo_root}/build/icss_tactical_display_gui" 2>/dev/null || true
+  pkill -f "${repo_root}/build/icss_fire_control_console" 2>/dev/null || true
   sleep 0.2
 }
 
@@ -195,7 +195,7 @@ run_headless_viewer() {
   local viewer_log="$7"
 
   local viewer_args=(
-    "${repo_root}/build/icss_tactical_viewer_gui"
+    "${repo_root}/build/icss_tactical_display_gui"
     --host "${host}"
     --udp-port "${actual_udp_port}"
     --tcp-port "${actual_tcp_port}"
@@ -222,7 +222,7 @@ run_headless_viewer() {
   sanitize_screenshot "${dump_frame_path}"
 }
 
-copy_guided_bundle() {
+copy_tracked_intercept_bundle() {
   local sample_root="$1"
   mkdir -p "${runtime_root}/assets/sample-aar" "${runtime_root}/examples" "${runtime_root}/logs"
   rm -f "${runtime_root}/assets/sample-aar/replay-timeline.json"
@@ -235,16 +235,16 @@ copy_guided_bundle() {
   cp "${sample_root}/logs/session.log" "${runtime_root}/logs/session.log"
 }
 
-copy_straight_bundle() {
+copy_unguided_intercept_bundle() {
   local sample_root="$1"
   mkdir -p "${runtime_root}/assets/sample-aar" "${runtime_root}/examples" "${runtime_root}/logs"
-  rm -rf "${runtime_root}/assets/sample-aar/straight"
-  mkdir -p "${runtime_root}/assets/sample-aar/straight"
-  cp "${sample_root}/assets/sample-aar/replay-timeline.json" "${runtime_root}/assets/sample-aar/straight/replay-timeline.json"
-  cp "${sample_root}/assets/sample-aar/session-summary.json" "${runtime_root}/assets/sample-aar/straight/session-summary.json"
-  cp "${sample_root}/assets/sample-aar/session-summary.md" "${runtime_root}/assets/sample-aar/straight/session-summary.md"
-  cp "${sample_root}/examples/sample-output.md" "${runtime_root}/examples/sample-output-straight.md"
-  cp "${sample_root}/logs/session.log" "${runtime_root}/logs/session-straight.log"
+  rm -rf "${runtime_root}/assets/sample-aar/unguided_intercept"
+  mkdir -p "${runtime_root}/assets/sample-aar/unguided_intercept"
+  cp "${sample_root}/assets/sample-aar/replay-timeline.json" "${runtime_root}/assets/sample-aar/unguided_intercept/replay-timeline.json"
+  cp "${sample_root}/assets/sample-aar/session-summary.json" "${runtime_root}/assets/sample-aar/unguided_intercept/session-summary.json"
+  cp "${sample_root}/assets/sample-aar/session-summary.md" "${runtime_root}/assets/sample-aar/unguided_intercept/session-summary.md"
+  cp "${sample_root}/examples/sample-output.md" "${runtime_root}/examples/sample-output-unguided_intercept.md"
+  cp "${sample_root}/logs/session.log" "${runtime_root}/logs/session-unguided_intercept.log"
 }
 
 capture_gui_sample() {
@@ -287,74 +287,74 @@ run_inprocess_sample() {
 }
 
 regen_samples_mode() {
-  local guided_root="${tmp_dir}/guided-runtime"
-  local straight_root="${tmp_dir}/straight-runtime"
-  local guided_log="${tmp_dir}/guided-baseline.log"
-  local straight_log="${tmp_dir}/straight-baseline.log"
+  local tracked_intercept_root="${tmp_dir}/tracked_intercept-runtime"
+  local unguided_intercept_root="${tmp_dir}/unguided_intercept-runtime"
+  local tracked_intercept_log="${tmp_dir}/tracked_intercept-baseline.log"
+  local unguided_intercept_log="${tmp_dir}/unguided_intercept-baseline.log"
 
   ensure_runtime_configs "${runtime_root}"
-  copy_runtime_configs "${runtime_root}" "${guided_root}"
-  copy_runtime_configs "${runtime_root}" "${straight_root}"
+  copy_runtime_configs "${runtime_root}" "${tracked_intercept_root}"
+  copy_runtime_configs "${runtime_root}" "${unguided_intercept_root}"
   mkdir -p "${runtime_root}/assets/screenshots"
 
-  local need_guided="false"
-  local need_straight="false"
-  if [[ "${sample_mode}" == "guided" ]]; then
-    need_guided="true"
-  elif [[ "${sample_mode}" == "straight" ]]; then
-    need_guided="true"
-    need_straight="true"
+  local need_tracked_intercept="false"
+  local need_unguided_intercept="false"
+  if [[ "${sample_mode}" == "tracked_intercept" ]]; then
+    need_tracked_intercept="true"
+  elif [[ "${sample_mode}" == "unguided_intercept" ]]; then
+    need_tracked_intercept="true"
+    need_unguided_intercept="true"
   else
-    need_guided="true"
-    need_straight="true"
+    need_tracked_intercept="true"
+    need_unguided_intercept="true"
   fi
 
-  if [[ "${need_guided}" == "true" ]]; then
-    run_inprocess_sample "${guided_root}" guided "${guided_log}"
+  if [[ "${need_tracked_intercept}" == "true" ]]; then
+    run_inprocess_sample "${tracked_intercept_root}" tracked_intercept "${tracked_intercept_log}"
   fi
-  if [[ "${sample_mode}" == "guided" || "${sample_mode}" == "all" ]]; then
-    copy_guided_bundle "${guided_root}"
+  if [[ "${sample_mode}" == "tracked_intercept" || "${sample_mode}" == "all" ]]; then
+    copy_tracked_intercept_bundle "${tracked_intercept_root}"
     capture_gui_sample "${runtime_root}" \
-      "${runtime_root}/assets/screenshots/tactical-viewer-guidance-state.json" \
-      "${runtime_root}/assets/screenshots/tactical-viewer-guidance.bmp" \
-      "Start,Guidance,Activate,Command" \
+      "${runtime_root}/assets/screenshots/tactical-display-tracked_intercept-state.json" \
+      "${runtime_root}/assets/screenshots/tactical-display-tracked_intercept.bmp" \
+      "Start,Track,Ready,Engage" \
       "2400" \
-      "guided-capture"
+      "tracked_intercept-capture"
   fi
 
-  if [[ "${need_straight}" == "true" ]]; then
-    run_inprocess_sample "${straight_root}" straight "${straight_log}"
+  if [[ "${need_unguided_intercept}" == "true" ]]; then
+    run_inprocess_sample "${unguided_intercept_root}" unguided_intercept "${unguided_intercept_log}"
   fi
-  if [[ "${sample_mode}" == "straight" || "${sample_mode}" == "all" ]]; then
-    copy_straight_bundle "${straight_root}"
+  if [[ "${sample_mode}" == "unguided_intercept" || "${sample_mode}" == "all" ]]; then
+    copy_unguided_intercept_bundle "${unguided_intercept_root}"
     capture_gui_sample "${runtime_root}" \
-      "${runtime_root}/assets/screenshots/tactical-viewer-straight-state.json" \
-      "${runtime_root}/assets/screenshots/tactical-viewer-straight.bmp" \
-      "Start,Guidance,Activate,Guidance,Command" \
+      "${runtime_root}/assets/screenshots/tactical-display-unguided_intercept-state.json" \
+      "${runtime_root}/assets/screenshots/tactical-display-unguided_intercept.bmp" \
+      "Start,Track,Ready,Track,Engage" \
       "3200" \
-      "straight-capture"
+      "unguided_intercept-capture"
   fi
 
-  if [[ "${sample_mode}" == "guided" ]]; then
-    echo "==== guided artifact summary ===="
-    "${repo_root}/build/icss_artifact_summary" --repo-root "${guided_root}"
+  if [[ "${sample_mode}" == "tracked_intercept" ]]; then
+    echo "==== tracked_intercept artifact summary ===="
+    "${repo_root}/build/icss_artifact_summary" --repo-root "${tracked_intercept_root}"
   else
-    echo "==== straight artifact summary ===="
+    echo "==== unguided_intercept artifact summary ===="
     "${repo_root}/build/icss_artifact_summary" \
-      --guided-root "${guided_root}" \
-      --straight-root "${straight_root}"
+      --tracked_intercept-root "${tracked_intercept_root}" \
+      --unguided_intercept-root "${unguided_intercept_root}"
   fi
-  if [[ "${sample_mode}" == "guided" || "${sample_mode}" == "all" ]]; then
-    echo "guided_sample.summary=${runtime_root}/assets/sample-aar/session-summary.md"
-    echo "guided_sample.output=${runtime_root}/examples/sample-output.md"
-    echo "guided_sample.golden_state=${runtime_root}/assets/screenshots/tactical-viewer-guidance-state.json"
-    echo "guided_sample.screenshot=${runtime_root}/assets/screenshots/tactical-viewer-guidance.bmp"
+  if [[ "${sample_mode}" == "tracked_intercept" || "${sample_mode}" == "all" ]]; then
+    echo "tracked_intercept_sample.summary=${runtime_root}/assets/sample-aar/session-summary.md"
+    echo "tracked_intercept_sample.output=${runtime_root}/examples/sample-output.md"
+    echo "tracked_intercept_sample.golden_state=${runtime_root}/assets/screenshots/tactical-display-tracked_intercept-state.json"
+    echo "tracked_intercept_sample.screenshot=${runtime_root}/assets/screenshots/tactical-display-tracked_intercept.bmp"
   fi
-  if [[ "${sample_mode}" == "straight" || "${sample_mode}" == "all" ]]; then
-    echo "straight_sample.summary=${runtime_root}/assets/sample-aar/straight/session-summary.md"
-    echo "straight_sample.output=${runtime_root}/examples/sample-output-straight.md"
-    echo "straight_sample.golden_state=${runtime_root}/assets/screenshots/tactical-viewer-straight-state.json"
-    echo "straight_sample.screenshot=${runtime_root}/assets/screenshots/tactical-viewer-straight.bmp"
+  if [[ "${sample_mode}" == "unguided_intercept" || "${sample_mode}" == "all" ]]; then
+    echo "unguided_intercept_sample.summary=${runtime_root}/assets/sample-aar/unguided_intercept/session-summary.md"
+    echo "unguided_intercept_sample.output=${runtime_root}/examples/sample-output-unguided_intercept.md"
+    echo "unguided_intercept_sample.golden_state=${runtime_root}/assets/screenshots/tactical-display-unguided_intercept-state.json"
+    echo "unguided_intercept_sample.screenshot=${runtime_root}/assets/screenshots/tactical-display-unguided_intercept.bmp"
   fi
   echo "regen_completed=true"
 }
@@ -367,7 +367,7 @@ if [[ "${preserve_existing}" != "true" ]]; then
   stop_existing_demo_processes
 fi
 
-if [[ ! -x "${repo_root}/build/icss_server" || ! -x "${repo_root}/build/icss_command_console" || ! -x "${repo_root}/build/icss_tactical_viewer_gui" || ! -x "${repo_root}/build/icss_artifact_summary" ]]; then
+if [[ ! -x "${repo_root}/build/icss_server" || ! -x "${repo_root}/build/icss_fire_control_console" || ! -x "${repo_root}/build/icss_tactical_display_gui" || ! -x "${repo_root}/build/icss_artifact_summary" ]]; then
   echo "required demo binaries are missing after build" >&2
   exit 1
 fi
@@ -421,7 +421,7 @@ fi
 start_live_server "${runtime_root}" "${server_log}" "${tcp_port}" "${udp_port}"
 
 viewer_args=(
-  "${repo_root}/build/icss_tactical_viewer_gui"
+  "${repo_root}/build/icss_tactical_display_gui"
   --host "${host}"
   --udp-port "${actual_udp_port}"
   --tcp-port "${actual_tcp_port}"
@@ -443,7 +443,7 @@ viewer_pid=$!
 sleep 0.20
 
 if [[ "${scripted}" == "true" ]]; then
-  "${repo_root}/build/icss_command_console" \
+  "${repo_root}/build/icss_fire_control_console" \
     --backend socket_live \
     --host "${host}" \
     --tcp-port "${actual_tcp_port}" \
@@ -452,8 +452,8 @@ if [[ "${scripted}" == "true" ]]; then
     | tee "${console_log}"
 else
   echo "interactive_mode=true"
-  echo "use the GUI control panel buttons: Start -> Guidance -> Activate -> Command"
-  echo "request Review after judgment/archive if you want server-side AAR data"
+  echo "use the GUI control panel buttons: Start -> Track -> Ready -> Engage"
+  echo "request AAR after assessment/archive if you want server-side AAR data"
 fi
 
 if [[ "${viewer_duration_ms}" == "0" && "${headless}" != "true" ]]; then

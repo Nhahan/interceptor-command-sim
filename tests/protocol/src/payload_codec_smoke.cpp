@@ -14,10 +14,10 @@ int main() {
     assert(parsed_session.requested_sender_id == 101U);
     assert(parsed_session.scenario_name == "basic_intercept_training");
 
-    const SessionJoinPayload session_join {{1001U, 101U, 1U}, "command_console"};
+    const SessionJoinPayload session_join {{1001U, 101U, 1U}, "fire_control_console"};
     const auto join_wire = serialize(session_join);
     const auto parsed_join = parse_session_join(join_wire);
-    assert(parsed_join.client_role == "command_console");
+    assert(parsed_join.client_role == "fire_control_console");
 
     const SessionLeavePayload leave_payload {{1001U, 101U, 2U}, "operator requested leave"};
     const auto leave_wire = serialize(leave_payload);
@@ -44,34 +44,34 @@ int main() {
     const auto parsed_reset = parse_scenario_reset(reset_wire);
     assert(parsed_reset.reason == "reset for new run");
 
-    const CommandIssuePayload command {
+    const EngageOrderPayload command {
         {1001U, 101U, 7U},
-        "asset-interceptor",
+        "interceptor-alpha",
         "target-alpha",
     };
     const auto command_wire = serialize(command);
-    const auto parsed_command = parse_command_issue(command_wire);
+    const auto parsed_command = parse_engage_order(command_wire);
     assert(parsed_command.envelope.session_id == 1001U);
     assert(parsed_command.envelope.sender_id == 101U);
     assert(parsed_command.target_id == "target-alpha");
-    assert(parsed_command.asset_id == "asset-interceptor");
+    assert(parsed_command.interceptor_id == "interceptor-alpha");
 
-    const TrackReleasePayload track_release {
+    const TrackDropPayload track_drop {
         {1001U, 101U, 8U},
         "target-alpha",
     };
-    const auto track_release_wire = serialize(track_release);
-    const auto parsed_track_release = parse_track_release(track_release_wire);
-    assert(parsed_track_release.envelope.sequence == 8U);
-    assert(parsed_track_release.target_id == "target-alpha");
+    const auto track_drop_wire = serialize(track_drop);
+    const auto parsed_track_drop = parse_track_drop(track_drop_wire);
+    assert(parsed_track_drop.envelope.sequence == 8U);
+    assert(parsed_track_drop.target_id == "target-alpha");
 
     const TelemetryPayload telemetry {
         {1001U, 1U, 8U},
         {3U, 35U, 12.5F, 1'776'327'000'800ULL},
         "reconnected",
         3U,
-        "judgment_produced",
-        "Judgment produced",
+        "assessment_produced",
+        "Assessment produced",
     };
     const auto telemetry_wire = serialize(telemetry);
     const auto parsed_telemetry = parse_telemetry(telemetry_wire);
@@ -80,8 +80,8 @@ int main() {
     assert(parsed_telemetry.sample.packet_loss_pct > 12.0F);
     assert(parsed_telemetry.connection_state == "reconnected");
     assert(parsed_telemetry.event_tick == 3U);
-    assert(parsed_telemetry.event_type == "judgment_produced");
-    assert(parsed_telemetry.event_summary == "Judgment produced");
+    assert(parsed_telemetry.event_type == "assessment_produced");
+    assert(parsed_telemetry.event_summary == "Assessment produced");
 
     const SnapshotPayload snapshot {
         {1001U, 1U, 9U},
@@ -100,7 +100,7 @@ int main() {
         5.0F,
         -3.0F,
         -31.0F,
-        "asset-interceptor",
+        "interceptor-alpha",
         true,
         8,
         2,
@@ -143,16 +143,16 @@ int main() {
     assert(parsed_snapshot.phase == "tracking");
     assert(parsed_snapshot.world_width == 576);
     assert(parsed_snapshot.target_world_x > 4.0F);
-    assert(parsed_snapshot.asset_world_x > 8.0F);
+    assert(parsed_snapshot.interceptor_world_x > 8.0F);
     assert(parsed_snapshot.target_velocity_x == 5);
     assert(parsed_snapshot.target_velocity_world_x == 5.0F);
     assert(parsed_snapshot.target_heading_deg < 0.0F);
     assert(parsed_snapshot.target_active);
     assert(parsed_snapshot.target_x == 4);
     assert(parsed_snapshot.target_y == 6);
-    assert(parsed_snapshot.asset_active);
-    assert(parsed_snapshot.asset_x == 8);
-    assert(parsed_snapshot.asset_y == 2);
+    assert(parsed_snapshot.interceptor_active);
+    assert(parsed_snapshot.interceptor_x == 8);
+    assert(parsed_snapshot.interceptor_y == 2);
     assert(parsed_snapshot.interceptor_speed_per_tick == 32);
     assert(parsed_snapshot.seeker_fov_deg == 45.0F);
     assert(parsed_snapshot.seeker_lock);
@@ -163,9 +163,9 @@ int main() {
     assert(parsed_snapshot.track_measurement_valid);
     assert(parsed_snapshot.track_measurement_residual_distance > 2.0F);
     assert(parsed_snapshot.track_covariance_trace > 10.0F);
-    assert(parsed_snapshot.asset_status == "ready");
-    assert(parsed_snapshot.command_status == "accepted");
-    assert(parsed_snapshot.judgment_code == "pending");
+    assert(parsed_snapshot.interceptor_status == "ready");
+    assert(parsed_snapshot.engage_order_status == "accepted");
+    assert(parsed_snapshot.assessment_code == "pending");
     assert(parsed_snapshot.launch_angle_deg == 37.0F);
 
     const CommandAckPayload ack {
@@ -187,7 +187,7 @@ int main() {
         "intercept_success",
         "reconnect_and_resync",
         12U,
-        "judgment_produced",
+        "assessment_produced",
         "authoritative intercept complete",
     };
     const auto aar_response_wire = serialize(aar_response);
@@ -196,9 +196,9 @@ int main() {
     assert(parsed_aar_response.control == "absolute");
     assert(parsed_aar_response.requested_index == 11U);
     assert(parsed_aar_response.clamped);
-    assert(parsed_aar_response.judgment_code == "intercept_success");
+    assert(parsed_aar_response.assessment_code == "intercept_success");
     assert(parsed_aar_response.total_events == 12U);
-    assert(parsed_aar_response.event_type == "judgment_produced");
+    assert(parsed_aar_response.event_type == "assessment_produced");
 
     const AarRequestPayload aar_request {
         {1001U, 101U, 13U},
@@ -210,17 +210,17 @@ int main() {
     assert(parsed_aar_request.replay_cursor_index == 7U);
     assert(parsed_aar_request.control == "step_backward");
 
-    const ViewerHeartbeatPayload heartbeat {
+    const DisplayHeartbeatPayload heartbeat {
         {1001U, 201U, 12U},
         42U,
     };
     const auto heartbeat_wire = serialize(heartbeat);
-    const auto parsed_heartbeat = parse_viewer_heartbeat(heartbeat_wire);
+    const auto parsed_heartbeat = parse_display_heartbeat(heartbeat_wire);
     assert(parsed_heartbeat.heartbeat_id == 42U);
 
     bool rejected_wrong_kind = false;
     try {
-        static_cast<void>(parse_command_issue(session_wire));
+        static_cast<void>(parse_engage_order(session_wire));
     } catch (const std::runtime_error&) {
         rejected_wrong_kind = true;
     }

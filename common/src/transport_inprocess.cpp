@@ -26,7 +26,7 @@ public:
     void poll_once() override {}
 
     void connect_client(icss::core::ClientRole role, std::uint32_t sender_id) override {
-        if (role == icss::core::ClientRole::CommandConsole) {
+        if (role == icss::core::ClientRole::FireControlConsole) {
             command_sender_id_ = sender_id;
         } else {
             viewer_sender_id_ = sender_id;
@@ -35,7 +35,7 @@ public:
     }
 
     void disconnect_client(icss::core::ClientRole role, std::string reason) override {
-        if (role == icss::core::ClientRole::CommandConsole) {
+        if (role == icss::core::ClientRole::FireControlConsole) {
             command_sender_id_ = 0U;
         } else {
             viewer_sender_id_ = 0U;
@@ -50,7 +50,7 @@ public:
     icss::core::CommandResult start_scenario() override { return session_.start_scenario(); }
     icss::core::CommandResult reset_session(std::string reason) override { return session_.reset_session(std::move(reason)); }
 
-    icss::core::CommandResult dispatch(const icss::protocol::TrackRequestPayload& payload) override {
+    icss::core::CommandResult dispatch(const icss::protocol::TrackAcquirePayload& payload) override {
         if (const auto invalid = validate_envelope(payload.envelope, command_sender_id_, "Track request rejected", {})) {
             return *invalid;
         }
@@ -62,7 +62,7 @@ public:
         return session_.request_track();
     }
 
-    icss::core::CommandResult dispatch(const icss::protocol::TrackReleasePayload& payload) override {
+    icss::core::CommandResult dispatch(const icss::protocol::TrackDropPayload& payload) override {
         if (const auto invalid = validate_envelope(payload.envelope, command_sender_id_, "Track release rejected", {})) {
             return *invalid;
         }
@@ -74,23 +74,23 @@ public:
         return session_.release_track();
     }
 
-    icss::core::CommandResult dispatch(const icss::protocol::AssetActivatePayload& payload) override {
-        if (const auto invalid = validate_envelope(payload.envelope, command_sender_id_, "Asset activation rejected", {})) {
+    icss::core::CommandResult dispatch(const icss::protocol::InterceptorReadyPayload& payload) override {
+        if (const auto invalid = validate_envelope(payload.envelope, command_sender_id_, "Interceptor activation rejected", {})) {
             return *invalid;
         }
-        if (payload.asset_id != detail::kAssetId) {
-            return reject_payload("Asset activation rejected",
-                                  "asset activation does not match the configured asset",
+        if (payload.interceptor_id != detail::kAssetId) {
+            return reject_payload("Interceptor activation rejected",
+                                  "interceptor activation does not match the configured interceptor",
                                   {std::string{detail::kAssetId}});
         }
         return session_.activate_asset();
     }
 
-    icss::core::CommandResult dispatch(const icss::protocol::CommandIssuePayload& payload) override {
+    icss::core::CommandResult dispatch(const icss::protocol::EngageOrderPayload& payload) override {
         if (const auto invalid = validate_envelope(payload.envelope, command_sender_id_, "Command rejected", {})) {
             return *invalid;
         }
-        if (payload.asset_id != detail::kAssetId || payload.target_id != detail::kTargetId) {
+        if (payload.interceptor_id != detail::kAssetId || payload.target_id != detail::kTargetId) {
             return reject_payload("Command rejected",
                                   "command payload entity ids do not match the active session",
                                   {std::string{detail::kAssetId}, std::string{detail::kTargetId}});
@@ -118,25 +118,25 @@ public:
         const auto summary = session_.build_summary();
         const auto snapshot = session_.latest_snapshot();
         const auto& events = session_.events();
-        const auto guidance_event = std::find_if(events.rbegin(), events.rend(), [](const icss::core::EventRecord& event) {
-            return event.header.event_type == icss::protocol::EventType::CommandAccepted
+        const auto track_event = std::find_if(events.rbegin(), events.rend(), [](const icss::core::EventRecord& event) {
+            return event.header.event_type == icss::protocol::EventType::EngageOrderAccepted
                 || event.header.event_type == icss::protocol::EventType::TrackUpdated;
         });
-        const bool guidance_active = guidance_event == events.rend()
+        const bool track_active = track_event == events.rend()
             ? snapshot.track.active
-            : !(guidance_event->summary.find("disabled") != std::string::npos
-                || guidance_event->details.find("disabled") != std::string::npos
-                || guidance_event->summary.find("straight") != std::string::npos
-                || guidance_event->details.find("straight") != std::string::npos);
+            : !(track_event->summary.find("dropped") != std::string::npos
+                || track_event->details.find("dropped") != std::string::npos
+                || track_event->summary.find("unguided_intercept") != std::string::npos
+                || track_event->details.find("unguided_intercept") != std::string::npos);
         out << "# Sample Output\n\n";
         out << "- schema_version: " << detail::kSampleOutputSchemaVersion << "\n";
         out << "- backend: in_process\n";
         out << "- session_id: " << summary.session_id << "\n";
         out << "- cursor_index: " << cursor.index << "/" << cursor.total << "\n";
-        out << "- command_console_connection: " << icss::core::to_string(summary.command_console_connection) << "\n";
-        out << "- viewer_connection: " << icss::core::to_string(summary.viewer_connection) << "\n";
-        out << "- guidance_state: " << (guidance_active ? "on" : "off") << "\n";
-        out << "- launch_mode: " << (guidance_active ? "guided" : "straight") << "\n";
+        out << "- fire_control_console_connection: " << icss::core::to_string(summary.fire_control_console_connection) << "\n";
+        out << "- display_connection: " << icss::core::to_string(summary.display_connection) << "\n";
+        out << "- effective_track_state: " << (track_active ? "tracked" : "untracked") << "\n";
+        out << "- intercept_profile: " << (track_active ? "tracked_intercept" : "unguided_intercept") << "\n";
         out << "- launch_angle_deg: " << static_cast<int>(snapshot.launch_angle_deg) << "\n";
         out << "- latest_freshness: " << icss::view::freshness_label(snapshot) << "\n";
         out << "- latest_snapshot_sequence: " << snapshot.header.snapshot_sequence << "\n";
@@ -160,7 +160,7 @@ private:
             return reject_payload(std::move(summary), "payload session_id does not match the active session", std::move(entity_ids));
         }
         if (envelope.sender_id != expected_sender) {
-            return reject_payload(std::move(summary), "payload sender_id does not match the connected command console", std::move(entity_ids));
+            return reject_payload(std::move(summary), "payload sender_id does not match the connected fire control console", std::move(entity_ids));
         }
         return std::nullopt;
     }

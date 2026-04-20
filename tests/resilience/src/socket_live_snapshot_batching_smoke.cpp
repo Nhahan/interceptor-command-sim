@@ -104,7 +104,7 @@ int main() {
     udp_server_addr.sin_port = htons(info.udp_port);
     assert(::inet_pton(AF_INET, config.server.bind_host.c_str(), &udp_server_addr.sin_addr) == 1);
 
-    const auto viewer_join = serialize(SessionJoinPayload{{1001U, 201U, 1U}, "tactical_viewer"});
+    const auto viewer_join = serialize(SessionJoinPayload{{1001U, 201U, 1U}, "tactical_display"});
     assert(::sendto(udp_viewer.fd, viewer_join.data(), viewer_join.size(), 0,
                     reinterpret_cast<sockaddr*>(&udp_server_addr), sizeof(udp_server_addr)) >= 0);
     for (int i = 0; i < 5; ++i) {

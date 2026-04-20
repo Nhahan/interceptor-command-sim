@@ -35,7 +35,7 @@ ChildProcess spawn_gui_viewer(const std::filesystem::path& dump_path,
 
         ::setenv("SDL_VIDEODRIVER", "dummy", 1);
 
-        const std::string exe = (std::filesystem::path{ICSS_REPO_ROOT} / "build/icss_tactical_viewer_gui").string();
+        const std::string exe = (std::filesystem::path{ICSS_REPO_ROOT} / "build/icss_tactical_display_gui").string();
         const std::string udp = std::to_string(udp_port);
         const std::string tcp = std::to_string(tcp_port);
         std::vector<std::string> argv_storage {
@@ -45,7 +45,7 @@ ChildProcess spawn_gui_viewer(const std::filesystem::path& dump_path,
             "--tcp-port", tcp,
             "--headless",
             "--hidden",
-            "--auto-controls", "Start,Guidance,Activate,Command,Review",
+            "--auto-controls", "Start,Track,Ready,Engage,AAR",
             "--duration-ms", "1800",
             "--heartbeat-interval-ms", "100",
             "--dump-state", dump_path.string(),
@@ -57,7 +57,7 @@ ChildProcess spawn_gui_viewer(const std::filesystem::path& dump_path,
         }
         argv.push_back(nullptr);
         ::execv(exe.c_str(), argv.data());
-        std::perror("exec icss_tactical_viewer_gui failed");
+        std::perror("exec icss_tactical_display_gui failed");
         std::_Exit(127);
     }
 
@@ -79,7 +79,7 @@ int main() {
     namespace fs = std::filesystem;
     namespace process = icss::testsupport::process;
 
-    const fs::path temp_root = icss::testsupport::make_temp_configured_repo("icss_gui_review_");
+    const fs::path temp_root = icss::testsupport::make_temp_configured_repo("icss_gui_aar_");
     auto server = process::spawn_server_process({
         .repo_root = temp_root,
         .tcp_frame_format = "json",
@@ -88,7 +88,7 @@ int main() {
     });
     const auto startup = process::wait_for_startup(server);
 
-    const fs::path dump_path = temp_root / "viewer-review.json";
+    const fs::path dump_path = temp_root / "viewer-aar.json";
     auto viewer = spawn_gui_viewer(dump_path, startup.udp_port, startup.tcp_port);
 
     const auto [viewer_exited, viewer_status] =
@@ -101,18 +101,18 @@ int main() {
     const auto dump_json = icss::testsupport::minijson::parse(read_text(dump_path));
     assert(dump_json.is_object());
     const auto& object = dump_json.as_object();
-    assert(icss::testsupport::minijson::require_field(object, "last_control_label").as_string() == "Review");
-    assert(icss::testsupport::minijson::require_field(object, "last_control_message").as_string() == "server-side review loaded");
+    assert(icss::testsupport::minijson::require_field(object, "last_control_label").as_string() == "AAR");
+    assert(icss::testsupport::minijson::require_field(object, "last_control_message").as_string() == "server-side aar loaded");
     assert(icss::testsupport::minijson::require_field(object, "phase").as_string() == "archived");
-    assert(icss::testsupport::minijson::require_field(object, "review_available").as_bool());
-    assert(icss::testsupport::minijson::require_field(object, "review_loaded").as_bool());
-    assert(icss::testsupport::minijson::require_field(object, "review_visible").as_bool());
+    assert(icss::testsupport::minijson::require_field(object, "aar_available").as_bool());
+    assert(icss::testsupport::minijson::require_field(object, "aar_loaded").as_bool());
+    assert(icss::testsupport::minijson::require_field(object, "aar_visible").as_bool());
     assert(icss::testsupport::minijson::require_field(object, "recommended_control").as_string() == "Reset");
-    assert(icss::testsupport::minijson::require_field(object, "review_total_events").as_int() >= 1);
-    assert(icss::testsupport::minijson::require_field(object, "review_cursor_index").is_int());
-    assert(icss::testsupport::minijson::require_field(object, "review_judgment_code").as_string() == "intercept_success");
-    assert(!icss::testsupport::minijson::require_field(object, "review_event_type").as_string().empty());
-    assert(!icss::testsupport::minijson::require_field(object, "review_event_summary").as_string().empty());
+    assert(icss::testsupport::minijson::require_field(object, "aar_total_events").as_int() >= 1);
+    assert(icss::testsupport::minijson::require_field(object, "aar_cursor_index").is_int());
+    assert(icss::testsupport::minijson::require_field(object, "aar_assessment_code").as_string() == "intercept_success");
+    assert(!icss::testsupport::minijson::require_field(object, "aar_event_type").as_string().empty());
+    assert(!icss::testsupport::minijson::require_field(object, "aar_event_summary").as_string().empty());
 
     ::kill(server.pid, SIGTERM);
     const auto [server_exited, server_status] =

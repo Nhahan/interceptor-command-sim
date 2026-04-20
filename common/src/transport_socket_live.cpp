@@ -160,7 +160,7 @@ public:
 
     void connect_client(icss::core::ClientRole, std::uint32_t) override {}
     void disconnect_client(icss::core::ClientRole role, std::string reason) override {
-        if (role == icss::core::ClientRole::CommandConsole) {
+        if (role == icss::core::ClientRole::FireControlConsole) {
             command_client_.reset();
             tcp_buffer_.clear();
             pending_tcp_lines_.clear();
@@ -178,7 +178,7 @@ public:
     }
     void timeout_client(icss::core::ClientRole role, std::string reason) override {
         session_.timeout_client(role, std::move(reason));
-        if (role == icss::core::ClientRole::TacticalViewer) {
+        if (role == icss::core::ClientRole::TacticalDisplay) {
             clear_viewer_binding();
         }
         send_pending_snapshots();
@@ -186,10 +186,10 @@ public:
 
     icss::core::CommandResult start_scenario() override { return unsupported(); }
     icss::core::CommandResult reset_session(std::string) override { return unsupported(); }
-    icss::core::CommandResult dispatch(const icss::protocol::TrackRequestPayload&) override { return unsupported(); }
-    icss::core::CommandResult dispatch(const icss::protocol::TrackReleasePayload&) override { return unsupported(); }
-    icss::core::CommandResult dispatch(const icss::protocol::AssetActivatePayload&) override { return unsupported(); }
-    icss::core::CommandResult dispatch(const icss::protocol::CommandIssuePayload&) override { return unsupported(); }
+    icss::core::CommandResult dispatch(const icss::protocol::TrackAcquirePayload&) override { return unsupported(); }
+    icss::core::CommandResult dispatch(const icss::protocol::TrackDropPayload&) override { return unsupported(); }
+    icss::core::CommandResult dispatch(const icss::protocol::InterceptorReadyPayload&) override { return unsupported(); }
+    icss::core::CommandResult dispatch(const icss::protocol::EngageOrderPayload&) override { return unsupported(); }
 
     void advance_tick() override {
         maybe_timeout_viewer();
@@ -218,25 +218,25 @@ public:
         const auto summary = session_.build_summary();
         const auto snapshot = session_.latest_snapshot();
         const auto& events = session_.events();
-        const auto guidance_event = std::find_if(events.rbegin(), events.rend(), [](const icss::core::EventRecord& event) {
-            return event.header.event_type == icss::protocol::EventType::CommandAccepted
+        const auto track_event = std::find_if(events.rbegin(), events.rend(), [](const icss::core::EventRecord& event) {
+            return event.header.event_type == icss::protocol::EventType::EngageOrderAccepted
                 || event.header.event_type == icss::protocol::EventType::TrackUpdated;
         });
-        const bool guidance_active = guidance_event == events.rend()
+        const bool track_active = track_event == events.rend()
             ? snapshot.track.active
-            : !(guidance_event->summary.find("disabled") != std::string::npos
-                || guidance_event->details.find("disabled") != std::string::npos
-                || guidance_event->summary.find("straight") != std::string::npos
-                || guidance_event->details.find("straight") != std::string::npos);
+            : !(track_event->summary.find("dropped") != std::string::npos
+                || track_event->details.find("dropped") != std::string::npos
+                || track_event->summary.find("unguided_intercept") != std::string::npos
+                || track_event->details.find("unguided_intercept") != std::string::npos);
         out << "# Sample Output\n\n";
         out << "- schema_version: " << kSampleOutputSchemaVersion << "\n";
         out << "- backend: socket_live\n";
         out << "- session_id: " << summary.session_id << "\n";
         out << "- cursor_index: " << cursor.index << "/" << cursor.total << "\n";
-        out << "- command_console_connection: " << icss::core::to_string(summary.command_console_connection) << "\n";
-        out << "- viewer_connection: " << icss::core::to_string(summary.viewer_connection) << "\n";
-        out << "- guidance_state: " << (guidance_active ? "on" : "off") << "\n";
-        out << "- launch_mode: " << (guidance_active ? "guided" : "straight") << "\n";
+        out << "- fire_control_console_connection: " << icss::core::to_string(summary.fire_control_console_connection) << "\n";
+        out << "- display_connection: " << icss::core::to_string(summary.display_connection) << "\n";
+        out << "- effective_track_state: " << (track_active ? "tracked" : "untracked") << "\n";
+        out << "- intercept_profile: " << (track_active ? "tracked_intercept" : "unguided_intercept") << "\n";
         out << "- launch_angle_deg: " << static_cast<int>(snapshot.launch_angle_deg) << "\n";
         out << "- latest_freshness: " << icss::view::freshness_label(snapshot) << "\n";
         out << "- latest_snapshot_sequence: " << snapshot.header.snapshot_sequence << "\n";
@@ -267,7 +267,7 @@ private:
             return reject_payload("Command rejected", "payload session_id does not match the active session");
         }
         if (envelope.sender_id != command_sender_id_) {
-            return reject_payload("Command rejected", "payload sender_id does not match the connected command console");
+            return reject_payload("Engage order rejected", "payload sender_id does not match the connected fire control console");
         }
         return std::nullopt;
     }
@@ -363,7 +363,7 @@ private:
             resolution.control,
             resolution.requested_index,
             resolution.clamped,
-            icss::core::to_string(summary.judgment_code),
+            icss::core::to_string(summary.assessment_code),
             summary.resilience_case,
             resolution.cursor.total,
             std::move(event_type),
@@ -400,7 +400,7 @@ private:
                 ::close(fd);
                 session_.record_transport_rejection(
                     "Connection rejected",
-                    "socket_live allows only one active command console connection");
+                    "socket_live allows only one active fire control console connection");
                 continue;
             }
             command_client_.emplace(fd);
@@ -423,7 +423,7 @@ private:
                 throw std::runtime_error(std::string("tcp recv failed: ") + std::strerror(errno));
             }
             if (received == 0) {
-                disconnect_client(icss::core::ClientRole::CommandConsole, "tcp command connection closed");
+                disconnect_client(icss::core::ClientRole::FireControlConsole, "tcp command connection closed");
                 break;
             }
             tcp_buffer_.append(buffer, static_cast<std::size_t>(received));
@@ -463,9 +463,9 @@ private:
         const auto& payload_wire = frame.payload;
         if (kind == "session_join") {
             const auto payload = icss::protocol::parse_session_join(payload_wire);
-            if (payload.client_role != icss::core::to_string(icss::core::ClientRole::CommandConsole)) {
+            if (payload.client_role != icss::core::to_string(icss::core::ClientRole::FireControlConsole)) {
                 send_ack(payload.envelope, reject_payload("Session join rejected",
-                                                         "tcp session_join only supports command_console role"));
+                                                         "tcp session_join only supports fire_control_console role"));
                 return;
             }
             if (payload.envelope.session_id != kDefaultSessionId) {
@@ -475,16 +475,16 @@ private:
             }
             if (command_sender_id_ != 0U && payload.envelope.sender_id != command_sender_id_) {
                 send_ack(payload.envelope, reject_payload("Session join rejected",
-                                                         "socket_live allows only one active command console"));
+                                                         "socket_live allows only one active fire control console"));
                 return;
             }
             if (command_sender_id_ == payload.envelope.sender_id && command_client_.has_value()) {
-                send_ack(payload.envelope, {true, "command console joined", icss::protocol::TcpMessageKind::CommandAck});
+                send_ack(payload.envelope, {true, "fire control console joined", icss::protocol::TcpMessageKind::CommandAck});
                 return;
             }
             command_sender_id_ = payload.envelope.sender_id;
-            session_.connect_client(icss::core::ClientRole::CommandConsole, command_sender_id_);
-            send_ack(payload.envelope, {true, "command console joined", icss::protocol::TcpMessageKind::CommandAck});
+            session_.connect_client(icss::core::ClientRole::FireControlConsole, command_sender_id_);
+            send_ack(payload.envelope, {true, "fire control console joined", icss::protocol::TcpMessageKind::CommandAck});
             return;
         }
         if (kind == "session_leave") {
@@ -495,7 +495,7 @@ private:
             }
             send_ack(payload.envelope, {true, payload.reason, icss::protocol::TcpMessageKind::CommandAck});
             flush_tcp_writes();
-            disconnect_client(icss::core::ClientRole::CommandConsole, payload.reason);
+            disconnect_client(icss::core::ClientRole::FireControlConsole, payload.reason);
             return;
         }
         if (kind == "scenario_start") {
@@ -504,10 +504,10 @@ private:
                 send_ack(payload.envelope, *invalid);
                 return;
             }
-            if (session_.phase() != icss::core::SessionPhase::Initialized) {
+            if (session_.phase() != icss::core::SessionPhase::Standby) {
                 send_ack(payload.envelope,
                          reject_payload("Scenario start rejected",
-                                        "scenario can only be started from initialized state"));
+                                        "scenario can only be started from standby state"));
                 return;
             }
             if (payload.scenario_name != config_.scenario.name) {
@@ -549,7 +549,7 @@ private:
                 send_ack(payload.envelope, *invalid);
                 return;
             }
-            if (session_.phase() == icss::core::SessionPhase::Initialized ||
+            if (session_.phase() == icss::core::SessionPhase::Standby ||
                 session_.phase() == icss::core::SessionPhase::Archived) {
                 send_ack(payload.envelope,
                          reject_payload("Scenario stop rejected",
@@ -574,8 +574,8 @@ private:
             send_pending_snapshots();
             return;
         }
-        if (kind == "track_request") {
-            const auto payload = icss::protocol::parse_track_request(payload_wire);
+        if (kind == "track_acquire") {
+            const auto payload = icss::protocol::parse_track_acquire(payload_wire);
             if (const auto invalid = validate_command_envelope(payload.envelope)) {
                 send_ack(payload.envelope, *invalid);
                 return;
@@ -592,8 +592,8 @@ private:
             send_pending_snapshots();
             return;
         }
-        if (kind == "track_release") {
-            const auto payload = icss::protocol::parse_track_release(payload_wire);
+        if (kind == "track_drop") {
+            const auto payload = icss::protocol::parse_track_drop(payload_wire);
             if (const auto invalid = validate_command_envelope(payload.envelope)) {
                 send_ack(payload.envelope, *invalid);
                 return;
@@ -610,16 +610,16 @@ private:
             send_pending_snapshots();
             return;
         }
-        if (kind == "asset_activate") {
-            const auto payload = icss::protocol::parse_asset_activate(payload_wire);
+        if (kind == "interceptor_ready") {
+            const auto payload = icss::protocol::parse_interceptor_ready(payload_wire);
             if (const auto invalid = validate_command_envelope(payload.envelope)) {
                 send_ack(payload.envelope, *invalid);
                 return;
             }
-            if (payload.asset_id != kAssetId) {
+            if (payload.interceptor_id != kAssetId) {
                 send_ack(payload.envelope,
-                         reject_payload("Asset activation rejected",
-                                        "asset activation does not match the configured asset",
+                         reject_payload("Interceptor activation rejected",
+                                        "interceptor activation does not match the configured interceptor",
                                         {std::string{kAssetId}}));
                 return;
             }
@@ -628,13 +628,13 @@ private:
             send_pending_snapshots();
             return;
         }
-        if (kind == "command_issue") {
-            const auto payload = icss::protocol::parse_command_issue(payload_wire);
+        if (kind == "engage_order") {
+            const auto payload = icss::protocol::parse_engage_order(payload_wire);
             if (const auto invalid = validate_command_envelope(payload.envelope)) {
                 send_ack(payload.envelope, *invalid);
                 return;
             }
-            if (payload.asset_id != kAssetId || payload.target_id != kTargetId) {
+            if (payload.interceptor_id != kAssetId || payload.target_id != kTargetId) {
                 send_ack(payload.envelope, reject_payload("Command rejected",
                                                          "command payload entity ids do not match the active session",
                                                          {std::string{kAssetId}, std::string{kTargetId}}));
@@ -722,10 +722,10 @@ private:
                 continue;
             }
             if (kind != "session_join") {
-                if (kind == "viewer_heartbeat") {
-                    icss::protocol::ViewerHeartbeatPayload payload;
+                if (kind == "display_heartbeat") {
+                    icss::protocol::DisplayHeartbeatPayload payload;
                     try {
-                        payload = icss::protocol::parse_viewer_heartbeat(wire);
+                        payload = icss::protocol::parse_display_heartbeat(wire);
                     } catch (const std::exception&) {
                         continue;
                     }
@@ -735,10 +735,10 @@ private:
                     if (viewer_endpoint_.has_value() && !same_endpoint(*viewer_endpoint_, addr)) {
                         continue;
                     }
-                    last_viewer_heartbeat_at_ = std::chrono::steady_clock::now();
+                    last_display_heartbeat_at_ = std::chrono::steady_clock::now();
                     if (!session_.snapshots().empty() &&
-                        session_.latest_snapshot().viewer_connection == icss::core::ConnectionState::TimedOut) {
-                        session_.connect_client(icss::core::ClientRole::TacticalViewer, viewer_sender_id_);
+                        session_.latest_snapshot().display_connection == icss::core::ConnectionState::TimedOut) {
+                        session_.connect_client(icss::core::ClientRole::TacticalDisplay, viewer_sender_id_);
                         send_pending_snapshots();
                     }
                     continue;
@@ -751,7 +751,7 @@ private:
             } catch (const std::exception&) {
                 continue;
             }
-            if (payload.client_role != icss::core::to_string(icss::core::ClientRole::TacticalViewer)) {
+            if (payload.client_role != icss::core::to_string(icss::core::ClientRole::TacticalDisplay)) {
                 continue;
             }
             if (payload.envelope.session_id != kDefaultSessionId) {
@@ -761,37 +761,37 @@ private:
                 payload.envelope.sender_id != viewer_sender_id_) {
                 session_.record_transport_rejection(
                     "Viewer registration rejected",
-                    "socket_live allows only one active tactical viewer");
+                    "socket_live allows only one active tactical display");
                 continue;
             }
             if (viewer_endpoint_.has_value() && viewer_sender_id_ == payload.envelope.sender_id &&
                 same_endpoint(*viewer_endpoint_, addr)) {
-                last_viewer_heartbeat_at_ = std::chrono::steady_clock::now();
+                last_display_heartbeat_at_ = std::chrono::steady_clock::now();
                 if (!session_.snapshots().empty() &&
-                    session_.latest_snapshot().viewer_connection == icss::core::ConnectionState::TimedOut) {
-                    session_.connect_client(icss::core::ClientRole::TacticalViewer, viewer_sender_id_);
+                    session_.latest_snapshot().display_connection == icss::core::ConnectionState::TimedOut) {
+                    session_.connect_client(icss::core::ClientRole::TacticalDisplay, viewer_sender_id_);
                     send_pending_snapshots();
                 }
                 continue;
             }
             viewer_sender_id_ = payload.envelope.sender_id;
             viewer_endpoint_ = addr;
-            last_viewer_heartbeat_at_ = std::chrono::steady_clock::now();
+            last_display_heartbeat_at_ = std::chrono::steady_clock::now();
             reset_viewer_delivery_cursor();
-            session_.connect_client(icss::core::ClientRole::TacticalViewer, viewer_sender_id_);
+            session_.connect_client(icss::core::ClientRole::TacticalDisplay, viewer_sender_id_);
             send_pending_snapshots();
         }
     }
 
     void maybe_timeout_viewer() {
-        if (!viewer_endpoint_.has_value() || !last_viewer_heartbeat_at_.has_value()) {
+        if (!viewer_endpoint_.has_value() || !last_display_heartbeat_at_.has_value()) {
             return;
         }
-        const auto elapsed = std::chrono::steady_clock::now() - *last_viewer_heartbeat_at_;
+        const auto elapsed = std::chrono::steady_clock::now() - *last_display_heartbeat_at_;
         if (elapsed >= std::chrono::milliseconds(config_.server.heartbeat_timeout_ms)) {
-            timeout_client(icss::core::ClientRole::TacticalViewer,
+            timeout_client(icss::core::ClientRole::TacticalDisplay,
                            "viewer heartbeat timeout threshold exceeded");
-            last_viewer_heartbeat_at_.reset();
+            last_display_heartbeat_at_.reset();
         }
     }
 
@@ -826,7 +826,7 @@ private:
 
     void clear_viewer_binding() {
         viewer_endpoint_.reset();
-        last_viewer_heartbeat_at_.reset();
+        last_display_heartbeat_at_.reset();
         pending_udp_messages_.clear();
         viewer_sender_id_ = 0U;
         last_snapshot_sent_index_ = 0U;
@@ -851,7 +851,7 @@ private:
     SocketHandle udp_socket_;
     std::optional<SocketHandle> command_client_;
     std::optional<sockaddr_in> viewer_endpoint_;
-    std::optional<std::chrono::steady_clock::time_point> last_viewer_heartbeat_at_;
+    std::optional<std::chrono::steady_clock::time_point> last_display_heartbeat_at_;
     std::string tcp_buffer_;
     std::deque<std::string> pending_tcp_lines_;
     std::deque<PendingDatagram> pending_udp_messages_;
@@ -878,10 +878,10 @@ public:
 
     icss::core::CommandResult start_scenario() override { return unsupported(); }
     icss::core::CommandResult reset_session(std::string) override { return unsupported(); }
-    icss::core::CommandResult dispatch(const icss::protocol::TrackRequestPayload&) override { return unsupported(); }
-    icss::core::CommandResult dispatch(const icss::protocol::TrackReleasePayload&) override { return unsupported(); }
-    icss::core::CommandResult dispatch(const icss::protocol::AssetActivatePayload&) override { return unsupported(); }
-    icss::core::CommandResult dispatch(const icss::protocol::CommandIssuePayload&) override { return unsupported(); }
+    icss::core::CommandResult dispatch(const icss::protocol::TrackAcquirePayload&) override { return unsupported(); }
+    icss::core::CommandResult dispatch(const icss::protocol::TrackDropPayload&) override { return unsupported(); }
+    icss::core::CommandResult dispatch(const icss::protocol::InterceptorReadyPayload&) override { return unsupported(); }
+    icss::core::CommandResult dispatch(const icss::protocol::EngageOrderPayload&) override { return unsupported(); }
     void advance_tick() override {}
     void archive_session() override {}
 

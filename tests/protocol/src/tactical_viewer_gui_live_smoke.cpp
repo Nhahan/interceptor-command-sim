@@ -43,7 +43,7 @@ ChildProcess spawn_gui_viewer(const std::filesystem::path& dump_path,
 
         ::setenv("SDL_VIDEODRIVER", "dummy", 1);
 
-        const std::string exe = (std::filesystem::path{ICSS_REPO_ROOT} / "build/icss_tactical_viewer_gui").string();
+        const std::string exe = (std::filesystem::path{ICSS_REPO_ROOT} / "build/icss_tactical_display_gui").string();
         const std::string port = std::to_string(udp_port);
         const std::string tcp = std::to_string(tcp_port);
         const std::string session = std::to_string(session_id);
@@ -74,7 +74,7 @@ ChildProcess spawn_gui_viewer(const std::filesystem::path& dump_path,
         }
         argv.push_back(nullptr);
         ::execv(exe.c_str(), argv.data());
-        std::perror("exec icss_tactical_viewer_gui failed");
+        std::perror("exec icss_tactical_display_gui failed");
         std::_Exit(127);
     }
 
@@ -139,14 +139,14 @@ int main() {
     const auto freshness = icss::testsupport::minijson::require_field(object, "freshness").as_string();
     assert(freshness == "fresh" || freshness == "degraded");
     assert(!icss::testsupport::minijson::require_field(object, "resilience_summary").as_string().empty());
-    assert(icss::testsupport::minijson::require_field(object, "judgment_code").as_string() == "pending");
+    assert(icss::testsupport::minijson::require_field(object, "assessment_code").as_string() == "pending");
     assert(icss::testsupport::minijson::require_field(object, "heartbeat_count").is_int());
     assert(icss::testsupport::minijson::require_field(object, "last_server_event_tick").is_int());
     assert(icss::testsupport::minijson::require_field(object, "last_server_event_type").as_string() == "session_started");
     assert(icss::testsupport::minijson::require_field(object, "authoritative_headline").as_string().find("SESSION STARTED") != std::string::npos);
-    assert(icss::testsupport::minijson::require_field(object, "recommended_control").as_string() == "Guidance");
+    assert(icss::testsupport::minijson::require_field(object, "recommended_control").as_string() == "Track");
     assert(!icss::testsupport::minijson::require_field(object, "target_motion_visual_visible").as_bool());
-    assert(!icss::testsupport::minijson::require_field(object, "asset_motion_visual_visible").as_bool());
+    assert(!icss::testsupport::minijson::require_field(object, "interceptor_motion_visual_visible").as_bool());
     assert(!icss::testsupport::minijson::require_field(object, "engagement_visual_visible").as_bool());
     assert(!icss::testsupport::minijson::require_field(object, "predicted_marker_visual_visible").as_bool());
     assert(icss::testsupport::minijson::require_field(object, "planned_target_start_x").as_int() == 496);
@@ -164,15 +164,15 @@ int main() {
     assert(icss::testsupport::minijson::require_field(object, "last_control_label").as_string() == "Start");
     assert(icss::testsupport::minijson::require_field(object, "last_control_message").as_string().find("scenario started") != std::string::npos);
     assert(icss::testsupport::minijson::require_field(object, "target_active").as_bool());
-    assert(!icss::testsupport::minijson::require_field(object, "asset_active").as_bool());
-    assert(icss::testsupport::minijson::require_field(object, "guidance_active").as_bool()
-        == icss::testsupport::minijson::require_field(object, "tracking_active").as_bool());
+    assert(!icss::testsupport::minijson::require_field(object, "interceptor_active").as_bool());
+    assert(icss::testsupport::minijson::require_field(object, "track_active").as_bool()
+        == icss::testsupport::minijson::require_field(object, "track_active").as_bool());
     assert(icss::testsupport::minijson::require_field(object, "target_x").is_int());
-    assert(icss::testsupport::minijson::require_field(object, "asset_x").is_int());
-    const auto actual_asset_x = icss::testsupport::minijson::require_field(object, "asset_x").as_int();
-    const auto actual_asset_y = icss::testsupport::minijson::require_field(object, "asset_y").as_int();
-    assert(actual_asset_x == 0);
-    assert(actual_asset_y == 0);
+    assert(icss::testsupport::minijson::require_field(object, "interceptor_x").is_int());
+    const auto actual_interceptor_x = icss::testsupport::minijson::require_field(object, "interceptor_x").as_int();
+    const auto actual_interceptor_y = icss::testsupport::minijson::require_field(object, "interceptor_y").as_int();
+    assert(actual_interceptor_x == 0);
+    assert(actual_interceptor_y == 0);
     assert(icss::testsupport::minijson::require_field(object, "world_width").as_int() == 2304);
     assert(icss::testsupport::minijson::require_field(object, "world_height").as_int() == 1536);
     const auto target_velocity_x = icss::testsupport::minijson::require_field(object, "target_velocity_x").as_int();

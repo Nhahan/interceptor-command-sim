@@ -235,26 +235,26 @@ int main() {
     udp_server_addr.sin_port = htons(udp_port);
     assert(::inet_pton(AF_INET, "127.0.0.1", &udp_server_addr.sin_addr) == 1);
 
-    const auto viewer_join = serialize(SessionJoinPayload{{1001U, 201U, 1U}, "tactical_viewer"});
+    const auto viewer_join = serialize(SessionJoinPayload{{1001U, 201U, 1U}, "tactical_display"});
     assert(::sendto(udp_viewer.fd, viewer_join.data(), viewer_join.size(), 0,
                     reinterpret_cast<sockaddr*>(&udp_server_addr), sizeof(udp_server_addr)) >= 0);
-    const auto viewer_heartbeat = serialize(ViewerHeartbeatPayload{{1001U, 201U, 2U}, 1U});
-    assert(::sendto(udp_viewer.fd, viewer_heartbeat.data(), viewer_heartbeat.size(), 0,
+    const auto display_heartbeat = serialize(DisplayHeartbeatPayload{{1001U, 201U, 2U}, 1U});
+    assert(::sendto(udp_viewer.fd, display_heartbeat.data(), display_heartbeat.size(), 0,
                     reinterpret_cast<sockaddr*>(&udp_server_addr), sizeof(udp_server_addr)) >= 0);
 
-    send_binary_frame(tcp_client.fd, "session_join", serialize(SessionJoinPayload{{1001U, 101U, 1U}, "command_console"}));
+    send_binary_frame(tcp_client.fd, "session_join", serialize(SessionJoinPayload{{1001U, 101U, 1U}, "fire_control_console"}));
     assert(parse_command_ack(wait_for_binary_frame(tcp_client.fd).payload).accepted);
 
     send_binary_frame(tcp_client.fd, "scenario_start", serialize(ScenarioStartPayload{{1001U, 101U, 2U}, "basic_intercept_training"}));
     assert(parse_command_ack(wait_for_binary_frame(tcp_client.fd).payload).accepted);
 
-    send_binary_frame(tcp_client.fd, "track_request", serialize(TrackRequestPayload{{1001U, 101U, 3U}, "target-alpha"}));
+    send_binary_frame(tcp_client.fd, "track_acquire", serialize(TrackAcquirePayload{{1001U, 101U, 3U}, "target-alpha"}));
     assert(parse_command_ack(wait_for_binary_frame(tcp_client.fd).payload).accepted);
 
-    send_binary_frame(tcp_client.fd, "asset_activate", serialize(AssetActivatePayload{{1001U, 101U, 4U}, "asset-interceptor"}));
+    send_binary_frame(tcp_client.fd, "interceptor_ready", serialize(InterceptorReadyPayload{{1001U, 101U, 4U}, "interceptor-alpha"}));
     assert(parse_command_ack(wait_for_binary_frame(tcp_client.fd).payload).accepted);
 
-    send_binary_frame(tcp_client.fd, "command_issue", serialize(CommandIssuePayload{{1001U, 101U, 5U}, "asset-interceptor", "target-alpha"}));
+    send_binary_frame(tcp_client.fd, "engage_order", serialize(EngageOrderPayload{{1001U, 101U, 5U}, "interceptor-alpha", "target-alpha"}));
     assert(parse_command_ack(wait_for_binary_frame(tcp_client.fd).payload).accepted);
 
     std::this_thread::sleep_for(std::chrono::milliseconds(150));

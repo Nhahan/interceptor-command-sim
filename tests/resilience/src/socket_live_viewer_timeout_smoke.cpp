@@ -127,11 +127,11 @@ int main() {
     udp_server_addr.sin_port = htons(info.udp_port);
     assert(::inet_pton(AF_INET, config.server.bind_host.c_str(), &udp_server_addr.sin_addr) == 1);
 
-    const auto viewer_join = serialize(SessionJoinPayload{{1001U, 201U, 1U}, "tactical_viewer"});
+    const auto viewer_join = serialize(SessionJoinPayload{{1001U, 201U, 1U}, "tactical_display"});
     assert(::sendto(udp_viewer.fd, viewer_join.data(), viewer_join.size(), 0,
                     reinterpret_cast<sockaddr*>(&udp_server_addr), sizeof(udp_server_addr)) >= 0);
 
-    send_line(tcp_client.fd, encode_json_frame("session_join", serialize(SessionJoinPayload{{1001U, 101U, 1U}, "command_console"})));
+    send_line(tcp_client.fd, encode_json_frame("session_join", serialize(SessionJoinPayload{{1001U, 101U, 1U}, "fire_control_console"})));
     const auto join_ack = wait_for_line(*live, tcp_client.fd);
     assert(!join_ack.empty());
 
@@ -139,12 +139,12 @@ int main() {
     const auto start_ack = wait_for_line(*live, tcp_client.fd);
     assert(!start_ack.empty());
 
-    const auto heartbeat = serialize(ViewerHeartbeatPayload{{1001U, 201U, 2U}, 1U});
+    const auto heartbeat = serialize(DisplayHeartbeatPayload{{1001U, 201U, 2U}, 1U});
     assert(::sendto(udp_viewer.fd, heartbeat.data(), heartbeat.size(), 0,
                     reinterpret_cast<sockaddr*>(&udp_server_addr), sizeof(udp_server_addr)) >= 0);
     live->poll_once();
 
-    const auto spoofed_heartbeat = serialize(ViewerHeartbeatPayload{{1001U, 201U, 3U}, 2U});
+    const auto spoofed_heartbeat = serialize(DisplayHeartbeatPayload{{1001U, 201U, 3U}, 2U});
     assert(::sendto(udp_spoof.fd, spoofed_heartbeat.data(), spoofed_heartbeat.size(), 0,
                     reinterpret_cast<sockaddr*>(&udp_server_addr), sizeof(udp_server_addr)) >= 0);
     live->poll_once();
@@ -154,7 +154,7 @@ int main() {
         live->advance_tick();
     }
     const auto snapshot = live->latest_snapshot();
-    assert(snapshot.viewer_connection == ConnectionState::TimedOut);
+    assert(snapshot.display_connection == ConnectionState::TimedOut);
     const auto frame = icss::view::render_tactical_frame(
         snapshot,
         live->events(),
@@ -173,14 +173,14 @@ int main() {
         live->poll_once();
         live->advance_tick();
         recovered = live->latest_snapshot();
-        if (recovered.viewer_connection == ConnectionState::Reconnected
-            || recovered.viewer_connection == ConnectionState::Connected) {
+        if (recovered.display_connection == ConnectionState::Reconnected
+            || recovered.display_connection == ConnectionState::Connected) {
             break;
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(20));
     }
-    assert(recovered.viewer_connection == ConnectionState::Reconnected
-           || recovered.viewer_connection == ConnectionState::Connected);
+    assert(recovered.display_connection == ConnectionState::Reconnected
+           || recovered.display_connection == ConnectionState::Connected);
 
     fs::remove_all(temp_root);
 #endif

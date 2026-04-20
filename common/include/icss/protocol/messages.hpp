@@ -18,12 +18,12 @@ enum class TcpMessageKind : std::uint8_t {
     ScenarioStart,
     ScenarioStop,
     ScenarioReset,
-    TrackRequest,
-    TrackRelease,
-    AssetActivate,
-    CommandIssue,
+    TrackAcquire,
+    TrackDrop,
+    InterceptorReady,
+    EngageOrder,
     CommandAck,
-    JudgmentEvent,
+    AssessmentEvent,
     AarRequest,
     AarResponse,
 };
@@ -31,9 +31,9 @@ enum class TcpMessageKind : std::uint8_t {
 enum class UdpMessageKind : std::uint8_t {
     WorldSnapshot,
     EntityState,
-    TrackingSummary,
+    TrackSummary,
     Telemetry,
-    ViewerHeartbeat,
+    DisplayHeartbeat,
 };
 
 enum class EventType : std::uint8_t {
@@ -43,10 +43,10 @@ enum class EventType : std::uint8_t {
     ClientLeft,
     ClientReconnected,
     TrackUpdated,
-    AssetUpdated,
-    CommandAccepted,
-    CommandRejected,
-    JudgmentProduced,
+    InterceptorUpdated,
+    EngageOrderAccepted,
+    EngageOrderRejected,
+    AssessmentProduced,
     ResilienceTriggered,
 };
 
@@ -82,12 +82,12 @@ inline constexpr std::array<TcpMessageKind, 14> kTcpMessageKinds {
     TcpMessageKind::ScenarioStart,
     TcpMessageKind::ScenarioStop,
     TcpMessageKind::ScenarioReset,
-    TcpMessageKind::TrackRequest,
-    TcpMessageKind::TrackRelease,
-    TcpMessageKind::AssetActivate,
-    TcpMessageKind::CommandIssue,
+    TcpMessageKind::TrackAcquire,
+    TcpMessageKind::TrackDrop,
+    TcpMessageKind::InterceptorReady,
+    TcpMessageKind::EngageOrder,
     TcpMessageKind::CommandAck,
-    TcpMessageKind::JudgmentEvent,
+    TcpMessageKind::AssessmentEvent,
     TcpMessageKind::AarRequest,
     TcpMessageKind::AarResponse,
 };
@@ -95,9 +95,9 @@ inline constexpr std::array<TcpMessageKind, 14> kTcpMessageKinds {
 inline constexpr std::array<UdpMessageKind, 5> kUdpMessageKinds {
     UdpMessageKind::WorldSnapshot,
     UdpMessageKind::EntityState,
-    UdpMessageKind::TrackingSummary,
+    UdpMessageKind::TrackSummary,
     UdpMessageKind::Telemetry,
-    UdpMessageKind::ViewerHeartbeat,
+    UdpMessageKind::DisplayHeartbeat,
 };
 
 inline constexpr std::array<EventType, 11> kEventTypes {
@@ -107,10 +107,10 @@ inline constexpr std::array<EventType, 11> kEventTypes {
     EventType::ClientLeft,
     EventType::ClientReconnected,
     EventType::TrackUpdated,
-    EventType::AssetUpdated,
-    EventType::CommandAccepted,
-    EventType::CommandRejected,
-    EventType::JudgmentProduced,
+    EventType::InterceptorUpdated,
+    EventType::EngageOrderAccepted,
+    EventType::EngageOrderRejected,
+    EventType::AssessmentProduced,
     EventType::ResilienceTriggered,
 };
 
@@ -130,12 +130,12 @@ inline constexpr std::string_view to_string(TcpMessageKind value) {
     case TcpMessageKind::ScenarioStart: return "scenario_start";
     case TcpMessageKind::ScenarioStop: return "scenario_stop";
     case TcpMessageKind::ScenarioReset: return "scenario_reset";
-    case TcpMessageKind::TrackRequest: return "track_request";
-    case TcpMessageKind::TrackRelease: return "track_release";
-    case TcpMessageKind::AssetActivate: return "asset_activate";
-    case TcpMessageKind::CommandIssue: return "command_issue";
+    case TcpMessageKind::TrackAcquire: return "track_acquire";
+    case TcpMessageKind::TrackDrop: return "track_drop";
+    case TcpMessageKind::InterceptorReady: return "interceptor_ready";
+    case TcpMessageKind::EngageOrder: return "engage_order";
     case TcpMessageKind::CommandAck: return "command_ack";
-    case TcpMessageKind::JudgmentEvent: return "judgment_event";
+    case TcpMessageKind::AssessmentEvent: return "assessment_event";
     case TcpMessageKind::AarRequest: return "aar_request";
     case TcpMessageKind::AarResponse: return "aar_response";
     }
@@ -146,9 +146,9 @@ inline constexpr std::string_view to_string(UdpMessageKind value) {
     switch (value) {
     case UdpMessageKind::WorldSnapshot: return "world_snapshot";
     case UdpMessageKind::EntityState: return "entity_state";
-    case UdpMessageKind::TrackingSummary: return "tracking_summary";
+    case UdpMessageKind::TrackSummary: return "track_summary";
     case UdpMessageKind::Telemetry: return "telemetry";
-    case UdpMessageKind::ViewerHeartbeat: return "viewer_heartbeat";
+    case UdpMessageKind::DisplayHeartbeat: return "display_heartbeat";
     }
     return "unknown_udp_message";
 }
@@ -161,10 +161,10 @@ inline constexpr std::string_view to_string(EventType value) {
     case EventType::ClientLeft: return "client_left";
     case EventType::ClientReconnected: return "client_reconnected";
     case EventType::TrackUpdated: return "track_updated";
-    case EventType::AssetUpdated: return "asset_updated";
-    case EventType::CommandAccepted: return "command_accepted";
-    case EventType::CommandRejected: return "command_rejected";
-    case EventType::JudgmentProduced: return "judgment_produced";
+    case EventType::InterceptorUpdated: return "interceptor_updated";
+    case EventType::EngageOrderAccepted: return "engage_order_accepted";
+    case EventType::EngageOrderRejected: return "engage_order_rejected";
+    case EventType::AssessmentProduced: return "assessment_produced";
     case EventType::ResilienceTriggered: return "resilience_triggered";
     }
     return "unknown_event_type";

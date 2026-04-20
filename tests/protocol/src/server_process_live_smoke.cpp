@@ -268,58 +268,58 @@ int main() {
     udp_server_addr.sin_port = htons(udp_port);
     assert(::inet_pton(AF_INET, "127.0.0.1", &udp_server_addr.sin_addr) == 1);
 
-    const auto viewer_join = serialize(SessionJoinPayload{{1001U, 201U, 1U}, "tactical_viewer"});
+    const auto viewer_join = serialize(SessionJoinPayload{{1001U, 201U, 1U}, "tactical_display"});
     assert(::sendto(udp_viewer.fd, viewer_join.data(), viewer_join.size(), 0,
                     reinterpret_cast<sockaddr*>(&udp_server_addr), sizeof(udp_server_addr)) >= 0);
-    const auto viewer_heartbeat = serialize(ViewerHeartbeatPayload{{1001U, 201U, 2U}, 1U});
-    assert(::sendto(udp_viewer.fd, viewer_heartbeat.data(), viewer_heartbeat.size(), 0,
+    const auto display_heartbeat = serialize(DisplayHeartbeatPayload{{1001U, 201U, 2U}, 1U});
+    assert(::sendto(udp_viewer.fd, display_heartbeat.data(), display_heartbeat.size(), 0,
                     reinterpret_cast<sockaddr*>(&udp_server_addr), sizeof(udp_server_addr)) >= 0);
 
-    send_binary_frame(tcp_client.fd, "session_join", serialize(SessionJoinPayload{{1001U, 101U, 1U}, "command_console"}));
+    send_binary_frame(tcp_client.fd, "session_join", serialize(SessionJoinPayload{{1001U, 101U, 1U}, "fire_control_console"}));
     assert(parse_command_ack(wait_for_binary_frame(tcp_client.fd).payload).accepted);
 
     send_binary_frame(tcp_client.fd, "scenario_start", serialize(ScenarioStartPayload{{1001U, 101U, 2U}, "basic_intercept_training"}));
     assert(parse_command_ack(wait_for_binary_frame(tcp_client.fd).payload).accepted);
 
-    send_binary_frame(tcp_client.fd, "track_request", serialize(TrackRequestPayload{{1001U, 101U, 3U}, "target-alpha"}));
+    send_binary_frame(tcp_client.fd, "track_acquire", serialize(TrackAcquirePayload{{1001U, 101U, 3U}, "target-alpha"}));
     assert(parse_command_ack(wait_for_binary_frame(tcp_client.fd).payload).accepted);
 
-    send_binary_frame(tcp_client.fd, "asset_activate", serialize(AssetActivatePayload{{1001U, 101U, 4U}, "asset-interceptor"}));
+    send_binary_frame(tcp_client.fd, "interceptor_ready", serialize(InterceptorReadyPayload{{1001U, 101U, 4U}, "interceptor-alpha"}));
     assert(parse_command_ack(wait_for_binary_frame(tcp_client.fd).payload).accepted);
 
-    send_binary_frame(tcp_client.fd, "command_issue", serialize(CommandIssuePayload{{1001U, 101U, 5U}, "asset-interceptor", "target-alpha"}));
+    send_binary_frame(tcp_client.fd, "engage_order", serialize(EngageOrderPayload{{1001U, 101U, 5U}, "interceptor-alpha", "target-alpha"}));
     assert(parse_command_ack(wait_for_binary_frame(tcp_client.fd).payload).accepted);
 
     bool saw_snapshot = false;
     bool saw_telemetry = false;
-    bool judgment_ready = false;
-    const auto judgment_deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
-    while (std::chrono::steady_clock::now() < judgment_deadline && !judgment_ready) {
+    bool assessment_ready = false;
+    const auto assessment_deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+    while (std::chrono::steady_clock::now() < assessment_deadline && !assessment_ready) {
         const auto udp_batch = recv_udp_messages(udp_viewer.fd, 20, 4);
         for (const auto& wire : udp_batch) {
             if (wire.rfind("kind=world_snapshot", 0) == 0) {
                 const auto snapshot = parse_snapshot(wire);
                 assert(snapshot.target_id == "target-alpha");
                 saw_snapshot = true;
-                judgment_ready = judgment_ready || snapshot.judgment_ready;
+                assessment_ready = assessment_ready || snapshot.assessment_ready;
             } else if (wire.rfind("kind=telemetry", 0) == 0) {
                 const auto telemetry = parse_telemetry(wire);
                 assert(!telemetry.connection_state.empty());
                 saw_telemetry = true;
             }
         }
-        if (!judgment_ready) {
+        if (!assessment_ready) {
             std::this_thread::sleep_for(std::chrono::milliseconds(20));
         }
     }
-    assert(judgment_ready);
+    assert(assessment_ready);
 
     send_binary_frame(tcp_client.fd, "aar_request", serialize(AarRequestPayload{{1001U, 101U, 6U}, 99U, "absolute"}));
     const auto aar_frame = wait_for_binary_frame(tcp_client.fd);
     assert(aar_frame.kind == "aar_response");
     const auto aar_response = parse_aar_response(aar_frame.payload);
     assert(aar_response.total_events >= 6U);
-    assert(aar_response.judgment_code == "intercept_success");
+    assert(aar_response.assessment_code == "intercept_success");
     assert(aar_response.control == "absolute");
     assert(aar_response.clamped);
 
@@ -345,7 +345,7 @@ int main() {
     bool saw_event_summary = false;
     for (const auto& line : trailing_lines) {
         saw_connection_summary = saw_connection_summary
-            || line.find("command_console_connection=connected") != std::string::npos;
+            || line.find("fire_control_console_connection=connected") != std::string::npos;
         saw_event_summary = saw_event_summary
             || line.find("last_event_type=session_ended") != std::string::npos;
     }

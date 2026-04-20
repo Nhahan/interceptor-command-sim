@@ -7,28 +7,28 @@
 
 namespace icss::viewer_gui {
 
-icss::core::AssetStatus parse_asset_status(std::string_view value) {
-    if (value == "idle") return icss::core::AssetStatus::Idle;
-    if (value == "ready") return icss::core::AssetStatus::Ready;
-    if (value == "engaging") return icss::core::AssetStatus::Engaging;
-    if (value == "complete") return icss::core::AssetStatus::Complete;
-    return icss::core::AssetStatus::Idle;
+icss::core::InterceptorStatus parse_interceptor_status(std::string_view value) {
+    if (value == "idle") return icss::core::InterceptorStatus::Idle;
+    if (value == "ready") return icss::core::InterceptorStatus::Ready;
+    if (value == "intercepting") return icss::core::InterceptorStatus::Intercepting;
+    if (value == "complete") return icss::core::InterceptorStatus::Complete;
+    return icss::core::InterceptorStatus::Idle;
 }
 
-icss::core::CommandLifecycle parse_command_status(std::string_view value) {
-    if (value == "none") return icss::core::CommandLifecycle::None;
-    if (value == "accepted") return icss::core::CommandLifecycle::Accepted;
-    if (value == "executing") return icss::core::CommandLifecycle::Executing;
-    if (value == "completed") return icss::core::CommandLifecycle::Completed;
-    if (value == "rejected") return icss::core::CommandLifecycle::Rejected;
-    return icss::core::CommandLifecycle::None;
+icss::core::EngageOrderStatus parse_engage_order_status(std::string_view value) {
+    if (value == "none") return icss::core::EngageOrderStatus::None;
+    if (value == "accepted") return icss::core::EngageOrderStatus::Accepted;
+    if (value == "executing") return icss::core::EngageOrderStatus::Executing;
+    if (value == "completed") return icss::core::EngageOrderStatus::Completed;
+    if (value == "rejected") return icss::core::EngageOrderStatus::Rejected;
+    return icss::core::EngageOrderStatus::None;
 }
 
-icss::core::JudgmentCode parse_judgment_code(std::string_view value) {
-    if (value == "intercept_success") return icss::core::JudgmentCode::InterceptSuccess;
-    if (value == "invalid_transition") return icss::core::JudgmentCode::InvalidTransition;
-    if (value == "timeout_observed") return icss::core::JudgmentCode::TimeoutObserved;
-    return icss::core::JudgmentCode::Pending;
+icss::core::AssessmentCode parse_assessment_code(std::string_view value) {
+    if (value == "intercept_success") return icss::core::AssessmentCode::InterceptSuccess;
+    if (value == "invalid_transition") return icss::core::AssessmentCode::InvalidTransition;
+    if (value == "timeout_observed") return icss::core::AssessmentCode::TimeoutObserved;
+    return icss::core::AssessmentCode::Pending;
 }
 
 icss::core::ConnectionState parse_connection_state(std::string_view value) {
@@ -39,15 +39,15 @@ icss::core::ConnectionState parse_connection_state(std::string_view value) {
 }
 
 icss::core::SessionPhase parse_phase(std::string_view value) {
-    if (value == "initialized") return icss::core::SessionPhase::Initialized;
+    if (value == "standby") return icss::core::SessionPhase::Standby;
     if (value == "detecting") return icss::core::SessionPhase::Detecting;
     if (value == "tracking") return icss::core::SessionPhase::Tracking;
-    if (value == "asset_ready") return icss::core::SessionPhase::AssetReady;
-    if (value == "command_issued") return icss::core::SessionPhase::CommandIssued;
-    if (value == "engaging") return icss::core::SessionPhase::Engaging;
-    if (value == "judged") return icss::core::SessionPhase::Judged;
+    if (value == "interceptor_ready") return icss::core::SessionPhase::InterceptorReady;
+    if (value == "engage_ordered") return icss::core::SessionPhase::EngageOrdered;
+    if (value == "intercepting") return icss::core::SessionPhase::Intercepting;
+    if (value == "assessed") return icss::core::SessionPhase::Assessed;
     if (value == "archived") return icss::core::SessionPhase::Archived;
-    return icss::core::SessionPhase::Initialized;
+    return icss::core::SessionPhase::Standby;
 }
 
 std::string uppercase_words(std::string_view value) {
@@ -69,13 +69,13 @@ std::string uppercase_words(std::string_view value) {
 
 std::string phase_banner_label(icss::core::SessionPhase phase) {
     switch (phase) {
-    case icss::core::SessionPhase::Initialized: return "INITIALIZED";
+    case icss::core::SessionPhase::Standby: return "STANDBY";
     case icss::core::SessionPhase::Detecting: return "DETECTING";
-    case icss::core::SessionPhase::Tracking: return "GUIDANCE LOCKED";
-    case icss::core::SessionPhase::AssetReady: return "INTERCEPTOR READY";
-    case icss::core::SessionPhase::CommandIssued: return "COMMAND ACCEPTED";
-    case icss::core::SessionPhase::Engaging: return "ENGAGING";
-    case icss::core::SessionPhase::Judged: return "JUDGMENT PRODUCED";
+    case icss::core::SessionPhase::Tracking: return "TRACK ESTABLISHED";
+    case icss::core::SessionPhase::InterceptorReady: return "INTERCEPTOR READY";
+    case icss::core::SessionPhase::EngageOrdered: return "ENGAGE ORDERED";
+    case icss::core::SessionPhase::Intercepting: return "INTERCEPTING";
+    case icss::core::SessionPhase::Assessed: return "ASSESSMENT COMPLETE";
     case icss::core::SessionPhase::Archived: return "ARCHIVED";
     }
     return "UNKNOWN";
@@ -83,20 +83,20 @@ std::string phase_banner_label(icss::core::SessionPhase phase) {
 
 std::string phase_operator_note(icss::core::SessionPhase phase) {
     switch (phase) {
-    case icss::core::SessionPhase::Initialized:
-        return "Ready for scenario start. No live target track yet.";
+    case icss::core::SessionPhase::Standby:
+        return "Ready to initialize the intercept scenario.";
     case icss::core::SessionPhase::Detecting:
-        return "Target is present. Awaiting guidance enable.";
+        return "Target detected. Acquire track to build a firing solution.";
     case icss::core::SessionPhase::Tracking:
-        return "Guidance enabled. Interceptor can be prepared.";
-    case icss::core::SessionPhase::AssetReady:
-        return "Interceptor ready. Operator can issue command.";
-    case icss::core::SessionPhase::CommandIssued:
-        return "Command accepted by authoritative server.";
-    case icss::core::SessionPhase::Engaging:
-        return "Engagement in progress. Awaiting judgment.";
-    case icss::core::SessionPhase::Judged:
-        return "Authoritative judgment complete. Review result or archive.";
+        return "Track established. Ready the interceptor.";
+    case icss::core::SessionPhase::InterceptorReady:
+        return "Interceptor ready. Issue engage order when authorized.";
+    case icss::core::SessionPhase::EngageOrdered:
+        return "Engage order accepted by the authoritative server.";
+    case icss::core::SessionPhase::Intercepting:
+        return "Interceptor in flight. Awaiting server assessment.";
+    case icss::core::SessionPhase::Assessed:
+        return "Assessment complete. Open AAR or reset the run.";
     case icss::core::SessionPhase::Archived:
         return "Session archived. Reset to begin a new run.";
     }
@@ -105,13 +105,13 @@ std::string phase_operator_note(icss::core::SessionPhase phase) {
 
 SDL_Color phase_accent(icss::core::SessionPhase phase) {
     switch (phase) {
-    case icss::core::SessionPhase::Initialized: return SDL_Color {143, 157, 179, 255};
+    case icss::core::SessionPhase::Standby: return SDL_Color {143, 157, 179, 255};
     case icss::core::SessionPhase::Detecting: return SDL_Color {244, 180, 0, 255};
     case icss::core::SessionPhase::Tracking: return SDL_Color {80, 200, 120, 255};
-    case icss::core::SessionPhase::AssetReady: return SDL_Color {77, 171, 247, 255};
-    case icss::core::SessionPhase::CommandIssued: return SDL_Color {255, 149, 0, 255};
-    case icss::core::SessionPhase::Engaging: return SDL_Color {255, 99, 71, 255};
-    case icss::core::SessionPhase::Judged: return SDL_Color {179, 136, 255, 255};
+    case icss::core::SessionPhase::InterceptorReady: return SDL_Color {77, 171, 247, 255};
+    case icss::core::SessionPhase::EngageOrdered: return SDL_Color {255, 149, 0, 255};
+    case icss::core::SessionPhase::Intercepting: return SDL_Color {255, 99, 71, 255};
+    case icss::core::SessionPhase::Assessed: return SDL_Color {179, 136, 255, 255};
     case icss::core::SessionPhase::Archived: return SDL_Color {130, 130, 130, 255};
     }
     return SDL_Color {143, 157, 179, 255};
@@ -132,18 +132,18 @@ std::string resilience_summary(const ViewerState& state) {
 }
 
 std::string authoritative_headline(const ViewerState& state) {
-    if (state.snapshot.judgment.ready) {
-        return "JUDGMENT: " + uppercase_words(icss::core::to_string(state.snapshot.judgment.code));
+    if (state.snapshot.assessment.ready) {
+        return "ASSESSMENT: " + uppercase_words(icss::core::to_string(state.snapshot.assessment.code));
     }
     if (!state.control.last_ok && state.control.last_label != "idle") {
         return "REJECTED CONTROL: " + uppercase_words(state.control.last_label);
     }
-    if (state.snapshot.command_status == icss::core::CommandLifecycle::Executing) {
-        return "ACTIVE COMMAND: INTERCEPTOR ENGAGING";
+    if (state.snapshot.engage_order_status == icss::core::EngageOrderStatus::Executing) {
+        return "INTERCEPT IN PROGRESS";
     }
-    if (state.snapshot.command_status == icss::core::CommandLifecycle::Accepted
-        || state.snapshot.phase == icss::core::SessionPhase::CommandIssued) {
-        return "COMMAND ACCEPTED: AWAITING LIVE ENGAGEMENT";
+    if (state.snapshot.engage_order_status == icss::core::EngageOrderStatus::Accepted
+        || state.snapshot.phase == icss::core::SessionPhase::EngageOrdered) {
+        return "ENGAGE ORDER ACCEPTED";
     }
     if (!state.recent_server_events.empty()) {
         return "LAST EVENT: " + uppercase_words(state.last_server_event_type);
@@ -152,18 +152,18 @@ std::string authoritative_headline(const ViewerState& state) {
 }
 
 std::string authoritative_badge_label(const ViewerState& state) {
-    if (state.snapshot.judgment.ready) {
-        return "JUDGED";
+    if (state.snapshot.assessment.ready) {
+        return "ASSESSED";
     }
     if (!state.control.last_ok && state.control.last_label != "idle") {
         return "REJECTED";
     }
-    if (state.snapshot.command_status == icss::core::CommandLifecycle::Executing) {
-        return "ENGAGING";
+    if (state.snapshot.engage_order_status == icss::core::EngageOrderStatus::Executing) {
+        return "INTERCEPTING";
     }
-    if (state.snapshot.command_status == icss::core::CommandLifecycle::Accepted
-        || state.snapshot.phase == icss::core::SessionPhase::CommandIssued) {
-        return "ACCEPTED";
+    if (state.snapshot.engage_order_status == icss::core::EngageOrderStatus::Accepted
+        || state.snapshot.phase == icss::core::SessionPhase::EngageOrdered) {
+        return "ORDERED";
     }
     if (!state.recent_server_events.empty()) {
         return "LIVE";
@@ -172,17 +172,17 @@ std::string authoritative_badge_label(const ViewerState& state) {
 }
 
 SDL_Color authoritative_badge_color(const ViewerState& state) {
-    if (state.snapshot.judgment.ready) {
+    if (state.snapshot.assessment.ready) {
         return SDL_Color {179, 136, 255, 255};
     }
     if (!state.control.last_ok && state.control.last_label != "idle") {
         return SDL_Color {255, 99, 120, 255};
     }
-    if (state.snapshot.command_status == icss::core::CommandLifecycle::Executing) {
+    if (state.snapshot.engage_order_status == icss::core::EngageOrderStatus::Executing) {
         return SDL_Color {255, 149, 0, 255};
     }
-    if (state.snapshot.command_status == icss::core::CommandLifecycle::Accepted
-        || state.snapshot.phase == icss::core::SessionPhase::CommandIssued) {
+    if (state.snapshot.engage_order_status == icss::core::EngageOrderStatus::Accepted
+        || state.snapshot.phase == icss::core::SessionPhase::EngageOrdered) {
         return SDL_Color {255, 201, 107, 255};
     }
     if (!state.recent_server_events.empty()) {
@@ -191,37 +191,53 @@ SDL_Color authoritative_badge_color(const ViewerState& state) {
     return SDL_Color {143, 157, 179, 255};
 }
 
-bool review_available(const ViewerState& state) {
-    return state.snapshot.phase == icss::core::SessionPhase::Judged
+bool aar_available(const ViewerState& state) {
+    return state.snapshot.phase == icss::core::SessionPhase::Assessed
         || state.snapshot.phase == icss::core::SessionPhase::Archived
-        || state.snapshot.judgment.ready;
+        || state.snapshot.assessment.ready;
 }
 
-std::string review_panel_text(const ViewerState& state) {
-    if (!review_available(state)) {
-        return "Review unavailable until authoritative judgment or archive.\n"
+std::string aar_panel_text(const ViewerState& state) {
+    if (!aar_available(state)) {
+        return "AAR unavailable until authoritative assessment or archive.\n"
                "Use the live log during active control.";
     }
-    if (!state.review.loaded) {
-        return "Server-side review is available.\n"
-               "Press Review to load AAR cursor, judgment, resilience, and event summary.";
+    if (!state.aar.loaded) {
+        return "Server-side AAR is available.\n"
+               "Press AAR to load cursor, assessment, resilience, and event summary.";
     }
 
     std::string text;
-    text += "AAR cursor: " + std::to_string(state.review.cursor_index) + "/" + std::to_string(state.review.total_events) + "\n";
-    text += "Judgment: " + state.review.judgment_code + "\n";
-    text += "Resilience: " + state.review.resilience_case + "\n";
-    text += "Reviewed event: " + state.review.event_type + "\n";
-    text += "Summary: " + state.review.event_summary;
+    text += "AAR cursor: " + std::to_string(state.aar.cursor_index) + "/" + std::to_string(state.aar.total_events) + "\n";
+    text += "Assessment: " + state.aar.assessment_code + "\n";
+    text += "Resilience: " + state.aar.resilience_case + "\n";
+    text += "Current event: " + state.aar.event_type + "\n";
+    text += "Summary: " + state.aar.event_summary;
     return text;
 }
 
-std::string terminal_timeline_text(const ViewerState& state, bool review_mode) {
+std::string control_display_label(std::string_view action, const ViewerState& state) {
+    if (action == "Track") {
+        return state.snapshot.track.active ? "Drop Track" : "Acquire Track";
+    }
+    if (action == "Ready") {
+        return "Ready";
+    }
+    if (action == "Engage") {
+        return "Engage";
+    }
+    if (action == "AAR") {
+        return "AAR";
+    }
+    return std::string(action);
+}
+
+std::string terminal_timeline_text(const ViewerState& state, bool aar_mode) {
     std::string out;
-    out += review_mode ? "mode=review | source=server_aar\n" : "mode=live | source=server_events\n";
+    out += aar_mode ? "mode=aar | source=server_aar\n" : "mode=live | source=server_events\n";
     out += "----------------------------------------\n";
-    if (review_mode) {
-        const auto body = review_panel_text(state);
+    if (aar_mode) {
+        const auto body = aar_panel_text(state);
         std::size_t start = 0;
         while (start <= body.size()) {
             const auto end = body.find('\n', start);
@@ -245,9 +261,9 @@ std::string terminal_timeline_text(const ViewerState& state, bool review_mode) {
     return out;
 }
 
-std::vector<std::string> terminal_timeline_lines(const ViewerState& state, bool review_mode) {
+std::vector<std::string> terminal_timeline_lines(const ViewerState& state, bool aar_mode) {
     std::vector<std::string> lines;
-    const auto text = terminal_timeline_text(state, review_mode);
+    const auto text = terminal_timeline_text(state, aar_mode);
     std::size_t start = 0;
     while (start <= text.size()) {
         const auto end = text.find('\n', start);

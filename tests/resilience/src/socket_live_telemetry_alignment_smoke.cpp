@@ -135,21 +135,21 @@ int main() {
     udp_server_addr.sin_port = htons(info.udp_port);
     assert(::inet_pton(AF_INET, config.server.bind_host.c_str(), &udp_server_addr.sin_addr) == 1);
 
-    send_binary_frame(tcp_client.fd, "session_join", serialize(SessionJoinPayload{{1001U, 101U, 1U}, "command_console"}));
+    send_binary_frame(tcp_client.fd, "session_join", serialize(SessionJoinPayload{{1001U, 101U, 1U}, "fire_control_console"}));
     assert(parse_command_ack(wait_for_binary_frame(*live, tcp_client.fd).payload).accepted);
     send_binary_frame(tcp_client.fd, "scenario_start", serialize(ScenarioStartPayload{{1001U, 101U, 2U}, config.scenario.name}));
     assert(parse_command_ack(wait_for_binary_frame(*live, tcp_client.fd).payload).accepted);
-    send_binary_frame(tcp_client.fd, "track_request", serialize(TrackRequestPayload{{1001U, 101U, 3U}, "target-alpha"}));
+    send_binary_frame(tcp_client.fd, "track_acquire", serialize(TrackAcquirePayload{{1001U, 101U, 3U}, "target-alpha"}));
     assert(parse_command_ack(wait_for_binary_frame(*live, tcp_client.fd).payload).accepted);
     live->advance_tick();
-    send_binary_frame(tcp_client.fd, "asset_activate", serialize(AssetActivatePayload{{1001U, 101U, 4U}, "asset-interceptor"}));
+    send_binary_frame(tcp_client.fd, "interceptor_ready", serialize(InterceptorReadyPayload{{1001U, 101U, 4U}, "interceptor-alpha"}));
     assert(parse_command_ack(wait_for_binary_frame(*live, tcp_client.fd).payload).accepted);
-    send_binary_frame(tcp_client.fd, "command_issue", serialize(CommandIssuePayload{{1001U, 101U, 5U}, "asset-interceptor", "target-alpha"}));
+    send_binary_frame(tcp_client.fd, "engage_order", serialize(EngageOrderPayload{{1001U, 101U, 5U}, "interceptor-alpha", "target-alpha"}));
     assert(parse_command_ack(wait_for_binary_frame(*live, tcp_client.fd).payload).accepted);
     live->advance_tick();
     live->advance_tick();
 
-    const auto viewer_join = serialize(SessionJoinPayload{{1001U, 201U, 1U}, "tactical_viewer"});
+    const auto viewer_join = serialize(SessionJoinPayload{{1001U, 201U, 1U}, "tactical_display"});
     assert(::sendto(udp_viewer.fd, viewer_join.data(), viewer_join.size(), 0,
                     reinterpret_cast<sockaddr*>(&udp_server_addr), sizeof(udp_server_addr)) >= 0);
     const auto messages = wait_for_udp_messages(*live, udp_viewer.fd, 8);

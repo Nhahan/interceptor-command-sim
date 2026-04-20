@@ -157,11 +157,11 @@ ViewerOptions parse_args(int argc, char** argv) {
         }
         if (arg == "--help") {
             std::printf(
-                "usage: icss_tactical_viewer_gui [--host HOST] [--udp-port PORT] [--tcp-port PORT]\n"
+                "usage: icss_tactical_display_gui [--host HOST] [--udp-port PORT] [--tcp-port PORT]\n"
                 "       [--session-id ID] [--sender-id ID] [--duration-ms MS] [--heartbeat-interval-ms MS] [--repo-root PATH]\n"
                 "       [--tcp-frame-format json|binary] [--camera-zoom X] [--camera-pan-x W] [--camera-pan-y W] [--width PX] [--height PX]\n"
                 "       [--dump-state PATH] [--dump-frame PATH] [--dump-golden-state PATH] [--font PATH] [--hidden] [--headless]\n"
-                "       [--auto-control-script] [--auto-controls Start,Guidance,...]\n");
+                "       [--auto-control-script] [--auto-controls Start,Track,...]\n");
             std::exit(0);
         }
         throw std::runtime_error("unknown argument: " + std::string(arg));

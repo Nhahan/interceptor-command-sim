@@ -7,19 +7,17 @@ void draw_button(SDL_Renderer* renderer,
                  const RenderContext& ctx,
                  const Button& button,
                  bool is_live_control) {
-    const bool is_review_button = button.action == "Review";
+    const bool is_aar_button = button.action == "AAR";
     const bool is_reset_button = button.action == "Reset";
-    const bool is_guidance_button = button.action == "Guidance";
-    const bool post_command_track_locked = is_guidance_button
-        && (ctx.state.snapshot.phase == icss::core::SessionPhase::CommandIssued
-            || ctx.state.snapshot.phase == icss::core::SessionPhase::Engaging
-            || ctx.state.snapshot.phase == icss::core::SessionPhase::Judged
+    const bool is_track_button = button.action == "Track";
+    const bool post_command_track_locked = is_track_button
+        && (ctx.state.snapshot.phase == icss::core::SessionPhase::EngageOrdered
+            || ctx.state.snapshot.phase == icss::core::SessionPhase::Intercepting
+            || ctx.state.snapshot.phase == icss::core::SessionPhase::Assessed
             || ctx.state.snapshot.phase == icss::core::SessionPhase::Archived);
-    const bool enabled = (!is_review_button || review_available(ctx.state)) && !post_command_track_locked;
+    const bool enabled = (!is_aar_button || aar_available(ctx.state)) && !post_command_track_locked;
     const bool recommended = is_live_control && enabled && button.action == ctx.recommended_control;
-    const std::string button_label = is_guidance_button
-        ? (ctx.state.snapshot.track.active ? "Guidance Off" : "Guidance On")
-        : button.label;
+    const std::string button_label = control_display_label(button.action, ctx.state);
     const auto fill = is_reset_button
         ? (enabled ? rgba(92, 42, 52) : rgba(56, 36, 40))
         : (is_live_control
@@ -63,23 +61,21 @@ void draw_button(SDL_Renderer* renderer,
 void render_control_panel(SDL_Renderer* renderer, const RenderContext& ctx) {
     const auto& panel = ctx.layout.control_panel;
     fill_panel(renderer, panel, rgba(12, 14, 20), rgba(54, 60, 78));
-    draw_text(renderer, ctx.title_font, panel.x + 12, panel.y + 10, rgba(141, 211, 199), "Control Panel");
+    draw_text(renderer, ctx.title_font, panel.x + 12, panel.y + 10, rgba(141, 211, 199), "Fire Control Console");
     const SDL_Rect next_hint_box {panel.x + 12, panel.y + 40, panel.w - 24, 26};
     fill_panel(renderer, next_hint_box, rgba(22, 27, 36), rgba(56, 66, 86));
+    const auto recommended_label = ctx.recommended_control.empty()
+        ? std::string("none")
+        : control_display_label(ctx.recommended_control, ctx.state);
     draw_text(renderer,
               ctx.body_font,
               next_hint_box.x + 10,
               next_hint_box.y + 5,
               rgba(148, 156, 172),
-              ctx.recommended_control.empty() ? "Next recommended control: none" : "Next recommended control: " + ctx.recommended_control,
+              "Next recommended action: " + recommended_label,
               next_hint_box.w - 20);
 
-    draw_text(renderer,
-              ctx.body_font,
-              panel.x + 12,
-              panel.y + 79,
-              rgba(148, 156, 172),
-              "Guidance");
+    draw_text(renderer, ctx.body_font, panel.x + 12, panel.y + 79, rgba(148, 156, 172), "Track Control");
 
     for (const auto& button : ctx.layout.buttons) {
         if (is_live_control_action(button.action)) {

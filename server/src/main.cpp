@@ -21,7 +21,7 @@ std::atomic_bool g_shutdown_requested {false};
 
 struct CliOptions {
     icss::net::BackendKind backend {icss::net::BackendKind::InProcess};
-    icss::core::SampleMode sample_mode {icss::core::SampleMode::Guided};
+    icss::core::SampleMode sample_mode {icss::core::SampleMode::TrackedIntercept};
     std::uint64_t tick_limit {3};
     std::uint64_t tick_sleep_ms {0};
     bool run_forever {false};
@@ -64,11 +64,11 @@ icss::net::BackendKind parse_backend(std::string_view value) {
 }
 
 icss::core::SampleMode parse_sample_mode(std::string_view value) {
-    if (value == "guided") {
-        return icss::core::SampleMode::Guided;
+    if (value == "tracked_intercept") {
+        return icss::core::SampleMode::TrackedIntercept;
     }
-    if (value == "straight") {
-        return icss::core::SampleMode::Straight;
+    if (value == "unguided_intercept") {
+        return icss::core::SampleMode::UnguidedIntercept;
     }
     throw_usage("unsupported sample mode: " + std::string(value));
 }
@@ -218,7 +218,7 @@ CliOptions parse_args(int argc, char** argv) {
             continue;
         }
         if (arg == "--help") {
-            throw_usage("usage: icss_server [--backend in_process|socket_live] [--sample-mode guided|straight] [--tick-limit N] [--tick-sleep-ms N] [--run-forever] [--repo-root PATH] [--bind-host IPv4] [--tcp-port N] [--udp-port N] [--tick-rate-hz N] [--telemetry-interval-ms N] [--heartbeat-interval-ms N] [--heartbeat-timeout-ms N] [--udp-max-batch-snapshots N] [--udp-send-latest-only true|false] [--max-clients N] [--tcp-frame-format json|binary]");
+            throw_usage("usage: icss_server [--backend in_process|socket_live] [--sample-mode tracked_intercept|unguided_intercept] [--tick-limit N] [--tick-sleep-ms N] [--run-forever] [--repo-root PATH] [--bind-host IPv4] [--tcp-port N] [--udp-port N] [--tick-rate-hz N] [--telemetry-interval-ms N] [--heartbeat-interval-ms N] [--heartbeat-timeout-ms N] [--udp-max-batch-snapshots N] [--udp-send-latest-only true|false] [--max-clients N] [--tcp-frame-format json|binary]");
         }
         throw_usage("unknown argument: " + arg);
     }
@@ -247,15 +247,15 @@ int run_in_process(const std::filesystem::path& repo_root,
               << ", snapshots=" << summary.snapshot_count
               << ", events=" << summary.event_count
               << ", resilience=" << summary.resilience_case << '\n';
-    std::cout << "command_console_connection=" << to_string(summary.command_console_connection)
-              << ", viewer_connection=" << to_string(summary.viewer_connection)
+    std::cout << "fire_control_console_connection=" << to_string(summary.fire_control_console_connection)
+              << ", display_connection=" << to_string(summary.display_connection)
               << ", last_event_type=" << (summary.has_last_event ? icss::protocol::to_string(summary.last_event_type) : "none") << '\n';
     std::cout << "scenario=" << result.config.scenario.name
-              << ", sample_mode=" << (sample_mode == SampleMode::Guided ? "guided" : "straight")
+              << ", sample_mode=" << (sample_mode == SampleMode::TrackedIntercept ? "tracked_intercept" : "unguided_intercept")
               << ", latest_outputs=" << (repo_root / result.config.logging.aar_output_dir)
               << ", log_file=" << (repo_root / result.config.logging.file_path) << '\n';
     std::cout << "AAR artifacts written to " << (repo_root / result.config.logging.aar_output_dir) << '\n';
-    return summary.judgment_ready ? 0 : 1;
+    return summary.assessment_ready ? 0 : 1;
 }
 
 int run_socket_live(const std::filesystem::path& repo_root,
@@ -320,8 +320,8 @@ int run_socket_live(const std::filesystem::path& repo_root,
               << ", snapshots=" << summary.snapshot_count
               << ", events=" << summary.event_count
               << ", resilience=" << summary.resilience_case << '\n';
-    std::cout << "command_console_connection=" << to_string(summary.command_console_connection)
-              << ", viewer_connection=" << to_string(summary.viewer_connection)
+    std::cout << "fire_control_console_connection=" << to_string(summary.fire_control_console_connection)
+              << ", display_connection=" << to_string(summary.display_connection)
               << ", last_event_type=" << (summary.has_last_event ? icss::protocol::to_string(summary.last_event_type) : "none") << '\n';
     const auto latest_snapshot = summary.snapshot_count > 0
         ? std::optional<Snapshot> {transport->latest_snapshot()}
@@ -333,7 +333,7 @@ int run_socket_live(const std::filesystem::path& repo_root,
                               latest_snapshot ? &*latest_snapshot : nullptr);
     if (summary.snapshot_count == 0) {
         std::cout << "AAR artifacts skipped because no snapshots were emitted\n";
-        std::cout << "viewer_connection=disconnected, latest_freshness=stale, latest_snapshot_sequence=none\n";
+        std::cout << "display_connection=disconnected, latest_freshness=stale, latest_snapshot_sequence=none\n";
         return 0;
     }
 
@@ -342,7 +342,7 @@ int run_socket_live(const std::filesystem::path& repo_root,
     const auto example_output = repo_root / "examples/sample-output.md";
     transport->write_aar_artifacts(aar_dir);
     transport->write_example_output(example_output, icss::view::make_replay_cursor(summary.event_count, summary.event_count == 0 ? 0 : summary.event_count - 1));
-    std::cout << "viewer_connection=" << to_string(snapshot.viewer_connection)
+    std::cout << "display_connection=" << to_string(snapshot.display_connection)
               << ", latest_freshness=" << icss::view::freshness_label(snapshot)
               << ", latest_snapshot_sequence=" << snapshot.header.snapshot_sequence << '\n';
     std::cout << "AAR artifacts written to " << aar_dir << '\n';

@@ -15,11 +15,11 @@ SimulationSession::SimulationSession(std::uint32_t session_id,
       telemetry_interval_ms_(telemetry_interval_ms),
       scenario_(std::move(scenario)),
       target_({"target-alpha", {scenario_.target_start_x, scenario_.target_start_y}, false}),
-      asset_({"asset-interceptor", {scenario_.interceptor_start_x, scenario_.interceptor_start_y}, false}),
+      asset_({"interceptor-alpha", {scenario_.interceptor_start_x, scenario_.interceptor_start_y}, false}),
       target_world_({static_cast<float>(scenario_.target_start_x), static_cast<float>(scenario_.target_start_y)}),
       asset_world_({static_cast<float>(scenario_.interceptor_start_x), static_cast<float>(scenario_.interceptor_start_y)}),
       target_velocity_world_({static_cast<float>(scenario_.target_velocity_x), static_cast<float>(scenario_.target_velocity_y)}),
-      asset_velocity_world_({0.0F, 0.0F}),
+      interceptor_velocity_world_({0.0F, 0.0F}),
       seeker_lock_(false),
       off_boresight_deg_(0.0F) {}
 
@@ -105,11 +105,11 @@ void SimulationSession::reset_world_state_from_scenario() {
     target_world_ = {static_cast<float>(scenario_.target_start_x), static_cast<float>(scenario_.target_start_y)};
     asset_world_ = {static_cast<float>(scenario_.interceptor_start_x), static_cast<float>(scenario_.interceptor_start_y)};
     target_velocity_world_ = {static_cast<float>(scenario_.target_velocity_x), static_cast<float>(scenario_.target_velocity_y)};
-    asset_velocity_world_ = {0.0F, 0.0F};
+    interceptor_velocity_world_ = {0.0F, 0.0F};
     seeker_lock_ = false;
     off_boresight_deg_ = 0.0F;
     target_ = {"target-alpha", {scenario_.target_start_x, scenario_.target_start_y}, false};
-    asset_ = {"asset-interceptor", {scenario_.interceptor_start_x, scenario_.interceptor_start_y}, false};
+    asset_ = {"interceptor-alpha", {scenario_.interceptor_start_x, scenario_.interceptor_start_y}, false};
 }
 
 std::uint64_t SimulationSession::next_timestamp_ms() {
@@ -118,11 +118,11 @@ std::uint64_t SimulationSession::next_timestamp_ms() {
 }
 
 ClientState& SimulationSession::client(ClientRole role) {
-    return role == ClientRole::CommandConsole ? command_console_ : tactical_viewer_;
+    return role == ClientRole::FireControlConsole ? fire_control_console_ : tactical_display_;
 }
 
 const ClientState& SimulationSession::client(ClientRole role) const {
-    return role == ClientRole::CommandConsole ? command_console_ : tactical_viewer_;
+    return role == ClientRole::FireControlConsole ? fire_control_console_ : tactical_display_;
 }
 
 void SimulationSession::push_event(protocol::EventType type,
@@ -136,15 +136,15 @@ void SimulationSession::push_event(protocol::EventType type,
 CommandResult SimulationSession::reject_command(std::string summary,
                                                 std::string reason,
                                                 std::vector<std::string> entity_ids) {
-    push_event(protocol::EventType::CommandRejected,
+    push_event(protocol::EventType::EngageOrderRejected,
                "simulation_server",
                std::move(entity_ids),
                std::move(summary),
                reason);
-    if (!judgment_.ready) {
-        command_status_ = CommandLifecycle::Rejected;
-        judgment_.code = JudgmentCode::InvalidTransition;
-        judgment_.summary = reason;
+    if (!assessment_.ready) {
+        engage_order_status_ = EngageOrderStatus::Rejected;
+        assessment_.code = AssessmentCode::InvalidTransition;
+        assessment_.summary = reason;
     }
     return {false, std::move(reason), protocol::TcpMessageKind::CommandAck};
 }

@@ -20,14 +20,14 @@ bool apply_parameter_action(ViewerState& state, std::string_view action) {
     auto& scenario = state.planned_scenario;
     auto update_preview = [&](std::string_view field, int value) {
         const bool preview_allowed = !state.received_snapshot
-            || state.snapshot.phase == icss::core::SessionPhase::Initialized;
+            || state.snapshot.phase == icss::core::SessionPhase::Standby;
         if (preview_allowed) {
             sync_preview_from_planned_scenario(state);
         }
         state.control.last_ok = true;
         state.control.last_label = "Setup";
         state.control.last_message = setup_message(field, value);
-        state.review.visible = false;
+        state.aar.visible = false;
         push_timeline_entry(state, "[setup] " + std::string(field) + " -> " + std::to_string(value));
     };
 
@@ -71,22 +71,22 @@ bool apply_parameter_action(ViewerState& state, std::string_view action) {
         update_preview("target_velocity_y", scenario.target_velocity_y);
         return true;
     }
-    if (action == "asset_pos_x_dec") {
+    if (action == "interceptor_pos_x_dec") {
         scenario.interceptor_start_x = 0;
         update_preview("interceptor_start_x", scenario.interceptor_start_x);
         return true;
     }
-    if (action == "asset_pos_x_inc") {
+    if (action == "interceptor_pos_x_inc") {
         scenario.interceptor_start_x = 0;
         update_preview("interceptor_start_x", scenario.interceptor_start_x);
         return true;
     }
-    if (action == "asset_pos_y_dec") {
+    if (action == "interceptor_pos_y_dec") {
         scenario.interceptor_start_y = 0;
         update_preview("interceptor_start_y", scenario.interceptor_start_y);
         return true;
     }
-    if (action == "asset_pos_y_inc") {
+    if (action == "interceptor_pos_y_inc") {
         scenario.interceptor_start_y = 0;
         update_preview("interceptor_start_y", scenario.interceptor_start_y);
         return true;
@@ -101,12 +101,12 @@ bool apply_parameter_action(ViewerState& state, std::string_view action) {
         update_preview("launch_angle_deg", scenario.launch_angle_deg);
         return true;
     }
-    if (action == "asset_speed_dec") {
+    if (action == "interceptor_speed_dec") {
         scenario.interceptor_speed_per_tick = clamp_int(scenario.interceptor_speed_per_tick - 8, 4, 96);
         update_preview("interceptor_speed_per_tick", scenario.interceptor_speed_per_tick);
         return true;
     }
-    if (action == "asset_speed_inc") {
+    if (action == "interceptor_speed_inc") {
         scenario.interceptor_speed_per_tick = clamp_int(scenario.interceptor_speed_per_tick + 8, 4, 96);
         update_preview("interceptor_speed_per_tick", scenario.interceptor_speed_per_tick);
         return true;
@@ -126,30 +126,30 @@ bool apply_parameter_action(ViewerState& state, std::string_view action) {
 
 bool is_live_control_action(std::string_view action) {
     return action == "Start"
-        || action == "Guidance"
-        || action == "Activate"
-        || action == "Command"
+        || action == "Track"
+        || action == "Ready"
+        || action == "Engage"
         || action == "Reset"
-        || action == "Review";
+        || action == "AAR";
 }
 
 std::string recommended_control_label(const ViewerState& state) {
     switch (state.snapshot.phase) {
-    case icss::core::SessionPhase::Initialized:
+    case icss::core::SessionPhase::Standby:
         return "Start";
     case icss::core::SessionPhase::Detecting:
-        return "Guidance";
+        return "Track";
     case icss::core::SessionPhase::Tracking:
-        return "Activate";
-    case icss::core::SessionPhase::AssetReady:
-        return "Command";
-    case icss::core::SessionPhase::CommandIssued:
-    case icss::core::SessionPhase::Engaging:
+        return "Ready";
+    case icss::core::SessionPhase::InterceptorReady:
+        return "Engage";
+    case icss::core::SessionPhase::EngageOrdered:
+    case icss::core::SessionPhase::Intercepting:
         return "";
-    case icss::core::SessionPhase::Judged:
+    case icss::core::SessionPhase::Assessed:
     case icss::core::SessionPhase::Archived:
-        if (review_available(state) && !state.review.loaded) {
-            return "Review";
+        if (aar_available(state) && !state.aar.loaded) {
+            return "AAR";
         }
         return "Reset";
     }
@@ -160,18 +160,18 @@ void sync_preview_from_scenario(ViewerState& state, const icss::core::ScenarioCo
     state.snapshot.world_width = scenario.world_width;
     state.snapshot.world_height = scenario.world_height;
     state.snapshot.target.position = {scenario.target_start_x, scenario.target_start_y};
-    state.snapshot.asset.position = {scenario.interceptor_start_x, scenario.interceptor_start_y};
+    state.snapshot.interceptor.position = {scenario.interceptor_start_x, scenario.interceptor_start_y};
     state.snapshot.target_world_position = {static_cast<float>(scenario.target_start_x),
                                             static_cast<float>(scenario.target_start_y)};
-    state.snapshot.asset_world_position = {static_cast<float>(scenario.interceptor_start_x),
+    state.snapshot.interceptor_world_position = {static_cast<float>(scenario.interceptor_start_x),
                                            static_cast<float>(scenario.interceptor_start_y)};
     state.snapshot.target_velocity_x = scenario.target_velocity_x;
     state.snapshot.target_velocity_y = scenario.target_velocity_y;
     state.snapshot.target_velocity = {static_cast<float>(scenario.target_velocity_x),
                                       static_cast<float>(scenario.target_velocity_y)};
-    state.snapshot.asset_velocity = {0.0F, 0.0F};
+    state.snapshot.interceptor_velocity = {0.0F, 0.0F};
     state.snapshot.target_heading_deg = heading_deg_gui(state.snapshot.target_velocity);
-    state.snapshot.asset_heading_deg = 0.0F;
+    state.snapshot.interceptor_heading_deg = 0.0F;
     state.snapshot.interceptor_speed_per_tick = scenario.interceptor_speed_per_tick;
     state.snapshot.interceptor_acceleration_per_tick =
         std::max(1.0F, static_cast<float>(scenario.interceptor_speed_per_tick) * 0.28F);

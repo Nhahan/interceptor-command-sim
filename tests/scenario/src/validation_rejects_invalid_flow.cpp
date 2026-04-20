@@ -10,7 +10,7 @@ int main() {
     using namespace icss::protocol;
 
     SimulationSession session;
-    session.connect_client(ClientRole::CommandConsole, 101U);
+    session.connect_client(ClientRole::FireControlConsole, 101U);
 
     const auto invalid_command = session.issue_command();
     assert(!invalid_command.accepted);
@@ -32,27 +32,27 @@ int main() {
     assert(session.phase() == SessionPhase::Detecting);
     const auto retrack = session.request_track();
     assert(retrack.accepted);
-    const auto command_status_before_transport_reject = session.latest_snapshot().command_status;
-    const auto judgment_before_transport_reject = session.latest_snapshot().judgment.code;
+    const auto engage_order_status_before_transport_reject = session.latest_snapshot().engage_order_status;
+    const auto assessment_before_transport_reject = session.latest_snapshot().assessment.code;
     const auto transport_reject = session.record_transport_rejection("Viewer registration rejected", "second viewer blocked");
     assert(!transport_reject.accepted);
-    assert(session.latest_snapshot().command_status == command_status_before_transport_reject);
-    assert(session.latest_snapshot().judgment.code == judgment_before_transport_reject);
+    assert(session.latest_snapshot().engage_order_status == engage_order_status_before_transport_reject);
+    assert(session.latest_snapshot().assessment.code == assessment_before_transport_reject);
 
-    const auto asset = session.activate_asset();
-    assert(asset.accepted);
-    const auto release_from_asset_ready = session.release_track();
-    assert(release_from_asset_ready.accepted);
-    assert(session.phase() == SessionPhase::AssetReady);
+    const auto interceptor = session.activate_asset();
+    assert(interceptor.accepted);
+    const auto release_from_interceptor_ready = session.release_track();
+    assert(release_from_interceptor_ready.accepted);
+    assert(session.phase() == SessionPhase::InterceptorReady);
     assert(!session.latest_snapshot().track.active);
-    const auto reenable_from_asset_ready = session.request_track();
-    assert(reenable_from_asset_ready.accepted);
-    assert(session.phase() == SessionPhase::AssetReady);
+    const auto reenable_from_interceptor_ready = session.request_track();
+    assert(reenable_from_interceptor_ready.accepted);
+    assert(session.phase() == SessionPhase::InterceptorReady);
 
     const auto command = session.issue_command();
     assert(command.accepted);
-    const auto post_command_track_release = session.release_track();
-    assert(!post_command_track_release.accepted);
+    const auto post_command_track_drop = session.release_track();
+    assert(!post_command_track_drop.accepted);
 
     session.archive_session();
 
@@ -68,7 +68,7 @@ int main() {
     const auto& pre_reset_events = session.events();
     const auto pre_archive_event_count = pre_reset_events.size();
     const auto rejected_count = std::count_if(pre_reset_events.begin(), pre_reset_events.end(), [](const EventRecord& event) {
-        return event.header.event_type == EventType::CommandRejected;
+        return event.header.event_type == EventType::EngageOrderRejected;
     });
     assert(rejected_count >= 4);
 

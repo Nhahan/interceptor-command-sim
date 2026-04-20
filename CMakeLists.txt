@@ -53,13 +53,13 @@ add_executable(icss_server server/src/main.cpp)
 target_link_libraries(icss_server PRIVATE icss_core)
 target_common(icss_server)
 
-add_executable(icss_command_console clients/command-console/src/main.cpp)
-target_link_libraries(icss_command_console PRIVATE icss_core)
-target_common(icss_command_console)
+add_executable(icss_fire_control_console clients/command-console/src/main.cpp)
+target_link_libraries(icss_fire_control_console PRIVATE icss_core)
+target_common(icss_fire_control_console)
 
-add_executable(icss_tactical_viewer clients/tactical-viewer/src/main.cpp)
-target_link_libraries(icss_tactical_viewer PRIVATE icss_core)
-target_common(icss_tactical_viewer)
+add_executable(icss_tactical_display clients/tactical-viewer/src/main.cpp)
+target_link_libraries(icss_tactical_display PRIVATE icss_core)
+target_common(icss_tactical_display)
 
 if(ICSS_ENABLE_GUI_VIEWER)
     find_package(PkgConfig QUIET)
@@ -68,7 +68,7 @@ if(ICSS_ENABLE_GUI_VIEWER)
         pkg_check_modules(ICSS_SDL2_TTF QUIET SDL2_ttf)
     endif()
     if(ICSS_SDL2_FOUND AND ICSS_SDL2_TTF_FOUND)
-        add_executable(icss_tactical_viewer_gui
+        add_executable(icss_tactical_display_gui
             clients/tactical-viewer-gui/src/main.cpp
             clients/tactical-viewer-gui/src/app_support.cpp
             clients/tactical-viewer-gui/src/app_args.cpp
@@ -86,18 +86,18 @@ if(ICSS_ENABLE_GUI_VIEWER)
             clients/tactical-viewer-gui/src/app_render_controls.cpp
             clients/tactical-viewer-gui/src/app_render_panels.cpp
             clients/tactical-viewer-gui/src/app_render_dump.cpp)
-        target_link_directories(icss_tactical_viewer_gui PRIVATE ${ICSS_SDL2_LIBRARY_DIRS} ${ICSS_SDL2_TTF_LIBRARY_DIRS})
-        target_include_directories(icss_tactical_viewer_gui PRIVATE
+        target_link_directories(icss_tactical_display_gui PRIVATE ${ICSS_SDL2_LIBRARY_DIRS} ${ICSS_SDL2_TTF_LIBRARY_DIRS})
+        target_include_directories(icss_tactical_display_gui PRIVATE
             clients/tactical-viewer-gui/src
             ${ICSS_SDL2_INCLUDE_DIRS}
             ${ICSS_SDL2_TTF_INCLUDE_DIRS})
         set(ICSS_GUI_SDL_LIBS ${ICSS_SDL2_LIBRARIES} ${ICSS_SDL2_TTF_LIBRARIES})
         list(REMOVE_DUPLICATES ICSS_GUI_SDL_LIBS)
-        target_link_libraries(icss_tactical_viewer_gui PRIVATE icss_core ${ICSS_GUI_SDL_LIBS})
-        target_compile_options(icss_tactical_viewer_gui PRIVATE ${ICSS_SDL2_CFLAGS_OTHER} ${ICSS_SDL2_TTF_CFLAGS_OTHER})
-        target_common(icss_tactical_viewer_gui)
+        target_link_libraries(icss_tactical_display_gui PRIVATE icss_core ${ICSS_GUI_SDL_LIBS})
+        target_compile_options(icss_tactical_display_gui PRIVATE ${ICSS_SDL2_CFLAGS_OTHER} ${ICSS_SDL2_TTF_CFLAGS_OTHER})
+        target_common(icss_tactical_display_gui)
     else()
-        message(STATUS "Skipping icss_tactical_viewer_gui: SDL2/SDL2_ttf not available")
+        message(STATUS "Skipping icss_tactical_display_gui: SDL2/SDL2_ttf not available")
     endif()
 endif()
 
@@ -141,76 +141,76 @@ add_executable(icss_server_process_live_run_forever_smoke tests/protocol/src/ser
 target_link_libraries(icss_server_process_live_run_forever_smoke PRIVATE icss_core)
 target_common(icss_server_process_live_run_forever_smoke)
 
-add_executable(icss_command_console_socket_live_smoke tests/protocol/src/command_console_socket_live_smoke.cpp)
-target_link_libraries(icss_command_console_socket_live_smoke PRIVATE icss_core)
-add_dependencies(icss_command_console_socket_live_smoke icss_server icss_command_console)
-target_common(icss_command_console_socket_live_smoke)
+add_executable(icss_fire_control_console_socket_live_smoke tests/protocol/src/command_console_socket_live_smoke.cpp)
+target_link_libraries(icss_fire_control_console_socket_live_smoke PRIVATE icss_core)
+add_dependencies(icss_fire_control_console_socket_live_smoke icss_server icss_fire_control_console)
+target_common(icss_fire_control_console_socket_live_smoke)
 
-if(TARGET icss_tactical_viewer_gui)
-    add_executable(icss_tactical_viewer_gui_live_smoke tests/protocol/src/tactical_viewer_gui_live_smoke.cpp)
-    target_link_libraries(icss_tactical_viewer_gui_live_smoke PRIVATE icss_core)
-    add_dependencies(icss_tactical_viewer_gui_live_smoke icss_server icss_tactical_viewer_gui)
-    target_common(icss_tactical_viewer_gui_live_smoke)
-    add_executable(icss_tactical_viewer_gui_command_feedback_smoke tests/protocol/src/tactical_viewer_gui_command_feedback_smoke.cpp)
-    target_link_libraries(icss_tactical_viewer_gui_command_feedback_smoke PRIVATE icss_core)
-    add_dependencies(icss_tactical_viewer_gui_command_feedback_smoke icss_server icss_tactical_viewer_gui)
-    target_common(icss_tactical_viewer_gui_command_feedback_smoke)
-    add_executable(icss_tactical_viewer_gui_review_smoke tests/protocol/src/tactical_viewer_gui_review_smoke.cpp)
-    target_link_libraries(icss_tactical_viewer_gui_review_smoke PRIVATE icss_core)
-    add_dependencies(icss_tactical_viewer_gui_review_smoke icss_server icss_tactical_viewer_gui)
-    target_common(icss_tactical_viewer_gui_review_smoke)
-    add_executable(icss_tactical_viewer_gui_parameter_timeout_smoke tests/protocol/src/tactical_viewer_gui_parameter_timeout_smoke.cpp)
-    target_link_libraries(icss_tactical_viewer_gui_parameter_timeout_smoke PRIVATE icss_core)
-    add_dependencies(icss_tactical_viewer_gui_parameter_timeout_smoke icss_server icss_tactical_viewer_gui)
-    target_common(icss_tactical_viewer_gui_parameter_timeout_smoke)
-    add_executable(icss_tactical_viewer_gui_setup_next_start_smoke tests/protocol/src/tactical_viewer_gui_setup_next_start_smoke.cpp)
-    target_link_libraries(icss_tactical_viewer_gui_setup_next_start_smoke PRIVATE icss_core)
-    add_dependencies(icss_tactical_viewer_gui_setup_next_start_smoke icss_server icss_tactical_viewer_gui)
-    target_common(icss_tactical_viewer_gui_setup_next_start_smoke)
-    add_executable(icss_tactical_viewer_gui_auto_rejoin_smoke tests/protocol/src/tactical_viewer_gui_auto_rejoin_smoke.cpp)
-    target_link_libraries(icss_tactical_viewer_gui_auto_rejoin_smoke PRIVATE icss_core)
-    add_dependencies(icss_tactical_viewer_gui_auto_rejoin_smoke icss_server icss_tactical_viewer_gui)
-    target_common(icss_tactical_viewer_gui_auto_rejoin_smoke)
-    add_executable(icss_tactical_viewer_gui_repo_root_config_smoke tests/protocol/src/tactical_viewer_gui_repo_root_config_smoke.cpp)
-    target_link_libraries(icss_tactical_viewer_gui_repo_root_config_smoke PRIVATE icss_core)
-    add_dependencies(icss_tactical_viewer_gui_repo_root_config_smoke icss_server icss_tactical_viewer_gui)
-    target_common(icss_tactical_viewer_gui_repo_root_config_smoke)
-    add_executable(icss_tactical_viewer_gui_snapshot_ordering_smoke
+if(TARGET icss_tactical_display_gui)
+    add_executable(icss_tactical_display_gui_live_smoke tests/protocol/src/tactical_viewer_gui_live_smoke.cpp)
+    target_link_libraries(icss_tactical_display_gui_live_smoke PRIVATE icss_core)
+    add_dependencies(icss_tactical_display_gui_live_smoke icss_server icss_tactical_display_gui)
+    target_common(icss_tactical_display_gui_live_smoke)
+    add_executable(icss_tactical_display_gui_command_feedback_smoke tests/protocol/src/tactical_viewer_gui_command_feedback_smoke.cpp)
+    target_link_libraries(icss_tactical_display_gui_command_feedback_smoke PRIVATE icss_core)
+    add_dependencies(icss_tactical_display_gui_command_feedback_smoke icss_server icss_tactical_display_gui)
+    target_common(icss_tactical_display_gui_command_feedback_smoke)
+    add_executable(icss_tactical_display_gui_aar_smoke tests/protocol/src/tactical_viewer_gui_aar_smoke.cpp)
+    target_link_libraries(icss_tactical_display_gui_aar_smoke PRIVATE icss_core)
+    add_dependencies(icss_tactical_display_gui_aar_smoke icss_server icss_tactical_display_gui)
+    target_common(icss_tactical_display_gui_aar_smoke)
+    add_executable(icss_tactical_display_gui_parameter_timeout_smoke tests/protocol/src/tactical_viewer_gui_parameter_timeout_smoke.cpp)
+    target_link_libraries(icss_tactical_display_gui_parameter_timeout_smoke PRIVATE icss_core)
+    add_dependencies(icss_tactical_display_gui_parameter_timeout_smoke icss_server icss_tactical_display_gui)
+    target_common(icss_tactical_display_gui_parameter_timeout_smoke)
+    add_executable(icss_tactical_display_gui_setup_next_start_smoke tests/protocol/src/tactical_viewer_gui_setup_next_start_smoke.cpp)
+    target_link_libraries(icss_tactical_display_gui_setup_next_start_smoke PRIVATE icss_core)
+    add_dependencies(icss_tactical_display_gui_setup_next_start_smoke icss_server icss_tactical_display_gui)
+    target_common(icss_tactical_display_gui_setup_next_start_smoke)
+    add_executable(icss_tactical_display_gui_auto_rejoin_smoke tests/protocol/src/tactical_viewer_gui_auto_rejoin_smoke.cpp)
+    target_link_libraries(icss_tactical_display_gui_auto_rejoin_smoke PRIVATE icss_core)
+    add_dependencies(icss_tactical_display_gui_auto_rejoin_smoke icss_server icss_tactical_display_gui)
+    target_common(icss_tactical_display_gui_auto_rejoin_smoke)
+    add_executable(icss_tactical_display_gui_repo_root_config_smoke tests/protocol/src/tactical_viewer_gui_repo_root_config_smoke.cpp)
+    target_link_libraries(icss_tactical_display_gui_repo_root_config_smoke PRIVATE icss_core)
+    add_dependencies(icss_tactical_display_gui_repo_root_config_smoke icss_server icss_tactical_display_gui)
+    target_common(icss_tactical_display_gui_repo_root_config_smoke)
+    add_executable(icss_tactical_display_gui_snapshot_ordering_smoke
         tests/protocol/src/tactical_viewer_gui_snapshot_ordering_smoke.cpp
         clients/tactical-viewer-gui/src/app_snapshot.cpp
         clients/tactical-viewer-gui/src/app_support.cpp
         clients/tactical-viewer-gui/src/app_labels.cpp)
-    target_link_directories(icss_tactical_viewer_gui_snapshot_ordering_smoke PRIVATE ${ICSS_SDL2_LIBRARY_DIRS} ${ICSS_SDL2_TTF_LIBRARY_DIRS})
-    target_include_directories(icss_tactical_viewer_gui_snapshot_ordering_smoke PRIVATE
+    target_link_directories(icss_tactical_display_gui_snapshot_ordering_smoke PRIVATE ${ICSS_SDL2_LIBRARY_DIRS} ${ICSS_SDL2_TTF_LIBRARY_DIRS})
+    target_include_directories(icss_tactical_display_gui_snapshot_ordering_smoke PRIVATE
         clients/tactical-viewer-gui/src
         ${ICSS_SDL2_INCLUDE_DIRS}
         ${ICSS_SDL2_TTF_INCLUDE_DIRS})
-    target_link_libraries(icss_tactical_viewer_gui_snapshot_ordering_smoke PRIVATE icss_core ${ICSS_GUI_SDL_LIBS})
-    target_compile_options(icss_tactical_viewer_gui_snapshot_ordering_smoke PRIVATE ${ICSS_SDL2_CFLAGS_OTHER} ${ICSS_SDL2_TTF_CFLAGS_OTHER})
-    target_common(icss_tactical_viewer_gui_snapshot_ordering_smoke)
-    add_executable(icss_tactical_viewer_gui_malformed_udp_smoke
+    target_link_libraries(icss_tactical_display_gui_snapshot_ordering_smoke PRIVATE icss_core ${ICSS_GUI_SDL_LIBS})
+    target_compile_options(icss_tactical_display_gui_snapshot_ordering_smoke PRIVATE ${ICSS_SDL2_CFLAGS_OTHER} ${ICSS_SDL2_TTF_CFLAGS_OTHER})
+    target_common(icss_tactical_display_gui_snapshot_ordering_smoke)
+    add_executable(icss_tactical_display_gui_malformed_udp_smoke
         tests/protocol/src/tactical_viewer_gui_malformed_udp_smoke.cpp
         clients/tactical-viewer-gui/src/app_net.cpp
         clients/tactical-viewer-gui/src/app_snapshot.cpp
         clients/tactical-viewer-gui/src/app_support.cpp
         clients/tactical-viewer-gui/src/app_labels.cpp
         clients/tactical-viewer-gui/src/app_visual_state.cpp)
-    target_link_directories(icss_tactical_viewer_gui_malformed_udp_smoke PRIVATE ${ICSS_SDL2_LIBRARY_DIRS} ${ICSS_SDL2_TTF_LIBRARY_DIRS})
-    target_include_directories(icss_tactical_viewer_gui_malformed_udp_smoke PRIVATE
+    target_link_directories(icss_tactical_display_gui_malformed_udp_smoke PRIVATE ${ICSS_SDL2_LIBRARY_DIRS} ${ICSS_SDL2_TTF_LIBRARY_DIRS})
+    target_include_directories(icss_tactical_display_gui_malformed_udp_smoke PRIVATE
         clients/tactical-viewer-gui/src
         ${ICSS_SDL2_INCLUDE_DIRS}
         ${ICSS_SDL2_TTF_INCLUDE_DIRS})
-    target_link_libraries(icss_tactical_viewer_gui_malformed_udp_smoke PRIVATE icss_core ${ICSS_GUI_SDL_LIBS})
-    target_compile_options(icss_tactical_viewer_gui_malformed_udp_smoke PRIVATE ${ICSS_SDL2_CFLAGS_OTHER} ${ICSS_SDL2_TTF_CFLAGS_OTHER})
-    target_common(icss_tactical_viewer_gui_malformed_udp_smoke)
-    add_executable(icss_tactical_viewer_gui_relative_dump_paths_smoke tests/protocol/src/tactical_viewer_gui_relative_dump_paths_smoke.cpp)
-    target_link_libraries(icss_tactical_viewer_gui_relative_dump_paths_smoke PRIVATE icss_core)
-    add_dependencies(icss_tactical_viewer_gui_relative_dump_paths_smoke icss_server icss_tactical_viewer_gui)
-    target_common(icss_tactical_viewer_gui_relative_dump_paths_smoke)
-    add_executable(icss_tactical_viewer_gui_duplicate_start_reject_smoke tests/protocol/src/tactical_viewer_gui_duplicate_start_reject_smoke.cpp)
-    target_link_libraries(icss_tactical_viewer_gui_duplicate_start_reject_smoke PRIVATE icss_core)
-    add_dependencies(icss_tactical_viewer_gui_duplicate_start_reject_smoke icss_server icss_tactical_viewer_gui)
-    target_common(icss_tactical_viewer_gui_duplicate_start_reject_smoke)
+    target_link_libraries(icss_tactical_display_gui_malformed_udp_smoke PRIVATE icss_core ${ICSS_GUI_SDL_LIBS})
+    target_compile_options(icss_tactical_display_gui_malformed_udp_smoke PRIVATE ${ICSS_SDL2_CFLAGS_OTHER} ${ICSS_SDL2_TTF_CFLAGS_OTHER})
+    target_common(icss_tactical_display_gui_malformed_udp_smoke)
+    add_executable(icss_tactical_display_gui_relative_dump_paths_smoke tests/protocol/src/tactical_viewer_gui_relative_dump_paths_smoke.cpp)
+    target_link_libraries(icss_tactical_display_gui_relative_dump_paths_smoke PRIVATE icss_core)
+    add_dependencies(icss_tactical_display_gui_relative_dump_paths_smoke icss_server icss_tactical_display_gui)
+    target_common(icss_tactical_display_gui_relative_dump_paths_smoke)
+    add_executable(icss_tactical_display_gui_duplicate_start_reject_smoke tests/protocol/src/tactical_viewer_gui_duplicate_start_reject_smoke.cpp)
+    target_link_libraries(icss_tactical_display_gui_duplicate_start_reject_smoke PRIVATE icss_core)
+    add_dependencies(icss_tactical_display_gui_duplicate_start_reject_smoke icss_server icss_tactical_display_gui)
+    target_common(icss_tactical_display_gui_duplicate_start_reject_smoke)
 endif()
 
 add_executable(icss_scenario_flow tests/scenario/src/scenario_flow.cpp)
@@ -299,19 +299,19 @@ if(BUILD_TESTING)
     add_test(NAME server_process_live_json_smoke COMMAND icss_server_process_live_json_smoke)
     add_test(NAME server_process_live_override_precedence_smoke COMMAND icss_server_process_live_override_precedence_smoke)
     add_test(NAME server_process_live_run_forever_smoke COMMAND icss_server_process_live_run_forever_smoke)
-    add_test(NAME command_console_socket_live_smoke COMMAND icss_command_console_socket_live_smoke)
-    if(TARGET icss_tactical_viewer_gui_live_smoke)
-        add_test(NAME tactical_viewer_gui_live_smoke COMMAND icss_tactical_viewer_gui_live_smoke)
-        add_test(NAME tactical_viewer_gui_command_feedback_smoke COMMAND icss_tactical_viewer_gui_command_feedback_smoke)
-        add_test(NAME tactical_viewer_gui_review_smoke COMMAND icss_tactical_viewer_gui_review_smoke)
-        add_test(NAME tactical_viewer_gui_parameter_timeout_smoke COMMAND icss_tactical_viewer_gui_parameter_timeout_smoke)
-        add_test(NAME tactical_viewer_gui_setup_next_start_smoke COMMAND icss_tactical_viewer_gui_setup_next_start_smoke)
-        add_test(NAME tactical_viewer_gui_auto_rejoin_smoke COMMAND icss_tactical_viewer_gui_auto_rejoin_smoke)
-        add_test(NAME tactical_viewer_gui_repo_root_config_smoke COMMAND icss_tactical_viewer_gui_repo_root_config_smoke)
-        add_test(NAME tactical_viewer_gui_snapshot_ordering_smoke COMMAND icss_tactical_viewer_gui_snapshot_ordering_smoke)
-        add_test(NAME tactical_viewer_gui_malformed_udp_smoke COMMAND icss_tactical_viewer_gui_malformed_udp_smoke)
-        add_test(NAME tactical_viewer_gui_relative_dump_paths_smoke COMMAND icss_tactical_viewer_gui_relative_dump_paths_smoke)
-        add_test(NAME tactical_viewer_gui_duplicate_start_reject_smoke COMMAND icss_tactical_viewer_gui_duplicate_start_reject_smoke)
+    add_test(NAME fire_control_console_socket_live_smoke COMMAND icss_fire_control_console_socket_live_smoke)
+    if(TARGET icss_tactical_display_gui_live_smoke)
+        add_test(NAME tactical_display_gui_live_smoke COMMAND icss_tactical_display_gui_live_smoke)
+        add_test(NAME tactical_display_gui_command_feedback_smoke COMMAND icss_tactical_display_gui_command_feedback_smoke)
+        add_test(NAME tactical_display_gui_aar_smoke COMMAND icss_tactical_display_gui_aar_smoke)
+        add_test(NAME tactical_display_gui_parameter_timeout_smoke COMMAND icss_tactical_display_gui_parameter_timeout_smoke)
+        add_test(NAME tactical_display_gui_setup_next_start_smoke COMMAND icss_tactical_display_gui_setup_next_start_smoke)
+        add_test(NAME tactical_display_gui_auto_rejoin_smoke COMMAND icss_tactical_display_gui_auto_rejoin_smoke)
+        add_test(NAME tactical_display_gui_repo_root_config_smoke COMMAND icss_tactical_display_gui_repo_root_config_smoke)
+        add_test(NAME tactical_display_gui_snapshot_ordering_smoke COMMAND icss_tactical_display_gui_snapshot_ordering_smoke)
+        add_test(NAME tactical_display_gui_malformed_udp_smoke COMMAND icss_tactical_display_gui_malformed_udp_smoke)
+        add_test(NAME tactical_display_gui_relative_dump_paths_smoke COMMAND icss_tactical_display_gui_relative_dump_paths_smoke)
+        add_test(NAME tactical_display_gui_duplicate_start_reject_smoke COMMAND icss_tactical_display_gui_duplicate_start_reject_smoke)
     endif()
     add_test(NAME scenario_flow COMMAND icss_scenario_flow)
     add_test(NAME scenario_branching_smoke COMMAND icss_scenario_branching_smoke)
@@ -338,7 +338,7 @@ add_test(NAME replay_cursor_smoke COMMAND icss_replay_cursor_smoke)
             -DICSS_SERVER=$<TARGET_FILE:icss_server>
             -DREPO_ROOT=${CMAKE_CURRENT_SOURCE_DIR}
             -DARGS=--backend|in_process
-            -DEXPECTED=backend=in_process|heartbeat_timeout_ms=|command_console_connection=connected|viewer_connection=connected|last_event_type=session_ended|AAR\ artifacts\ written\ to
+            -DEXPECTED=backend=in_process|heartbeat_timeout_ms=|fire_control_console_connection=connected|display_connection=connected|last_event_type=session_ended|AAR\ artifacts\ written\ to
             -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/cmake/expect_server_success.cmake)
     add_test(
         NAME server_socket_live_cli_smoke
@@ -346,7 +346,7 @@ add_test(NAME replay_cursor_smoke COMMAND icss_replay_cursor_smoke)
             -DICSS_SERVER=$<TARGET_FILE:icss_server>
             -DREPO_ROOT=${CMAKE_CURRENT_SOURCE_DIR}
             -DARGS=--backend|socket_live|--tcp-port|0|--udp-port|0|--tick-limit|2|--tick-rate-hz|30|--telemetry-interval-ms|150|--heartbeat-interval-ms|600|--heartbeat-timeout-ms|1800|--udp-max-batch-snapshots|1|--udp-send-latest-only|true|--max-clients|4
-            -DEXPECTED=backend=socket_live|binds_network=true|tick_rate_hz=30|telemetry_interval_ms=150|heartbeat_interval_ms=600|heartbeat_timeout_ms=1800|udp_send_latest_only=true|udp_max_batch_snapshots=1|max_clients=4|command_console_connection=disconnected|viewer_connection=disconnected|last_event_type=resilience_triggered|latest_freshness=stale|latest_snapshot_sequence=2
+            -DEXPECTED=backend=socket_live|binds_network=true|tick_rate_hz=30|telemetry_interval_ms=150|heartbeat_interval_ms=600|heartbeat_timeout_ms=1800|udp_send_latest_only=true|udp_max_batch_snapshots=1|max_clients=4|fire_control_console_connection=disconnected|display_connection=disconnected|last_event_type=resilience_triggered|latest_freshness=stale|latest_snapshot_sequence=2
             -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/cmake/expect_server_success.cmake)
     add_test(
         NAME server_socket_live_idle_cli_smoke
@@ -354,7 +354,7 @@ add_test(NAME replay_cursor_smoke COMMAND icss_replay_cursor_smoke)
             -DICSS_SERVER=$<TARGET_FILE:icss_server>
             -DREPO_ROOT=${CMAKE_CURRENT_SOURCE_DIR}
             -DARGS=--backend|socket_live|--tcp-port|0|--udp-port|0|--tick-limit|0
-            -DEXPECTED=backend=socket_live|phase=initialized|snapshots=0|command_console_connection=disconnected|viewer_connection=disconnected|last_event_type=none|latest_freshness=stale|latest_snapshot_sequence=none
+            -DEXPECTED=backend=socket_live|phase=standby|snapshots=0|fire_control_console_connection=disconnected|display_connection=disconnected|last_event_type=none|latest_freshness=stale|latest_snapshot_sequence=none
             -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/cmake/expect_server_success.cmake)
     add_test(
         NAME server_invalid_backend_cli

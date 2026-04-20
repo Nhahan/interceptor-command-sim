@@ -89,7 +89,7 @@ ConsoleOptions parse_args(int argc, char** argv) {
         }
         if (arg == "--help") {
             std::cout
-                << "usage: icss_command_console [--backend in_process|socket_live] [--host HOST] [--tcp-port PORT]\n"
+                << "usage: icss_fire_control_console [--backend in_process|socket_live] [--host HOST] [--tcp-port PORT]\n"
                 << "                           [--tcp-frame-format json|binary] [--session-id ID] [--sender-id ID]\n"
                 << "                           [--scenario-name NAME] [--repo-root PATH]\n";
             std::exit(0);
@@ -228,7 +228,7 @@ int run_socket_live(const ConsoleOptions& options) {
 
     send_and_expect_ack(
         "session_join",
-        icss::protocol::serialize(icss::protocol::SessionJoinPayload{{options.session_id, options.sender_id, sequence++}, "command_console"}));
+        icss::protocol::serialize(icss::protocol::SessionJoinPayload{{options.session_id, options.sender_id, sequence++}, "fire_control_console"}));
     send_and_expect_ack(
         "scenario_start",
         icss::protocol::serialize(icss::protocol::ScenarioStartPayload{
@@ -249,14 +249,14 @@ int run_socket_live(const ConsoleOptions& options) {
             scenario.launch_angle_deg,
         }));
     send_and_expect_ack(
-        "track_request",
-        icss::protocol::serialize(icss::protocol::TrackRequestPayload{{options.session_id, options.sender_id, sequence++}, "target-alpha"}));
+        "track_acquire",
+        icss::protocol::serialize(icss::protocol::TrackAcquirePayload{{options.session_id, options.sender_id, sequence++}, "target-alpha"}));
     send_and_expect_ack(
-        "asset_activate",
-        icss::protocol::serialize(icss::protocol::AssetActivatePayload{{options.session_id, options.sender_id, sequence++}, "asset-interceptor"}));
+        "interceptor_ready",
+        icss::protocol::serialize(icss::protocol::InterceptorReadyPayload{{options.session_id, options.sender_id, sequence++}, "interceptor-alpha"}));
     send_and_expect_ack(
-        "command_issue",
-        icss::protocol::serialize(icss::protocol::CommandIssuePayload{{options.session_id, options.sender_id, sequence++}, "asset-interceptor", "target-alpha"}));
+        "engage_order",
+        icss::protocol::serialize(icss::protocol::EngageOrderPayload{{options.session_id, options.sender_id, sequence++}, "interceptor-alpha", "target-alpha"}));
 
     icss::protocol::AarResponsePayload aar;
     bool aar_ready = false;
@@ -272,16 +272,16 @@ int run_socket_live(const ConsoleOptions& options) {
             throw std::runtime_error("expected aar_response after aar_request");
         }
         aar = icss::protocol::parse_aar_response(aar_frame.payload);
-        if (aar.judgment_code != "pending") {
+        if (aar.assessment_code != "pending") {
             aar_ready = true;
             break;
         }
     }
     if (!aar_ready) {
-        throw std::runtime_error("aar did not reach a terminal judgment before timeout");
+        throw std::runtime_error("aar did not reach a terminal assessment before timeout");
     }
     std::cout << "aar_response: cursor=" << aar.replay_cursor_index << "/" << aar.total_events
-              << " | judgment_code=" << aar.judgment_code
+              << " | assessment_code=" << aar.assessment_code
               << " | event_type=" << aar.event_type << '\n';
     return 0;
 }
@@ -294,13 +294,13 @@ int run_in_process() {
     using namespace icss::protocol;
 
     auto transport = make_transport(BackendKind::InProcess, default_runtime_config(fs::path{ICSS_REPO_ROOT}));
-    transport->connect_client(ClientRole::CommandConsole, 101U);
+    transport->connect_client(ClientRole::FireControlConsole, 101U);
 
     const std::vector<std::pair<std::string_view, CommandResult>> commands {
         {to_string(TcpMessageKind::ScenarioStart), transport->start_scenario()},
-        {to_string(TcpMessageKind::TrackRequest), transport->dispatch(TrackRequestPayload{{1001U, 101U, 1U}, "target-alpha"})},
-        {to_string(TcpMessageKind::AssetActivate), transport->dispatch(AssetActivatePayload{{1001U, 101U, 2U}, "asset-interceptor"})},
-        {to_string(TcpMessageKind::CommandIssue), transport->dispatch(CommandIssuePayload{{1001U, 101U, 3U}, "asset-interceptor", "target-alpha"})},
+        {to_string(TcpMessageKind::TrackAcquire), transport->dispatch(TrackAcquirePayload{{1001U, 101U, 1U}, "target-alpha"})},
+        {to_string(TcpMessageKind::InterceptorReady), transport->dispatch(InterceptorReadyPayload{{1001U, 101U, 2U}, "interceptor-alpha"})},
+        {to_string(TcpMessageKind::EngageOrder), transport->dispatch(EngageOrderPayload{{1001U, 101U, 3U}, "interceptor-alpha", "target-alpha"})},
     };
 
     std::cout << "Command console baseline\n";
@@ -310,16 +310,16 @@ int run_in_process() {
                   << " | reason=" << result.reason << '\n';
     }
 
-    const CommandIssuePayload preview {
+    const EngageOrderPayload preview {
         {1001U, 101U, 4U},
-        "asset-interceptor",
+        "interceptor-alpha",
         "target-alpha",
     };
     const AarRequestPayload aar_preview {
         {1001U, 101U, 5U},
         11U,
     };
-    std::cout << "wire_preview.command_issue=" << serialize(preview) << '\n';
+    std::cout << "wire_preview.engage_order=" << serialize(preview) << '\n';
     std::cout << "wire_preview.aar_request=" << serialize(aar_preview) << '\n';
     return 0;
 }

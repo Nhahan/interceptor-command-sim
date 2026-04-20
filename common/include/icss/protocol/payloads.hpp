@@ -49,28 +49,28 @@ struct ScenarioResetPayload {
     std::string reason;
 };
 
-struct TrackRequestPayload {
+struct TrackAcquirePayload {
     SessionEnvelope envelope {};
     std::string target_id;
 };
 
-struct TrackReleasePayload {
+struct TrackDropPayload {
     SessionEnvelope envelope {};
     std::string target_id;
 };
 
-struct AssetActivatePayload {
+struct InterceptorReadyPayload {
     SessionEnvelope envelope {};
-    std::string asset_id;
+    std::string interceptor_id;
 };
 
-struct CommandIssuePayload {
+struct EngageOrderPayload {
     SessionEnvelope envelope {};
-    std::string asset_id;
+    std::string interceptor_id;
     std::string target_id;
 };
 
-struct JudgmentPayload {
+struct AssessmentPayload {
     SessionEnvelope envelope {};
     bool accepted {false};
     std::string outcome;
@@ -88,7 +88,7 @@ struct AarResponsePayload {
     std::string control {"absolute"};
     std::uint64_t requested_index {};
     bool clamped {false};
-    std::string judgment_code;
+    std::string assessment_code;
     std::string resilience_case;
     std::uint64_t total_events {};
     std::string event_type;
@@ -112,15 +112,15 @@ struct SnapshotPayload {
     float target_velocity_world_x {0.0F};
     float target_velocity_world_y {0.0F};
     float target_heading_deg {0.0F};
-    std::string asset_id;
-    bool asset_active {false};
-    int asset_x {0};
-    int asset_y {0};
-    float asset_world_x {0.0F};
-    float asset_world_y {0.0F};
-    float asset_velocity_world_x {0.0F};
-    float asset_velocity_world_y {0.0F};
-    float asset_heading_deg {0.0F};
+    std::string interceptor_id;
+    bool interceptor_active {false};
+    int interceptor_x {0};
+    int interceptor_y {0};
+    float interceptor_world_x {0.0F};
+    float interceptor_world_y {0.0F};
+    float interceptor_velocity_world_x {0.0F};
+    float interceptor_velocity_world_y {0.0F};
+    float interceptor_heading_deg {0.0F};
     int interceptor_speed_per_tick {0};
     float interceptor_acceleration_per_tick {0.0F};
     int intercept_radius {0};
@@ -132,7 +132,7 @@ struct SnapshotPayload {
     float predicted_intercept_x {0.0F};
     float predicted_intercept_y {0.0F};
     float time_to_intercept_s {0.0F};
-    bool tracking_active {false};
+    bool track_active {false};
     float track_estimated_x {0.0F};
     float track_estimated_y {0.0F};
     float track_estimated_vx {0.0F};
@@ -144,10 +144,10 @@ struct SnapshotPayload {
     float track_covariance_trace {0.0F};
     int track_measurement_age_ticks {0};
     int track_missed_updates {0};
-    std::string asset_status;
-    std::string command_status;
-    bool judgment_ready {false};
-    std::string judgment_code;
+    std::string interceptor_status;
+    std::string engage_order_status;
+    bool assessment_ready {false};
+    std::string assessment_code;
     float launch_angle_deg {45.0F};
 };
 
@@ -160,7 +160,7 @@ struct TelemetryPayload {
     std::string event_summary;
 };
 
-struct ViewerHeartbeatPayload {
+struct DisplayHeartbeatPayload {
     SessionEnvelope envelope {};
     std::uint64_t heartbeat_id {};
 };

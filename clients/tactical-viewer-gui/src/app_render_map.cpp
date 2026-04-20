@@ -114,7 +114,7 @@ void draw_entity(SDL_Renderer* renderer,
                  SDL_Color color) {
     const auto center = (&entity == &ctx.state.snapshot.target)
         ? world_to_screen(transform, ctx.state.snapshot.target_world_position)
-        : world_to_screen(transform, ctx.state.snapshot.asset_world_position);
+        : world_to_screen(transform, ctx.state.snapshot.interceptor_world_position);
     const bool filled = entity.active;
     const SDL_Color fill = filled ? color : rgba(color.r / 3, color.g / 3, color.b / 3);
     const SDL_Color border = filled ? rgba(240, 244, 255) : rgba(color.r / 2, color.g / 2, color.b / 2);
@@ -250,11 +250,11 @@ void render_map_panel(SDL_Renderer* renderer, const RenderContext& ctx) {
     }
 
     draw_history(renderer, transform, ctx.state.target_history, rgba(244, 67, 54, 110));
-    draw_history(renderer, transform, ctx.state.asset_history, rgba(66, 165, 245, 110));
+    draw_history(renderer, transform, ctx.state.interceptor_history, rgba(66, 165, 245, 110));
     const auto target_center = world_to_screen(transform, ctx.state.snapshot.target_world_position);
-    const auto asset_center = world_to_screen(transform, ctx.state.snapshot.asset_world_position);
+    const auto interceptor_center = world_to_screen(transform, ctx.state.snapshot.interceptor_world_position);
     const bool target_motion_visible = target_motion_visual_visible(ctx.state);
-    const bool asset_motion_visible = asset_motion_visual_visible(ctx.state);
+    const bool interceptor_motion_visible = interceptor_motion_visual_visible(ctx.state);
     const bool engagement_live = engagement_visual_visible(ctx.state);
 
     if (target_motion_visible) {
@@ -270,7 +270,7 @@ void render_map_panel(SDL_Renderer* renderer, const RenderContext& ctx) {
                   static_cast<int>(std::lround(target_center.x)) + 18,
                   static_cast<int>(std::lround(target_center.y)) - 26,
                   rgba(255, 214, 102),
-                  "GUIDANCE LOCK");
+                  "TRACK ESTABLISHED");
         draw_text(renderer,
                   ctx.body_font,
                   static_cast<int>(std::lround(target_center.x)) + 18,
@@ -289,13 +289,13 @@ void render_map_panel(SDL_Renderer* renderer, const RenderContext& ctx) {
                   "age=" + std::to_string(ctx.state.snapshot.track.measurement_age_ticks)
                       + " miss=" + std::to_string(ctx.state.snapshot.track.missed_updates));
     }
-    if (asset_motion_visible) {
-        const auto asset_vector_px = world_delta_to_pixels(
+    if (interceptor_motion_visible) {
+        const auto interceptor_vector_px = world_delta_to_pixels(
             transform,
-            {ctx.state.snapshot.asset_velocity.x * kVelocityProjectionTicks,
-             ctx.state.snapshot.asset_velocity.y * kVelocityProjectionTicks});
-        const SDL_FPoint asset_vector_end {asset_center.x + asset_vector_px.x, asset_center.y + asset_vector_px.y};
-        draw_arrow(renderer, rgba(66, 165, 245, 220), asset_center, asset_vector_end);
+            {ctx.state.snapshot.interceptor_velocity.x * kVelocityProjectionTicks,
+             ctx.state.snapshot.interceptor_velocity.y * kVelocityProjectionTicks});
+        const SDL_FPoint interceptor_vector_end {interceptor_center.x + interceptor_vector_px.x, interceptor_center.y + interceptor_vector_px.y};
+        draw_arrow(renderer, rgba(66, 165, 245, 220), interceptor_center, interceptor_vector_end);
     }
     if (engagement_live) {
         if (predicted_marker_visual_visible(ctx.state)) {
@@ -304,15 +304,15 @@ void render_map_panel(SDL_Renderer* renderer, const RenderContext& ctx) {
         }
         draw_emphasized_line(renderer,
                              rgba(255, 149, 0, 255),
-                             static_cast<int>(asset_center.x),
-                             static_cast<int>(asset_center.y),
+                             static_cast<int>(interceptor_center.x),
+                             static_cast<int>(interceptor_center.y),
                              static_cast<int>(target_center.x),
                              static_cast<int>(target_center.y));
         draw_corner_brackets(renderer, target_center, 11.0F, 6.0F, rgba(255, 149, 0, 235));
     }
 
     draw_entity(renderer, ctx, transform, ctx.state.snapshot.target, rgba(244, 67, 54));
-    draw_entity(renderer, ctx, transform, ctx.state.snapshot.asset, rgba(66, 165, 245));
+    draw_entity(renderer, ctx, transform, ctx.state.snapshot.interceptor, rgba(66, 165, 245));
 }
 
 }  // namespace icss::viewer_gui

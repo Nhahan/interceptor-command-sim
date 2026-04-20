@@ -54,16 +54,16 @@ struct ControlState {
     std::uint64_t auto_last_action_ms {0};
 };
 
-struct ReviewState {
+struct AarState {
     bool available {false};
     bool loaded {false};
     bool visible {false};
     std::uint64_t cursor_index {0};
     std::uint64_t total_events {0};
-    std::string judgment_code {"pending"};
+    std::string assessment_code {"pending"};
     std::string resilience_case {"none"};
     std::string event_type {"none"};
-    std::string event_summary {"review not requested"};
+    std::string event_summary {"aar not requested"};
 };
 
 struct ViewerState {
@@ -83,10 +83,10 @@ struct ViewerState {
     std::string last_server_event_type {"none"};
     std::string last_server_event_summary {"no server event"};
     std::deque<icss::core::Vec2f> target_history;
-    std::deque<icss::core::Vec2f> asset_history;
-    bool effective_guidance_active {false};
+    std::deque<icss::core::Vec2f> interceptor_history;
+    bool effective_track_active {false};
     ControlState control;
-    ReviewState review;
+    AarState aar;
 };
 
 struct ViewportTransform {
@@ -126,9 +126,9 @@ void push_timeline_entry(ViewerState& state, std::string message);
 std::string escape_json(std::string_view input);
 ViewerOptions parse_args(int argc, char** argv);
 
-icss::core::AssetStatus parse_asset_status(std::string_view value);
-icss::core::CommandLifecycle parse_command_status(std::string_view value);
-icss::core::JudgmentCode parse_judgment_code(std::string_view value);
+icss::core::InterceptorStatus parse_interceptor_status(std::string_view value);
+icss::core::EngageOrderStatus parse_engage_order_status(std::string_view value);
+icss::core::AssessmentCode parse_assessment_code(std::string_view value);
 icss::core::ConnectionState parse_connection_state(std::string_view value);
 icss::core::SessionPhase parse_phase(std::string_view value);
 std::string uppercase_words(std::string_view value);
@@ -139,10 +139,11 @@ std::string resilience_summary(const ViewerState& state);
 std::string authoritative_headline(const ViewerState& state);
 std::string authoritative_badge_label(const ViewerState& state);
 SDL_Color authoritative_badge_color(const ViewerState& state);
-bool review_available(const ViewerState& state);
-std::string review_panel_text(const ViewerState& state);
-std::string terminal_timeline_text(const ViewerState& state, bool review_mode);
-std::vector<std::string> terminal_timeline_lines(const ViewerState& state, bool review_mode);
+bool aar_available(const ViewerState& state);
+std::string aar_panel_text(const ViewerState& state);
+std::string control_display_label(std::string_view action, const ViewerState& state);
+std::string terminal_timeline_text(const ViewerState& state, bool aar_mode);
+std::vector<std::string> terminal_timeline_lines(const ViewerState& state, bool aar_mode);
 std::string control_timeline_message(std::string_view label, bool ok, std::string_view message);
 std::string latest_timeline_entry(const ViewerState& state);
 std::string telemetry_event_status(const ViewerState& state);
@@ -156,7 +157,7 @@ std::string recommended_control_label(const ViewerState& state);
 void sync_preview_from_scenario(ViewerState& state, const icss::core::ScenarioConfig& scenario);
 icss::core::ScenarioConfig randomize_start_scenario(const icss::core::ScenarioConfig& base, std::uint64_t seed);
 bool target_motion_visual_visible(const ViewerState& state);
-bool asset_motion_visual_visible(const ViewerState& state);
+bool interceptor_motion_visual_visible(const ViewerState& state);
 bool engagement_visual_visible(const ViewerState& state);
 bool predicted_marker_visual_visible(const ViewerState& state);
 bool command_visual_active(const ViewerState& state);
@@ -193,7 +194,7 @@ private:
 
 FrameMode parse_frame_mode(std::string_view value);
 void send_viewer_join(UdpSocket& socket, const ViewerOptions& options, std::uint64_t& sequence);
-void send_viewer_heartbeat(UdpSocket& socket, const ViewerOptions& options, std::uint64_t& sequence, ViewerState& state);
+void send_display_heartbeat(UdpSocket& socket, const ViewerOptions& options, std::uint64_t& sequence, ViewerState& state);
 void receive_datagrams(UdpSocket& socket, const ViewerOptions& options, ViewerState& state, std::uint64_t now_ms);
 void send_frame(TcpSocket& socket, FrameMode mode, std::string_view kind, std::string_view payload);
 icss::protocol::FramedMessage recv_frame(TcpSocket& socket, FrameMode mode);

@@ -10,8 +10,8 @@
 namespace icss::core {
 
 enum class SampleMode : std::uint8_t {
-    Guided,
-    Straight,
+    TrackedIntercept,
+    UnguidedIntercept,
 };
 
 struct RuntimeResult {
@@ -21,7 +21,7 @@ struct RuntimeResult {
 
 class BaselineRuntime {
 public:
-    explicit BaselineRuntime(RuntimeConfig config, SampleMode sample_mode = SampleMode::Guided);
+    explicit BaselineRuntime(RuntimeConfig config, SampleMode sample_mode = SampleMode::TrackedIntercept);
 
     [[nodiscard]] const RuntimeConfig& config() const;
     [[nodiscard]] SampleMode sample_mode() const;
@@ -29,11 +29,11 @@ public:
 
 private:
     RuntimeConfig config_;
-    SampleMode sample_mode_ {SampleMode::Guided};
+    SampleMode sample_mode_ {SampleMode::TrackedIntercept};
 };
 
 RuntimeConfig default_runtime_config(const std::filesystem::path& repo_root);
-SimulationSession run_baseline_demo(const RuntimeConfig& config, SampleMode sample_mode = SampleMode::Guided);
+SimulationSession run_baseline_demo(const RuntimeConfig& config, SampleMode sample_mode = SampleMode::TrackedIntercept);
 SimulationSession run_baseline_demo(SampleMode sample_mode);
 SimulationSession run_baseline_demo();
 void write_runtime_session_log(const RuntimeConfig& config,

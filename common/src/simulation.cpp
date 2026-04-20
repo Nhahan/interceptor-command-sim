@@ -9,7 +9,7 @@
 namespace icss::core {
 
 void SimulationSession::advance_tick() {
-    if (phase_ == SessionPhase::Judged) {
+    if (phase_ == SessionPhase::Assessed) {
         ++tick_;
         archive_session();
         return;
@@ -28,13 +28,13 @@ void SimulationSession::advance_tick() {
         update_track_state();
     }
 
-    if (command_status_ == CommandLifecycle::Accepted && phase_ == SessionPhase::CommandIssued) {
-        phase_ = SessionPhase::Engaging;
-        asset_status_ = AssetStatus::Engaging;
-        command_status_ = CommandLifecycle::Executing;
+    if (engage_order_status_ == EngageOrderStatus::Accepted && phase_ == SessionPhase::EngageOrdered) {
+        phase_ = SessionPhase::Intercepting;
+        interceptor_status_ = InterceptorStatus::Intercepting;
+        engage_order_status_ = EngageOrderStatus::Executing;
     }
 
-    if (phase_ == SessionPhase::Engaging && asset_.active) {
+    if (phase_ == SessionPhase::Intercepting && asset_.active) {
         const auto interceptor_max_speed = static_cast<float>(scenario_.interceptor_speed_per_tick);
         if (track_.active) {
             const auto to_target = detail::subtract(target_world_, asset_world_);
@@ -43,15 +43,15 @@ void SimulationSession::advance_tick() {
             const auto tti_guess = distance / std::max(0.1F, interceptor_max_speed);
             const auto predicted_intercept = detail::add(target_world_, detail::scale(target_velocity_world_, tti_guess));
             const auto desired_velocity = detail::scale(detail::normalize(detail::subtract(predicted_intercept, asset_world_)), interceptor_max_speed);
-            const auto velocity_error = detail::subtract(desired_velocity, asset_velocity_world_);
+            const auto velocity_error = detail::subtract(desired_velocity, interceptor_velocity_world_);
             const auto accel_step = detail::scale(detail::normalize(velocity_error), std::min(interceptor_accel, detail::length(velocity_error)));
-            asset_velocity_world_ = detail::add(asset_velocity_world_, accel_step);
+            interceptor_velocity_world_ = detail::add(interceptor_velocity_world_, accel_step);
         }
-        const auto speed = detail::length(asset_velocity_world_);
+        const auto speed = detail::length(interceptor_velocity_world_);
         if (speed > interceptor_max_speed && speed > 0.0F) {
-            asset_velocity_world_ = detail::scale(detail::normalize(asset_velocity_world_), interceptor_max_speed);
+            interceptor_velocity_world_ = detail::scale(detail::normalize(interceptor_velocity_world_), interceptor_max_speed);
         }
-        asset_world_ = detail::add(asset_world_, asset_velocity_world_);
+        asset_world_ = detail::add(asset_world_, interceptor_velocity_world_);
         asset_world_.x = detail::clampf(asset_world_.x, 0.0F, static_cast<float>(scenario_.world_width - 1));
         asset_world_.y = detail::clampf(asset_world_.y, 0.0F, static_cast<float>(scenario_.world_height - 1));
         asset_.position.x = static_cast<int>(std::lround(asset_world_.x));
@@ -60,12 +60,12 @@ void SimulationSession::advance_tick() {
 
     {
         const bool engagement_context = asset_.active
-            && (command_status_ == CommandLifecycle::Accepted
-                || command_status_ == CommandLifecycle::Executing
-                || command_status_ == CommandLifecycle::Completed);
+            && (engage_order_status_ == EngageOrderStatus::Accepted
+                || engage_order_status_ == EngageOrderStatus::Executing
+                || engage_order_status_ == EngageOrderStatus::Completed);
         if (engagement_context && track_.active) {
             const auto los = detail::subtract(target_world_, asset_world_);
-            off_boresight_deg_ = std::abs(detail::normalize_angle_deg(detail::heading_deg(los) - detail::heading_deg(asset_velocity_world_)));
+            off_boresight_deg_ = std::abs(detail::normalize_angle_deg(detail::heading_deg(los) - detail::heading_deg(interceptor_velocity_world_)));
             seeker_lock_ = detail::length(los) > 0.0F && off_boresight_deg_ <= static_cast<float>(scenario_.seeker_fov_deg);
         } else {
             off_boresight_deg_ = 0.0F;
@@ -73,41 +73,41 @@ void SimulationSession::advance_tick() {
         }
     }
 
-    if (command_status_ == CommandLifecycle::Executing && phase_ == SessionPhase::Engaging) {
+    if (engage_order_status_ == EngageOrderStatus::Executing && phase_ == SessionPhase::Intercepting) {
         const auto distance = detail::length(detail::subtract(target_world_, asset_world_));
         const auto engagement_ticks = engagement_started_tick_.has_value() ? tick_ - *engagement_started_tick_ : 0;
         if (distance <= static_cast<float>(scenario_.intercept_radius)) {
-            judgment_.ready = true;
-            judgment_.code = JudgmentCode::InterceptSuccess;
-            judgment_.summary = "authoritative intercept judgment complete";
-            phase_ = SessionPhase::Judged;
+            assessment_.ready = true;
+            assessment_.code = AssessmentCode::InterceptSuccess;
+            assessment_.summary = "authoritative intercept assessment complete";
+            phase_ = SessionPhase::Assessed;
             target_.active = false;
             track_.active = false;
             target_velocity_world_ = {0.0F, 0.0F};
-            asset_velocity_world_ = {0.0F, 0.0F};
+            interceptor_velocity_world_ = {0.0F, 0.0F};
             seeker_lock_ = false;
             off_boresight_deg_ = 0.0F;
-            asset_status_ = AssetStatus::Complete;
-            command_status_ = CommandLifecycle::Completed;
+            interceptor_status_ = InterceptorStatus::Complete;
+            engage_order_status_ = EngageOrderStatus::Completed;
             engagement_started_tick_.reset();
-            push_event(protocol::EventType::JudgmentProduced,
+            push_event(protocol::EventType::AssessmentProduced,
                        "simulation_server",
                        {asset_.id, target_.id},
-                       "Judgment produced",
-                       "Server-authoritative judgment marked the intercept attempt as successful and the target as intercepted.");
+                       "Assessment produced",
+                       "Server-authoritative assessment marked the intercept attempt as successful and the target as intercepted.");
         } else if (engagement_ticks >= static_cast<std::uint64_t>(scenario_.engagement_timeout_ticks)) {
-            judgment_.ready = true;
-            judgment_.code = JudgmentCode::TimeoutObserved;
-            judgment_.summary = "authoritative intercept timeout observed";
-            phase_ = SessionPhase::Judged;
-            asset_status_ = AssetStatus::Complete;
-            command_status_ = CommandLifecycle::Completed;
+            assessment_.ready = true;
+            assessment_.code = AssessmentCode::TimeoutObserved;
+            assessment_.summary = "authoritative intercept timeout observed";
+            phase_ = SessionPhase::Assessed;
+            interceptor_status_ = InterceptorStatus::Complete;
+            engage_order_status_ = EngageOrderStatus::Completed;
             engagement_started_tick_.reset();
-            push_event(protocol::EventType::JudgmentProduced,
+            push_event(protocol::EventType::AssessmentProduced,
                        "simulation_server",
                        {asset_.id, target_.id},
-                       "Judgment produced",
-                       "Server-authoritative judgment marked the intercept attempt as timed out before intercept.");
+                       "Assessment produced",
+                       "Server-authoritative assessment marked the intercept attempt as timed out before intercept.");
         }
     }
 

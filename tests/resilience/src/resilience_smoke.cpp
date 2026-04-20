@@ -32,8 +32,8 @@ int main() {
     assert(frame.find("freshness=") != std::string::npos);
 
     SimulationSession degraded_session;
-    degraded_session.connect_client(ClientRole::CommandConsole, 101U);
-    degraded_session.connect_client(ClientRole::TacticalViewer, 201U);
+    degraded_session.connect_client(ClientRole::FireControlConsole, 101U);
+    degraded_session.connect_client(ClientRole::TacticalDisplay, 201U);
     degraded_session.start_scenario();
     degraded_session.request_track();
     degraded_session.advance_tick();
@@ -49,11 +49,11 @@ int main() {
     assert(degraded_frame.find("freshness=degraded") != std::string::npos);
 
     SimulationSession reconnect_session;
-    reconnect_session.connect_client(ClientRole::CommandConsole, 101U);
-    reconnect_session.connect_client(ClientRole::TacticalViewer, 201U);
+    reconnect_session.connect_client(ClientRole::FireControlConsole, 101U);
+    reconnect_session.connect_client(ClientRole::TacticalDisplay, 201U);
     reconnect_session.start_scenario();
-    reconnect_session.disconnect_client(ClientRole::TacticalViewer, "viewer reconnect path");
-    reconnect_session.connect_client(ClientRole::TacticalViewer, 201U);
+    reconnect_session.disconnect_client(ClientRole::TacticalDisplay, "viewer reconnect path");
+    reconnect_session.connect_client(ClientRole::TacticalDisplay, 201U);
     reconnect_session.request_track();
     const auto reconnect_frame = icss::view::render_tactical_frame(
         reconnect_session.latest_snapshot(),

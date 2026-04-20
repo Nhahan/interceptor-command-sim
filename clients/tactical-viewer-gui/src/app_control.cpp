@@ -39,57 +39,57 @@ void perform_control_action(std::string_view action_label,
         if (!ack.accepted) {
             return ack;
         }
-        if (effective_label != "Review") {
-            state.review.visible = false;
+        if (effective_label != "AAR") {
+            state.aar.visible = false;
         }
         if (effective_label == "Start") {
             state.snapshot.phase = icss::core::SessionPhase::Detecting;
             state.snapshot.target.active = true;
-            state.snapshot.command_status = icss::core::CommandLifecycle::None;
-            state.snapshot.asset_status = icss::core::AssetStatus::Idle;
-            state.snapshot.asset_velocity = {0.0F, 0.0F};
-            state.snapshot.asset_heading_deg = 0.0F;
-            state.effective_guidance_active = false;
+            state.snapshot.engage_order_status = icss::core::EngageOrderStatus::None;
+            state.snapshot.interceptor_status = icss::core::InterceptorStatus::Idle;
+            state.snapshot.interceptor_velocity = {0.0F, 0.0F};
+            state.snapshot.interceptor_heading_deg = 0.0F;
+            state.effective_track_active = false;
             state.target_history.clear();
-            state.asset_history.clear();
-        } else if (effective_label == "Activate") {
-            state.snapshot.phase = icss::core::SessionPhase::AssetReady;
-            state.snapshot.asset.active = true;
-            state.snapshot.asset_status = icss::core::AssetStatus::Ready;
-        } else if (effective_label == "Guidance On") {
+            state.interceptor_history.clear();
+        } else if (effective_label == "Ready") {
+            state.snapshot.phase = icss::core::SessionPhase::InterceptorReady;
+            state.snapshot.interceptor.active = true;
+            state.snapshot.interceptor_status = icss::core::InterceptorStatus::Ready;
+        } else if (effective_label == "Acquire Track") {
             if (state.snapshot.phase == icss::core::SessionPhase::Detecting) {
                 state.snapshot.phase = icss::core::SessionPhase::Tracking;
             }
             state.snapshot.track.active = true;
-            state.effective_guidance_active = true;
-        } else if (effective_label == "Guidance Off") {
+            state.effective_track_active = true;
+        } else if (effective_label == "Drop Track") {
             if (state.snapshot.phase == icss::core::SessionPhase::Tracking) {
                 state.snapshot.phase = icss::core::SessionPhase::Detecting;
             }
             clear_local_track();
-            state.effective_guidance_active = false;
-        } else if (effective_label == "Command") {
-            state.snapshot.phase = icss::core::SessionPhase::CommandIssued;
-            state.snapshot.command_status = icss::core::CommandLifecycle::Accepted;
-            state.snapshot.asset_status = icss::core::AssetStatus::Ready;
+            state.effective_track_active = false;
+        } else if (effective_label == "Engage") {
+            state.snapshot.phase = icss::core::SessionPhase::EngageOrdered;
+            state.snapshot.engage_order_status = icss::core::EngageOrderStatus::Accepted;
+            state.snapshot.interceptor_status = icss::core::InterceptorStatus::Ready;
             const auto launch_angle_rad = state.snapshot.launch_angle_deg * 3.1415926535F / 180.0F;
             const auto launch_speed = static_cast<float>(state.snapshot.interceptor_speed_per_tick);
-            state.snapshot.asset_velocity = {
+            state.snapshot.interceptor_velocity = {
                 std::cos(launch_angle_rad) * launch_speed,
                 std::sin(launch_angle_rad) * launch_speed,
             };
-            state.snapshot.asset_heading_deg = state.snapshot.launch_angle_deg;
+            state.snapshot.interceptor_heading_deg = state.snapshot.launch_angle_deg;
         } else if (effective_label == "Reset") {
             sync_preview_from_planned_scenario(state);
-            state.snapshot.phase = icss::core::SessionPhase::Initialized;
+            state.snapshot.phase = icss::core::SessionPhase::Standby;
             state.snapshot.target.active = false;
-            state.snapshot.asset.active = false;
+            state.snapshot.interceptor.active = false;
             clear_local_track();
-            state.snapshot.command_status = icss::core::CommandLifecycle::None;
-            state.snapshot.asset_status = icss::core::AssetStatus::Idle;
-            state.snapshot.judgment = {};
-            state.effective_guidance_active = false;
-            state.review = {};
+            state.snapshot.engage_order_status = icss::core::EngageOrderStatus::None;
+            state.snapshot.interceptor_status = icss::core::InterceptorStatus::Idle;
+            state.snapshot.assessment = {};
+            state.effective_track_active = false;
+            state.aar = {};
         }
         return ack;
     };
@@ -124,46 +124,46 @@ void perform_control_action(std::string_view action_label,
         }
         return;
     }
-    if (action_label == "Guidance") {
+    if (action_label == "Track") {
         const bool turning_on = !state.snapshot.track.active;
-        const auto display_label = turning_on ? "Guidance On" : "Guidance Off";
+        const auto display_label = turning_on ? "Acquire Track" : "Drop Track";
         if (turning_on) {
-            send_and_expect_ack("track_request",
-                                icss::protocol::serialize(icss::protocol::TrackRequestPayload{{options.session_id, options.sender_id, state.control.sequence++}, "target-alpha"}),
+            send_and_expect_ack("track_acquire",
+                                icss::protocol::serialize(icss::protocol::TrackAcquirePayload{{options.session_id, options.sender_id, state.control.sequence++}, "target-alpha"}),
                                 display_label);
         } else {
-            send_and_expect_ack("track_release",
-                                icss::protocol::serialize(icss::protocol::TrackReleasePayload{{options.session_id, options.sender_id, state.control.sequence++}, "target-alpha"}),
+            send_and_expect_ack("track_drop",
+                                icss::protocol::serialize(icss::protocol::TrackDropPayload{{options.session_id, options.sender_id, state.control.sequence++}, "target-alpha"}),
                                 display_label);
         }
         return;
     }
-    if (action_label == "Activate") {
-        send_and_expect_ack("asset_activate", icss::protocol::serialize(icss::protocol::AssetActivatePayload{{options.session_id, options.sender_id, state.control.sequence++}, "asset-interceptor"}));
+    if (action_label == "Ready") {
+        send_and_expect_ack("interceptor_ready", icss::protocol::serialize(icss::protocol::InterceptorReadyPayload{{options.session_id, options.sender_id, state.control.sequence++}, "interceptor-alpha"}));
         return;
     }
-    if (action_label == "Command") {
-        send_and_expect_ack("command_issue", icss::protocol::serialize(icss::protocol::CommandIssuePayload{{options.session_id, options.sender_id, state.control.sequence++}, "asset-interceptor", "target-alpha"}));
+    if (action_label == "Engage") {
+        send_and_expect_ack("engage_order", icss::protocol::serialize(icss::protocol::EngageOrderPayload{{options.session_id, options.sender_id, state.control.sequence++}, "interceptor-alpha", "target-alpha"}));
         return;
     }
     if (action_label == "Reset") {
         send_and_expect_ack("scenario_reset", icss::protocol::serialize(icss::protocol::ScenarioResetPayload{{options.session_id, options.sender_id, state.control.sequence++}, "gui control panel reset"}));
         state.recent_server_events.clear();
         state.target_history.clear();
-        state.asset_history.clear();
+        state.interceptor_history.clear();
         state.last_server_event_tick = 0;
         state.last_server_event_type = "none";
         state.last_server_event_summary = "no server event";
         state.timeline_scroll_lines = 0;
-        state.review.visible = false;
+        state.aar.visible = false;
         return;
     }
-    if (action_label == "Review") {
-        if (!review_available(state)) {
+    if (action_label == "AAR") {
+        if (!aar_available(state)) {
             state.control.last_ok = false;
-            state.control.last_label = "Review";
-            state.control.last_message = "review available after judgment or archive";
-            push_timeline_entry(state, control_timeline_message("Review", false, state.control.last_message));
+            state.control.last_label = "AAR";
+            state.control.last_message = "aar available after assessment or archive";
+            push_timeline_entry(state, control_timeline_message("AAR", false, state.control.last_message));
             return;
         }
         send_frame(control_socket,
@@ -172,23 +172,23 @@ void perform_control_action(std::string_view action_label,
                    icss::protocol::serialize(icss::protocol::AarRequestPayload{{options.session_id, options.sender_id, state.control.sequence++}, 999U, "absolute"}));
         const auto frame = recv_frame(control_socket, frame_mode);
         if (frame.kind != "aar_response") {
-            throw std::runtime_error("expected aar_response after Review action");
+            throw std::runtime_error("expected aar_response after AAR action");
         }
         const auto response = icss::protocol::parse_aar_response(frame.payload);
         state.control.last_ok = true;
-        state.control.last_label = "Review";
-        state.control.last_message = "server-side review loaded";
-        push_timeline_entry(state, control_timeline_message("Review", true, state.control.last_message));
-        state.review.available = true;
-        state.review.loaded = true;
-        state.review.visible = true;
+        state.control.last_label = "AAR";
+        state.control.last_message = "server-side aar loaded";
+        push_timeline_entry(state, control_timeline_message("AAR", true, state.control.last_message));
+        state.aar.available = true;
+        state.aar.loaded = true;
+        state.aar.visible = true;
         state.timeline_scroll_lines = 0;
-        state.review.cursor_index = response.replay_cursor_index;
-        state.review.total_events = response.total_events;
-        state.review.judgment_code = response.judgment_code;
-        state.review.resilience_case = response.resilience_case;
-        state.review.event_type = response.event_type;
-        state.review.event_summary = response.event_summary;
+        state.aar.cursor_index = response.replay_cursor_index;
+        state.aar.total_events = response.total_events;
+        state.aar.assessment_code = response.assessment_code;
+        state.aar.resilience_case = response.resilience_case;
+        state.aar.event_type = response.event_type;
+        state.aar.event_summary = response.event_summary;
     }
 }
 #endif

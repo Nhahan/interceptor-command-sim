@@ -45,13 +45,13 @@ foreach(relative_path
         "assets/sample-aar/session-summary.md"
         "assets/sample-aar/session-summary.json"
         "assets/sample-aar/replay-timeline.json"
-        "assets/sample-aar/straight/session-summary.md"
-        "assets/sample-aar/straight/session-summary.json"
-        "assets/sample-aar/straight/replay-timeline.json"
+        "assets/sample-aar/unguided_intercept/session-summary.md"
+        "assets/sample-aar/unguided_intercept/session-summary.json"
+        "assets/sample-aar/unguided_intercept/replay-timeline.json"
         "examples/sample-output.md"
-        "examples/sample-output-straight.md"
-        "assets/screenshots/tactical-viewer-guidance-state.json"
-        "assets/screenshots/tactical-viewer-straight-state.json")
+        "examples/sample-output-unguided_intercept.md"
+        "assets/screenshots/tactical-display-tracked_intercept-state.json"
+        "assets/screenshots/tactical-display-unguided_intercept-state.json")
     set(generated_path "${runtime_root}/${relative_path}")
     set(checked_in_path "${REPO_ROOT}/${relative_path}")
 
@@ -70,8 +70,8 @@ foreach(relative_path
 endforeach()
 
 foreach(relative_path
-        "assets/screenshots/tactical-viewer-guidance.bmp"
-        "assets/screenshots/tactical-viewer-straight.bmp")
+        "assets/screenshots/tactical-display-tracked_intercept.bmp"
+        "assets/screenshots/tactical-display-unguided_intercept.bmp")
     set(generated_path "${runtime_root}/${relative_path}")
     set(checked_in_path "${REPO_ROOT}/${relative_path}")
     if(NOT EXISTS "${generated_path}")

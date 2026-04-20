@@ -10,12 +10,12 @@
 namespace icss::viewer_gui {
 namespace {
 
-const char* effective_guidance_state(const ViewerState& state) {
-    return state.effective_guidance_active ? "on" : "off";
+const char* effective_track_state(const ViewerState& state) {
+    return state.effective_track_active ? "tracked" : "untracked";
 }
 
-const char* effective_launch_mode(const ViewerState& state) {
-    return state.effective_guidance_active ? "guided" : "straight";
+const char* intercept_profile(const ViewerState& state) {
+    return state.effective_track_active ? "tracked_intercept" : "unguided_intercept";
 }
 
 }  // namespace
@@ -41,10 +41,10 @@ void write_dump_state(const std::filesystem::path& path, const ViewerState& stat
     out << "  \"tick\": " << state.snapshot.telemetry.tick << ",\n";
     out << "  \"phase\": \"" << icss::core::to_string(state.snapshot.phase) << "\",\n";
     out << "  \"phase_banner\": \"" << escape_json(phase_banner_label(state.snapshot.phase)) << "\",\n";
-    out << "  \"connection_state\": \"" << icss::core::to_string(state.snapshot.viewer_connection) << "\",\n";
+    out << "  \"connection_state\": \"" << icss::core::to_string(state.snapshot.display_connection) << "\",\n";
     out << "  \"freshness\": \"" << icss::view::freshness_label(state.snapshot) << "\",\n";
     out << "  \"resilience_summary\": \"" << escape_json(resilience_summary(state)) << "\",\n";
-    out << "  \"judgment_code\": \"" << icss::core::to_string(state.snapshot.judgment.code) << "\",\n";
+    out << "  \"assessment_code\": \"" << icss::core::to_string(state.snapshot.assessment.code) << "\",\n";
     out << "  \"heartbeat_count\": " << state.heartbeat_count << ",\n";
     out << "  \"last_server_event_tick\": " << state.last_server_event_tick << ",\n";
     out << "  \"last_server_event_type\": \"" << escape_json(state.last_server_event_type) << "\",\n";
@@ -53,7 +53,7 @@ void write_dump_state(const std::filesystem::path& path, const ViewerState& stat
     out << "  \"authoritative_headline\": \"" << escape_json(authoritative_headline(state)) << "\",\n";
     out << "  \"recommended_control\": \"" << escape_json(recommended_control_label(state)) << "\",\n";
     out << "  \"target_motion_visual_visible\": " << (target_motion_visual_visible(state) ? "true" : "false") << ",\n";
-    out << "  \"asset_motion_visual_visible\": " << (asset_motion_visual_visible(state) ? "true" : "false") << ",\n";
+    out << "  \"interceptor_motion_visual_visible\": " << (interceptor_motion_visual_visible(state) ? "true" : "false") << ",\n";
     out << "  \"engagement_visual_visible\": " << (engagement_visual_visible(state) ? "true" : "false") << ",\n";
     out << "  \"predicted_marker_visual_visible\": " << (predicted_marker_visual_visible(state) ? "true" : "false") << ",\n";
     out << "  \"planned_target_start_x\": " << state.planned_scenario.target_start_x << ",\n";
@@ -72,26 +72,25 @@ void write_dump_state(const std::filesystem::path& path, const ViewerState& stat
     out << "  \"camera_visible_min_y\": " << transform.visible_min_y << ",\n";
     out << "  \"camera_visible_max_x\": " << transform.visible_max_x << ",\n";
     out << "  \"camera_visible_max_y\": " << transform.visible_max_y << ",\n";
-    out << "  \"review_available\": " << (review_available(state) ? "true" : "false") << ",\n";
-    out << "  \"review_loaded\": " << (state.review.loaded ? "true" : "false") << ",\n";
-    out << "  \"review_visible\": " << (state.review.visible ? "true" : "false") << ",\n";
-    out << "  \"review_cursor_index\": " << state.review.cursor_index << ",\n";
-    out << "  \"review_total_events\": " << state.review.total_events << ",\n";
-    out << "  \"review_judgment_code\": \"" << escape_json(state.review.judgment_code) << "\",\n";
-    out << "  \"review_resilience_case\": \"" << escape_json(state.review.resilience_case) << "\",\n";
-    out << "  \"review_event_type\": \"" << escape_json(state.review.event_type) << "\",\n";
-    out << "  \"review_event_summary\": \"" << escape_json(state.review.event_summary) << "\",\n";
+    out << "  \"aar_available\": " << (aar_available(state) ? "true" : "false") << ",\n";
+    out << "  \"aar_loaded\": " << (state.aar.loaded ? "true" : "false") << ",\n";
+    out << "  \"aar_visible\": " << (state.aar.visible ? "true" : "false") << ",\n";
+    out << "  \"aar_cursor_index\": " << state.aar.cursor_index << ",\n";
+    out << "  \"aar_total_events\": " << state.aar.total_events << ",\n";
+    out << "  \"aar_assessment_code\": \"" << escape_json(state.aar.assessment_code) << "\",\n";
+    out << "  \"aar_resilience_case\": \"" << escape_json(state.aar.resilience_case) << "\",\n";
+    out << "  \"aar_event_type\": \"" << escape_json(state.aar.event_type) << "\",\n";
+    out << "  \"aar_event_summary\": \"" << escape_json(state.aar.event_summary) << "\",\n";
     out << "  \"last_control_label\": \"" << escape_json(state.control.last_label) << "\",\n";
     out << "  \"last_control_message\": \"" << escape_json(state.control.last_message) << "\",\n";
-    out << "  \"asset_status\": \"" << icss::core::to_string(state.snapshot.asset_status) << "\",\n";
-    out << "  \"command_status\": \"" << icss::core::to_string(state.snapshot.command_status) << "\",\n";
+    out << "  \"interceptor_status\": \"" << icss::core::to_string(state.snapshot.interceptor_status) << "\",\n";
+    out << "  \"engage_order_status\": \"" << icss::core::to_string(state.snapshot.engage_order_status) << "\",\n";
     out << "  \"command_visual_active\": " << (command_visual_active(state) ? "true" : "false") << ",\n";
     out << "  \"target_active\": " << (state.snapshot.target.active ? "true" : "false") << ",\n";
-    out << "  \"asset_active\": " << (state.snapshot.asset.active ? "true" : "false") << ",\n";
-    out << "  \"effective_guidance_state\": \"" << effective_guidance_state(state) << "\",\n";
-    out << "  \"effective_launch_mode\": \"" << effective_launch_mode(state) << "\",\n";
-    out << "  \"guidance_active\": " << (state.snapshot.track.active ? "true" : "false") << ",\n";
-    out << "  \"tracking_active\": " << (state.snapshot.track.active ? "true" : "false") << ",\n";
+    out << "  \"interceptor_active\": " << (state.snapshot.interceptor.active ? "true" : "false") << ",\n";
+    out << "  \"effective_track_state\": \"" << effective_track_state(state) << "\",\n";
+    out << "  \"intercept_profile\": \"" << intercept_profile(state) << "\",\n";
+    out << "  \"track_active\": " << (state.snapshot.track.active ? "true" : "false") << ",\n";
     out << "  \"track_measurement_residual_distance\": " << state.snapshot.track.measurement_residual_distance << ",\n";
     out << "  \"track_covariance_trace\": " << state.snapshot.track.covariance_trace << ",\n";
     out << "  \"track_measurement_valid\": " << (state.snapshot.track.measurement_valid ? "true" : "false") << ",\n";
@@ -108,11 +107,11 @@ void write_dump_state(const std::filesystem::path& path, const ViewerState& stat
     out << "  \"target_world_x\": " << state.snapshot.target_world_position.x << ",\n";
     out << "  \"target_world_y\": " << state.snapshot.target_world_position.y << ",\n";
     out << "  \"target_heading_deg\": " << state.snapshot.target_heading_deg << ",\n";
-    out << "  \"asset_x\": " << state.snapshot.asset.position.x << ",\n";
-    out << "  \"asset_y\": " << state.snapshot.asset.position.y << ",\n";
-    out << "  \"asset_world_x\": " << state.snapshot.asset_world_position.x << ",\n";
-    out << "  \"asset_world_y\": " << state.snapshot.asset_world_position.y << ",\n";
-    out << "  \"asset_heading_deg\": " << state.snapshot.asset_heading_deg << ",\n";
+    out << "  \"interceptor_x\": " << state.snapshot.interceptor.position.x << ",\n";
+    out << "  \"interceptor_y\": " << state.snapshot.interceptor.position.y << ",\n";
+    out << "  \"interceptor_world_x\": " << state.snapshot.interceptor_world_position.x << ",\n";
+    out << "  \"interceptor_world_y\": " << state.snapshot.interceptor_world_position.y << ",\n";
+    out << "  \"interceptor_heading_deg\": " << state.snapshot.interceptor_heading_deg << ",\n";
     out << "  \"world_width\": " << state.snapshot.world_width << ",\n";
     out << "  \"world_height\": " << state.snapshot.world_height << ",\n";
     out << "  \"interceptor_speed_per_tick\": " << state.snapshot.interceptor_speed_per_tick << ",\n";
@@ -143,18 +142,18 @@ void write_dump_golden_state(const std::filesystem::path& path, const ViewerStat
     out << "  \"schema_version\": \"icss-gui-viewer-golden-state-v1\",\n";
     out << "  \"phase\": \"" << icss::core::to_string(state.snapshot.phase) << "\",\n";
     out << "  \"phase_banner\": \"" << escape_json(phase_banner_label(state.snapshot.phase)) << "\",\n";
-    out << "  \"judgment_code\": \"" << icss::core::to_string(state.snapshot.judgment.code) << "\",\n";
-    out << "  \"effective_guidance_state\": \"" << effective_guidance_state(state) << "\",\n";
-    out << "  \"effective_launch_mode\": \"" << effective_launch_mode(state) << "\",\n";
+    out << "  \"assessment_code\": \"" << icss::core::to_string(state.snapshot.assessment.code) << "\",\n";
+    out << "  \"effective_track_state\": \"" << effective_track_state(state) << "\",\n";
+    out << "  \"intercept_profile\": \"" << intercept_profile(state) << "\",\n";
     out << "  \"recommended_control\": \"" << escape_json(recommended_control_label(state)) << "\",\n";
-    out << "  \"asset_status\": \"" << icss::core::to_string(state.snapshot.asset_status) << "\",\n";
-    out << "  \"command_status\": \"" << icss::core::to_string(state.snapshot.command_status) << "\",\n";
+    out << "  \"interceptor_status\": \"" << icss::core::to_string(state.snapshot.interceptor_status) << "\",\n";
+    out << "  \"engage_order_status\": \"" << icss::core::to_string(state.snapshot.engage_order_status) << "\",\n";
     out << "  \"target_active\": " << (state.snapshot.target.active ? "true" : "false") << ",\n";
-    out << "  \"asset_active\": " << (state.snapshot.asset.active ? "true" : "false") << ",\n";
+    out << "  \"interceptor_active\": " << (state.snapshot.interceptor.active ? "true" : "false") << ",\n";
     out << "  \"planned_launch_angle_deg\": " << state.planned_scenario.launch_angle_deg << ",\n";
     out << "  \"active_launch_angle_deg\": " << state.snapshot.launch_angle_deg << ",\n";
     out << "  \"target_motion_visual_visible\": " << (target_motion_visual_visible(state) ? "true" : "false") << ",\n";
-    out << "  \"asset_motion_visual_visible\": " << (asset_motion_visual_visible(state) ? "true" : "false") << ",\n";
+    out << "  \"interceptor_motion_visual_visible\": " << (interceptor_motion_visual_visible(state) ? "true" : "false") << ",\n";
     out << "  \"engagement_visual_visible\": " << (engagement_visual_visible(state) ? "true" : "false") << ",\n";
     out << "  \"predicted_marker_visual_visible\": " << (predicted_marker_visual_visible(state) ? "true" : "false") << "\n";
     out << "}\n";

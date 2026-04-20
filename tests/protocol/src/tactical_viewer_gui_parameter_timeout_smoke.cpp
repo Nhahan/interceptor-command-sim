@@ -35,7 +35,7 @@ ChildProcess spawn_gui_viewer(const std::filesystem::path& dump_path,
 
         ::setenv("SDL_VIDEODRIVER", "dummy", 1);
 
-        const std::string exe = (std::filesystem::path{ICSS_REPO_ROOT} / "build/icss_tactical_viewer_gui").string();
+        const std::string exe = (std::filesystem::path{ICSS_REPO_ROOT} / "build/icss_tactical_display_gui").string();
         const std::string udp = std::to_string(udp_port);
         const std::string tcp = std::to_string(tcp_port);
         std::vector<std::string> argv_storage {
@@ -45,7 +45,7 @@ ChildProcess spawn_gui_viewer(const std::filesystem::path& dump_path,
             "--tcp-port", tcp,
             "--headless",
             "--hidden",
-            "--auto-controls", "asset_speed_dec,asset_speed_dec,asset_speed_dec,timeout_dec,timeout_dec,timeout_dec,timeout_dec,timeout_dec,Start,Guidance,Activate,Command",
+            "--auto-controls", "interceptor_speed_dec,interceptor_speed_dec,interceptor_speed_dec,timeout_dec,timeout_dec,timeout_dec,timeout_dec,timeout_dec,Start,Track,Ready,Engage",
             "--duration-ms", "2200",
             "--heartbeat-interval-ms", "100",
             "--dump-state", dump_path.string(),
@@ -57,7 +57,7 @@ ChildProcess spawn_gui_viewer(const std::filesystem::path& dump_path,
         }
         argv.push_back(nullptr);
         ::execv(exe.c_str(), argv.data());
-        std::perror("exec icss_tactical_viewer_gui failed");
+        std::perror("exec icss_tactical_display_gui failed");
         std::_Exit(127);
     }
 
@@ -104,10 +104,10 @@ int main() {
     assert(icss::testsupport::minijson::require_field(object, "planned_engagement_timeout_ticks").as_int() == 10);
     assert(icss::testsupport::minijson::require_field(object, "interceptor_speed_per_tick").as_int() == 8);
     assert(icss::testsupport::minijson::require_field(object, "engagement_timeout_ticks").as_int() == 10);
-    assert(icss::testsupport::minijson::require_field(object, "judgment_code").as_string() == "timeout_observed");
+    assert(icss::testsupport::minijson::require_field(object, "assessment_code").as_string() == "timeout_observed");
     const auto phase = icss::testsupport::minijson::require_field(object, "phase").as_string();
-    assert(phase == "judged" || phase == "archived");
-    assert(!icss::testsupport::minijson::require_field(object, "asset_motion_visual_visible").as_bool());
+    assert(phase == "assessed" || phase == "archived");
+    assert(!icss::testsupport::minijson::require_field(object, "interceptor_motion_visual_visible").as_bool());
     assert(!icss::testsupport::minijson::require_field(object, "engagement_visual_visible").as_bool());
     assert(!icss::testsupport::minijson::require_field(object, "predicted_marker_visual_visible").as_bool());
     assert(!icss::testsupport::minijson::require_field(object, "command_visual_active").as_bool());

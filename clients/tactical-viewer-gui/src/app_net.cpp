@@ -132,12 +132,12 @@ bool same_endpoint(const sockaddr_in& lhs, const sockaddr_in& rhs) {
 }
 
 void send_viewer_join(UdpSocket& socket, const ViewerOptions& options, std::uint64_t& sequence) {
-    const icss::protocol::SessionJoinPayload join {{options.session_id, options.sender_id, sequence++}, "tactical_viewer"};
+    const icss::protocol::SessionJoinPayload join {{options.session_id, options.sender_id, sequence++}, "tactical_display"};
     send_datagram(socket.get(), make_server_addr(options), icss::protocol::serialize(join));
 }
 
-void send_viewer_heartbeat(UdpSocket& socket, const ViewerOptions& options, std::uint64_t& sequence, ViewerState& state) {
-    const icss::protocol::ViewerHeartbeatPayload heartbeat {{options.session_id, options.sender_id, sequence++}, ++state.heartbeat_id};
+void send_display_heartbeat(UdpSocket& socket, const ViewerOptions& options, std::uint64_t& sequence, ViewerState& state) {
+    const icss::protocol::DisplayHeartbeatPayload heartbeat {{options.session_id, options.sender_id, sequence++}, ++state.heartbeat_id};
     send_datagram(socket.get(), make_server_addr(options), icss::protocol::serialize(heartbeat));
     ++state.heartbeat_count;
 }
@@ -239,7 +239,7 @@ void ensure_control_connected(TcpSocket& socket,
                mode,
                "session_join",
                icss::protocol::serialize(icss::protocol::SessionJoinPayload{{options.session_id, options.sender_id, state.control.sequence++},
-                                                                            "command_console"}));
+                                                                            "fire_control_console"}));
     const auto frame = recv_frame(socket, mode);
     if (frame.kind != "command_ack") {
         throw std::runtime_error("expected command_ack for session_join");
@@ -250,7 +250,7 @@ void ensure_control_connected(TcpSocket& socket,
     state.control.last_label = "join";
     state.control.last_message = ack.reason;
     if (!ack.accepted) {
-        throw std::runtime_error("command console attach rejected: " + ack.reason);
+        throw std::runtime_error("fire control console attach rejected: " + ack.reason);
     }
 }
 
@@ -265,7 +265,7 @@ void TcpSocket::reset() {}
 bool TcpSocket::connected() const { return false; }
 int TcpSocket::fd() const { return -1; }
 void send_viewer_join(UdpSocket&, const ViewerOptions&, std::uint64_t&) {}
-void send_viewer_heartbeat(UdpSocket&, const ViewerOptions&, std::uint64_t&, ViewerState&) {}
+void send_display_heartbeat(UdpSocket&, const ViewerOptions&, std::uint64_t&, ViewerState&) {}
 void receive_datagrams(UdpSocket&, const ViewerOptions&, ViewerState&, std::uint64_t) {}
 void ensure_control_connected(TcpSocket&, ViewerState&, const ViewerOptions&, FrameMode) {}
 void send_frame(TcpSocket&, FrameMode, std::string_view, std::string_view) {}

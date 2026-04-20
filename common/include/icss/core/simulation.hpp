@@ -62,7 +62,7 @@ private:
                                  std::vector<std::string> entity_ids = {});
 
     std::uint32_t session_id_;
-    SessionPhase phase_ {SessionPhase::Initialized};
+    SessionPhase phase_ {SessionPhase::Standby};
     std::uint64_t tick_ {0};
     std::uint64_t sequence_ {0};
     std::uint64_t clock_ms_ {1'776'327'000'000ULL};
@@ -70,13 +70,13 @@ private:
     int telemetry_interval_ms_ {200};
     ScenarioConfig scenario_;
     EntityState target_ {"target-alpha", {3, 13}, false};
-    EntityState asset_ {"asset-interceptor", {10, 2}, false};
-    ClientState command_console_ {ClientRole::CommandConsole, ConnectionState::Disconnected, 0, 0};
-    ClientState tactical_viewer_ {ClientRole::TacticalViewer, ConnectionState::Disconnected, 0, 0};
+    EntityState asset_ {"interceptor-alpha", {10, 2}, false};
+    ClientState fire_control_console_ {ClientRole::FireControlConsole, ConnectionState::Disconnected, 0, 0};
+    ClientState tactical_display_ {ClientRole::TacticalDisplay, ConnectionState::Disconnected, 0, 0};
     TrackState track_;
-    AssetStatus asset_status_ {AssetStatus::Idle};
-    CommandLifecycle command_status_ {CommandLifecycle::None};
-    JudgmentState judgment_;
+    InterceptorStatus interceptor_status_ {InterceptorStatus::Idle};
+    EngageOrderStatus engage_order_status_ {EngageOrderStatus::None};
+    AssessmentState assessment_;
     bool reconnect_exercised_ {false};
     bool timeout_exercised_ {false};
     bool packet_gap_exercised_ {false};
@@ -92,7 +92,7 @@ private:
     Vec2f target_world_ {};
     Vec2f asset_world_ {};
     Vec2f target_velocity_world_ {};
-    Vec2f asset_velocity_world_ {};
+    Vec2f interceptor_velocity_world_ {};
     bool seeker_lock_ {false};
     float off_boresight_deg_ {0.0F};
     std::vector<EventRecord> events_;

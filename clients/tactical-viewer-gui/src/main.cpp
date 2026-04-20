@@ -12,9 +12,9 @@ namespace {
 void initialize_preview_state(ViewerState& state, const ViewerOptions& options) {
     state.planned_scenario = default_viewer_scenario(options.repo_root);
     state.snapshot.target.id = "target-alpha";
-    state.snapshot.asset.id = "asset-interceptor";
+    state.snapshot.interceptor.id = "interceptor-alpha";
     sync_preview_from_planned_scenario(state);
-    state.snapshot.viewer_connection = icss::core::ConnectionState::Disconnected;
+    state.snapshot.display_connection = icss::core::ConnectionState::Disconnected;
 }
 
 }  // namespace
@@ -36,7 +36,7 @@ int main(int argc, char** argv) {
         }
 
         Uint32 window_flags = options.hidden ? SDL_WINDOW_HIDDEN : SDL_WINDOW_SHOWN;
-        SDL_Window* window = SDL_CreateWindow("ICSS Tactical Viewer",
+        SDL_Window* window = SDL_CreateWindow("ICSS Tactical Display",
                                               SDL_WINDOWPOS_CENTERED,
                                               SDL_WINDOWPOS_CENTERED,
                                               options.width,
@@ -137,7 +137,7 @@ int main(int argc, char** argv) {
 
 #if !defined(_WIN32)
             if (now >= next_heartbeat) {
-                send_viewer_heartbeat(socket, options, sequence, state);
+                send_display_heartbeat(socket, options, sequence, state);
                 next_heartbeat = now + options.heartbeat_interval_ms;
             }
             receive_datagrams(socket, options, state, now);
@@ -151,15 +151,15 @@ int main(int argc, char** argv) {
             }
             if (options.auto_control_script) {
                 static const std::vector<std::string> kDefaultScript {
-                    "Start", "Guidance", "Activate", "Command", "Review", "Reset", "Start"
+                    "Start", "Track", "Ready", "Engage", "AAR", "Reset", "Start"
                 };
                 const auto& script = options.auto_controls.empty() ? kDefaultScript : options.auto_controls;
                 if (state.control.auto_step < script.size() && now >= state.control.auto_last_action_ms + 140) {
                     const auto& next_action = script[state.control.auto_step];
-                    const bool requires_judgment = (next_action == "Review")
-                        && state.snapshot.command_status != icss::core::CommandLifecycle::None
-                        && !state.snapshot.judgment.ready;
-                    if (!requires_judgment) {
+                    const bool requires_assessment = (next_action == "AAR")
+                        && state.snapshot.engage_order_status != icss::core::EngageOrderStatus::None
+                        && !state.snapshot.assessment.ready;
+                    if (!requires_assessment) {
                         perform_control_action(next_action, state, options, frame_mode, control_socket);
                         state.control.auto_last_action_ms = now;
                         ++state.control.auto_step;
@@ -177,7 +177,7 @@ int main(int argc, char** argv) {
         std::printf("received_snapshot=%s\n", state.received_snapshot ? "true" : "false");
         std::printf("received_telemetry=%s\n", state.received_telemetry ? "true" : "false");
         std::printf("snapshot_sequence=%llu\n", static_cast<unsigned long long>(state.snapshot.header.snapshot_sequence));
-        std::printf("connection_state=%s\n", icss::core::to_string(state.snapshot.viewer_connection));
+        std::printf("connection_state=%s\n", icss::core::to_string(state.snapshot.display_connection));
         std::printf("freshness=%s\n", icss::view::freshness_label(state.snapshot).c_str());
 
         TTF_CloseFont(title_font);

@@ -36,7 +36,7 @@ ChildProcess spawn_gui_viewer(const std::filesystem::path& repo_root,
 
         ::setenv("SDL_VIDEODRIVER", "dummy", 1);
 
-        const std::string exe = (std::filesystem::path{ICSS_REPO_ROOT} / "build/icss_tactical_viewer_gui").string();
+        const std::string exe = (std::filesystem::path{ICSS_REPO_ROOT} / "build/icss_tactical_display_gui").string();
         const std::string udp = std::to_string(udp_port);
         const std::string tcp = std::to_string(tcp_port);
         std::vector<std::string> argv_storage {
@@ -58,7 +58,7 @@ ChildProcess spawn_gui_viewer(const std::filesystem::path& repo_root,
         }
         argv.push_back(nullptr);
         ::execv(exe.c_str(), argv.data());
-        std::perror("exec icss_tactical_viewer_gui failed");
+        std::perror("exec icss_tactical_display_gui failed");
         std::_Exit(127);
     }
 

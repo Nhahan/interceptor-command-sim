@@ -15,14 +15,14 @@ int main() {
     const auto repo_config = load_runtime_config(std::filesystem::path {ICSS_REPO_ROOT});
     const auto summary = session.build_summary();
 
-    assert(summary.judgment_ready);
+    assert(summary.assessment_ready);
     assert(summary.phase == SessionPhase::Archived);
     assert(summary.snapshot_count >= 5);
     assert(summary.event_count >= 8);
     assert(session.latest_snapshot().envelope.sender_id == kServerSenderId);
-    assert(summary.judgment_code == JudgmentCode::InterceptSuccess);
-    assert(session.latest_snapshot().asset_status == AssetStatus::Complete);
-    assert(session.latest_snapshot().command_status == CommandLifecycle::Completed);
+    assert(summary.assessment_code == AssessmentCode::InterceptSuccess);
+    assert(session.latest_snapshot().interceptor_status == InterceptorStatus::Complete);
+    assert(session.latest_snapshot().engage_order_status == EngageOrderStatus::Completed);
     assert(session.latest_snapshot().world_width == repo_config.scenario.world_width);
     assert(session.latest_snapshot().world_height == repo_config.scenario.world_height);
     assert(session.latest_snapshot().engagement_timeout_ticks == repo_config.scenario.engagement_timeout_ticks);
@@ -45,14 +45,14 @@ int main() {
     assert(observed_stale_but_valid_measurement);
 
     SimulationSession reset_probe {1001U, 20, 200, ScenarioConfig {}};
-    reset_probe.connect_client(ClientRole::CommandConsole, 101U);
+    reset_probe.connect_client(ClientRole::FireControlConsole, 101U);
     const auto start_result = reset_probe.start_scenario();
     assert(start_result.accepted);
     const auto before_reset = reset_probe.latest_snapshot();
     const auto reset_result = reset_probe.reset_session("test reset");
     assert(reset_result.accepted);
     const auto after_reset = reset_probe.latest_snapshot();
-    assert(after_reset.phase == SessionPhase::Initialized);
+    assert(after_reset.phase == SessionPhase::Standby);
     assert(after_reset.header.tick == 0U);
     assert(after_reset.header.snapshot_sequence > before_reset.header.snapshot_sequence);
     assert(after_reset.header.timestamp_ms > before_reset.header.timestamp_ms);

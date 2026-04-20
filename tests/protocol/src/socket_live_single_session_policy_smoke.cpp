@@ -170,13 +170,13 @@ int main() {
     auto viewer_secondary = bind_udp_client(config.server.bind_host);
     const auto udp_server_addr = make_udp_server_addr(config.server.bind_host, info.udp_port);
 
-    const auto viewer_primary_join = serialize(SessionJoinPayload{{1001U, 201U, 1U}, "tactical_viewer"});
+    const auto viewer_primary_join = serialize(SessionJoinPayload{{1001U, 201U, 1U}, "tactical_display"});
     assert(::sendto(viewer_primary.fd, viewer_primary_join.data(), viewer_primary_join.size(), 0,
                     reinterpret_cast<const sockaddr*>(&udp_server_addr), sizeof(udp_server_addr)) >= 0);
 
     send_binary_frame(command_client.fd,
                       "session_join",
-                      serialize(SessionJoinPayload{{1001U, 101U, 1U}, "command_console"}));
+                      serialize(SessionJoinPayload{{1001U, 101U, 1U}, "fire_control_console"}));
     const auto join_frame = wait_for_binary_frame(*live, command_client.fd);
     assert(join_frame.kind == "command_ack");
     assert(parse_command_ack(join_frame.payload).accepted);
@@ -188,7 +188,7 @@ int main() {
         });
     send_binary_frame(command_client.fd,
                       "session_join",
-                      serialize(SessionJoinPayload{{1001U, 101U, 99U}, "command_console"}));
+                      serialize(SessionJoinPayload{{1001U, 101U, 99U}, "fire_control_console"}));
     const auto duplicate_join_frame = wait_for_binary_frame(*live, command_client.fd);
     assert(duplicate_join_frame.kind == "command_ack");
     assert(parse_command_ack(duplicate_join_frame.payload).accepted);
@@ -203,7 +203,7 @@ int main() {
     auto duplicate_command_client = connect_tcp_client(config.server.bind_host, info.tcp_port);
     assert(wait_for_disconnect(*live, duplicate_command_client.fd));
 
-    const auto viewer_secondary_join = serialize(SessionJoinPayload{{1001U, 202U, 1U}, "tactical_viewer"});
+    const auto viewer_secondary_join = serialize(SessionJoinPayload{{1001U, 202U, 1U}, "tactical_display"});
     assert(::sendto(viewer_secondary.fd, viewer_secondary_join.data(), viewer_secondary_join.size(), 0,
                     reinterpret_cast<const sockaddr*>(&udp_server_addr), sizeof(udp_server_addr)) >= 0);
     live->poll_once();
@@ -216,8 +216,8 @@ int main() {
     assert(parse_command_ack(start_frame.payload).accepted);
 
     send_binary_frame(command_client.fd,
-                      "track_request",
-                      serialize(TrackRequestPayload{{1001U, 101U, 3U}, "target-alpha"}));
+                      "track_acquire",
+                      serialize(TrackAcquirePayload{{1001U, 101U, 3U}, "target-alpha"}));
     const auto track_frame = wait_for_binary_frame(*live, command_client.fd);
     assert(track_frame.kind == "command_ack");
     assert(parse_command_ack(track_frame.payload).accepted);
@@ -230,7 +230,7 @@ int main() {
     assert(secondary_messages.empty());
 
     auto viewer_reregistered = bind_udp_client(config.server.bind_host);
-    const auto viewer_reregister_join = serialize(SessionJoinPayload{{1001U, 201U, 2U}, "tactical_viewer"});
+    const auto viewer_reregister_join = serialize(SessionJoinPayload{{1001U, 201U, 2U}, "tactical_display"});
     assert(::sendto(viewer_reregistered.fd, viewer_reregister_join.data(), viewer_reregister_join.size(), 0,
                     reinterpret_cast<const sockaddr*>(&udp_server_addr), sizeof(udp_server_addr)) >= 0);
     live->poll_once();
@@ -238,8 +238,8 @@ int main() {
     (void)recv_udp_messages(viewer_reregistered.fd, 20);
 
     send_binary_frame(command_client.fd,
-                      "asset_activate",
-                      serialize(AssetActivatePayload{{1001U, 101U, 4U}, "asset-interceptor"}));
+                      "interceptor_ready",
+                      serialize(InterceptorReadyPayload{{1001U, 101U, 4U}, "interceptor-alpha"}));
     const auto asset_frame = wait_for_binary_frame(*live, command_client.fd);
     assert(asset_frame.kind == "command_ack");
     assert(parse_command_ack(asset_frame.payload).accepted);
@@ -249,14 +249,14 @@ int main() {
             resync_snapshot,
             live->events(),
             icss::view::make_replay_cursor(live->events().size(), live->events().empty() ? 0 : live->events().size() - 1));
-        assert(resync_snapshot.viewer_connection == ConnectionState::Reconnected);
+        assert(resync_snapshot.display_connection == ConnectionState::Reconnected);
         assert(resync_frame.find("connection=reconnected") != std::string::npos);
         assert(resync_frame.find("freshness=resync") != std::string::npos);
     }
 
     send_binary_frame(command_client.fd,
-                      "command_issue",
-                      serialize(CommandIssuePayload{{1001U, 101U, 5U}, "asset-interceptor", "target-alpha"}));
+                      "engage_order",
+                      serialize(EngageOrderPayload{{1001U, 101U, 5U}, "interceptor-alpha", "target-alpha"}));
     const auto command_frame = wait_for_binary_frame(*live, command_client.fd);
     assert(command_frame.kind == "command_ack");
     assert(parse_command_ack(command_frame.payload).accepted);
@@ -266,7 +266,7 @@ int main() {
             steady_snapshot,
             live->events(),
             icss::view::make_replay_cursor(live->events().size(), live->events().empty() ? 0 : live->events().size() - 1));
-        assert(steady_snapshot.viewer_connection == ConnectionState::Connected);
+        assert(steady_snapshot.display_connection == ConnectionState::Connected);
         assert(steady_frame.find("connection=connected") != std::string::npos);
         assert(steady_frame.find("freshness=fresh") != std::string::npos);
     }

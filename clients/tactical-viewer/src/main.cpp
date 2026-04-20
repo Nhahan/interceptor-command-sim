@@ -15,14 +15,14 @@ int main() {
     namespace view = icss::view;
 
     auto transport = make_transport(BackendKind::InProcess, default_runtime_config(fs::path{ICSS_REPO_ROOT}));
-    transport->connect_client(ClientRole::CommandConsole, 101U);
-    transport->connect_client(ClientRole::TacticalViewer, 201U);
+    transport->connect_client(ClientRole::FireControlConsole, 101U);
+    transport->connect_client(ClientRole::TacticalDisplay, 201U);
     transport->start_scenario();
-    transport->dispatch(icss::protocol::TrackRequestPayload{{1001U, 101U, 1U}, "target-alpha"});
+    transport->dispatch(icss::protocol::TrackAcquirePayload{{1001U, 101U, 1U}, "target-alpha"});
     transport->advance_tick();
-    transport->dispatch(icss::protocol::AssetActivatePayload{{1001U, 101U, 2U}, "asset-interceptor"});
-    transport->dispatch(icss::protocol::CommandIssuePayload{{1001U, 101U, 3U}, "asset-interceptor", "target-alpha"});
-    for (int i = 0; i < transport->latest_snapshot().engagement_timeout_ticks && !transport->latest_snapshot().judgment.ready; ++i) {
+    transport->dispatch(icss::protocol::InterceptorReadyPayload{{1001U, 101U, 2U}, "interceptor-alpha"});
+    transport->dispatch(icss::protocol::EngageOrderPayload{{1001U, 101U, 3U}, "interceptor-alpha", "target-alpha"});
+    for (int i = 0; i < transport->latest_snapshot().engagement_timeout_ticks && !transport->latest_snapshot().assessment.ready; ++i) {
         transport->advance_tick();
     }
     transport->archive_session();
@@ -51,15 +51,15 @@ int main() {
         snapshot.target_velocity.x,
         snapshot.target_velocity.y,
         snapshot.target_heading_deg,
-        snapshot.asset.id,
-        snapshot.asset.active,
-        snapshot.asset.position.x,
-        snapshot.asset.position.y,
-        snapshot.asset_world_position.x,
-        snapshot.asset_world_position.y,
-        snapshot.asset_velocity.x,
-        snapshot.asset_velocity.y,
-        snapshot.asset_heading_deg,
+        snapshot.interceptor.id,
+        snapshot.interceptor.active,
+        snapshot.interceptor.position.x,
+        snapshot.interceptor.position.y,
+        snapshot.interceptor_world_position.x,
+        snapshot.interceptor_world_position.y,
+        snapshot.interceptor_velocity.x,
+        snapshot.interceptor_velocity.y,
+        snapshot.interceptor_heading_deg,
         snapshot.interceptor_speed_per_tick,
         snapshot.interceptor_acceleration_per_tick,
         snapshot.intercept_radius,
@@ -83,15 +83,15 @@ int main() {
         snapshot.track.covariance_trace,
         static_cast<int>(snapshot.track.measurement_age_ticks),
         static_cast<int>(snapshot.track.missed_updates),
-        to_string(snapshot.asset_status),
-        to_string(snapshot.command_status),
-        snapshot.judgment.ready,
-        to_string(snapshot.judgment.code),
+        to_string(snapshot.interceptor_status),
+        to_string(snapshot.engage_order_status),
+        snapshot.assessment.ready,
+        to_string(snapshot.assessment.code),
     };
     const icss::protocol::TelemetryPayload telemetry_payload {
         snapshot.envelope,
         snapshot.telemetry,
-        to_string(snapshot.viewer_connection),
+        to_string(snapshot.display_connection),
         recent.empty() ? 0U : recent.back().header.tick,
         recent.empty() ? "none" : std::string(icss::protocol::to_string(recent.back().header.event_type)),
         recent.empty() ? "no server event" : recent.back().summary,

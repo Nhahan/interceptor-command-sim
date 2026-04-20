@@ -10,10 +10,10 @@ int main() {
     using namespace icss::protocol;
 
     SimulationSession session;
-    session.connect_client(ClientRole::CommandConsole, 101U);
-    session.connect_client(ClientRole::TacticalViewer, 201U);
+    session.connect_client(ClientRole::FireControlConsole, 101U);
+    session.connect_client(ClientRole::TacticalDisplay, 201U);
     session.start_scenario();
-    session.timeout_client(ClientRole::TacticalViewer, "heartbeat timeout threshold exceeded");
+    session.timeout_client(ClientRole::TacticalDisplay, "heartbeat timeout threshold exceeded");
 
     const auto& events = session.events();
     const auto timeout_seen = std::any_of(events.begin(), events.end(), [](const EventRecord& event) {
@@ -21,9 +21,9 @@ int main() {
     });
 
     assert(timeout_seen);
-    assert(session.latest_snapshot().viewer_connection == ConnectionState::TimedOut);
+    assert(session.latest_snapshot().display_connection == ConnectionState::TimedOut);
     assert(session.build_summary().resilience_case == "timeout_visibility");
-    assert(session.build_summary().judgment_code == JudgmentCode::Pending);
+    assert(session.build_summary().assessment_code == AssessmentCode::Pending);
     const auto frame = icss::view::render_tactical_frame(
         session.latest_snapshot(),
         events,
@@ -32,7 +32,7 @@ int main() {
     assert(frame.find("freshness=stale") != std::string::npos);
 
     SimulationSession reset_session;
-    reset_session.connect_client(ClientRole::CommandConsole, 101U);
+    reset_session.connect_client(ClientRole::FireControlConsole, 101U);
     reset_session.reset_session("idle reset");
     const auto idle_frame = icss::view::render_tactical_frame(
         reset_session.latest_snapshot(),

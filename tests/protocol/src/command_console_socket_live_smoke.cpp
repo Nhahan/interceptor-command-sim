@@ -20,7 +20,7 @@ namespace {
 #if !defined(_WIN32)
 using icss::testsupport::process::ChildProcess;
 
-ChildProcess spawn_command_console(const std::filesystem::path& repo_root,
+ChildProcess spawn_fire_control_console(const std::filesystem::path& repo_root,
                                    std::uint16_t tcp_port,
                                    std::string frame_format) {
     int pipe_fds[2] {};
@@ -33,7 +33,7 @@ ChildProcess spawn_command_console(const std::filesystem::path& repo_root,
         ::dup2(pipe_fds[1], STDERR_FILENO);
         ::close(pipe_fds[1]);
 
-        const std::string exe = (std::filesystem::path{ICSS_REPO_ROOT} / "build/icss_command_console").string();
+        const std::string exe = (std::filesystem::path{ICSS_REPO_ROOT} / "build/icss_fire_control_console").string();
         const std::string port = std::to_string(tcp_port);
         std::vector<std::string> argv_storage {
             exe,
@@ -50,7 +50,7 @@ ChildProcess spawn_command_console(const std::filesystem::path& repo_root,
         }
         argv.push_back(nullptr);
         ::execv(exe.c_str(), argv.data());
-        std::perror("exec icss_command_console failed");
+        std::perror("exec icss_fire_control_console failed");
         std::_Exit(127);
     }
 
@@ -67,13 +67,13 @@ int main() {
     namespace fs = std::filesystem;
     namespace process = icss::testsupport::process;
 
-    const fs::path temp_root = icss::testsupport::make_temp_configured_repo("icss_command_console_live_");
+    const fs::path temp_root = icss::testsupport::make_temp_configured_repo("icss_fire_control_console_live_");
     {
         const fs::path scenario_file = temp_root / "configs/scenario.example.yaml";
         std::ofstream out(scenario_file);
         out << "scenario:\n";
         out << "  name: basic_intercept_training\n";
-        out << "  description: command console timeout verification\n";
+        out << "  description: fire control console timeout verification\n";
         out << "entities:\n";
         out << "  targets: 1\n";
         out << "  assets: 1\n";
@@ -102,7 +102,7 @@ int main() {
     });
     const auto startup = process::wait_for_startup(server);
 
-    auto console = spawn_command_console(temp_root, startup.tcp_port, "binary");
+    auto console = spawn_fire_control_console(temp_root, startup.tcp_port, "binary");
     const auto [console_exited, console_status] =
         process::wait_for_exit(console.pid, std::chrono::steady_clock::now() + std::chrono::seconds(8));
     assert(console_exited);
@@ -120,11 +120,11 @@ int main() {
     assert(output.find("backend=socket_live") != std::string::npos);
     assert(output.find("session_join: accepted") != std::string::npos);
     assert(output.find("scenario_start: accepted") != std::string::npos);
-    assert(output.find("track_request: accepted") != std::string::npos);
-    assert(output.find("asset_activate: accepted") != std::string::npos);
-    assert(output.find("command_issue: accepted") != std::string::npos);
+    assert(output.find("track_acquire: accepted") != std::string::npos);
+    assert(output.find("interceptor_ready: accepted") != std::string::npos);
+    assert(output.find("engage_order: accepted") != std::string::npos);
     assert(output.find("aar_response: cursor=") != std::string::npos);
-    assert(output.find("judgment_code=timeout_observed") != std::string::npos);
+    assert(output.find("assessment_code=timeout_observed") != std::string::npos);
 
     ::kill(server.pid, SIGTERM);
     const auto [server_exited, server_status] =

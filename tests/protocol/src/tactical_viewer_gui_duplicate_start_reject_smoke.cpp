@@ -71,7 +71,7 @@ ChildProcess spawn_gui_viewer(const std::filesystem::path& dump_path,
 
         ::setenv("SDL_VIDEODRIVER", "dummy", 1);
 
-        const std::string exe = (std::filesystem::path {ICSS_REPO_ROOT} / "build/icss_tactical_viewer_gui").string();
+        const std::string exe = (std::filesystem::path {ICSS_REPO_ROOT} / "build/icss_tactical_display_gui").string();
         const std::string port = std::to_string(udp_port);
         const std::string tcp = std::to_string(tcp_port);
         const std::string session = std::to_string(session_id);
@@ -99,7 +99,7 @@ ChildProcess spawn_gui_viewer(const std::filesystem::path& dump_path,
         }
         argv.push_back(nullptr);
         ::execv(exe.c_str(), argv.data());
-        std::perror("exec icss_tactical_viewer_gui failed");
+        std::perror("exec icss_tactical_display_gui failed");
         std::_Exit(127);
     }
 
@@ -157,26 +157,26 @@ int main() {
     assert(icss::testsupport::minijson::require_field(object, "phase").as_string() == "detecting");
     assert(icss::testsupport::minijson::require_field(object, "last_control_label").as_string() == "Start");
     const auto last_message = icss::testsupport::minijson::require_field(object, "last_control_message").as_string();
-    assert(last_message.find("initialized state") != std::string::npos);
+    assert(last_message.find("standby state") != std::string::npos);
 
     const auto target_x = icss::testsupport::minijson::require_field(object, "target_x").as_int();
     const auto target_y = icss::testsupport::minijson::require_field(object, "target_y").as_int();
-    const auto asset_x = icss::testsupport::minijson::require_field(object, "asset_x").as_int();
-    const auto asset_y = icss::testsupport::minijson::require_field(object, "asset_y").as_int();
+    const auto interceptor_x = icss::testsupport::minijson::require_field(object, "interceptor_x").as_int();
+    const auto interceptor_y = icss::testsupport::minijson::require_field(object, "interceptor_y").as_int();
     const auto target_vx = icss::testsupport::minijson::require_field(object, "target_velocity_x").as_int();
     const auto target_vy = icss::testsupport::minijson::require_field(object, "target_velocity_y").as_int();
 
     assert(target_x == expected_first.target_start_x);
     assert(target_y == expected_first.target_start_y);
-    assert(asset_x == expected_first.interceptor_start_x);
-    assert(asset_y == expected_first.interceptor_start_y);
+    assert(interceptor_x == expected_first.interceptor_start_x);
+    assert(interceptor_y == expected_first.interceptor_start_y);
     assert(target_vx == expected_first.target_velocity_x);
     assert(target_vy == expected_first.target_velocity_y);
 
     assert(target_x != expected_second.target_start_x
            || target_y != expected_second.target_start_y
-           || asset_x != expected_second.interceptor_start_x
-           || asset_y != expected_second.interceptor_start_y
+           || interceptor_x != expected_second.interceptor_start_x
+           || interceptor_y != expected_second.interceptor_start_y
            || target_vx != expected_second.target_velocity_x
            || target_vy != expected_second.target_velocity_y);
 

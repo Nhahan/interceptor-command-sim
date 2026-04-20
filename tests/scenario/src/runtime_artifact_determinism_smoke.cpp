@@ -32,7 +32,7 @@ int main() {
                                   std::string& runtime_log) {
             BaselineRuntime runtime(default_runtime_config(temp_root), mode);
             const auto result = runtime.run();
-            assert(result.summary.judgment_ready);
+            assert(result.summary.assessment_ready);
 
             summary_md = read_text(temp_root / "assets/sample-aar/session-summary.md");
             summary_json = read_text(temp_root / "assets/sample-aar/session-summary.json");
@@ -64,7 +64,7 @@ int main() {
         fs::remove_all(temp_root);
     };
 
-    verify_mode(SampleMode::Guided, "icss_runtime_artifact_determinism_guided_");
-    verify_mode(SampleMode::Straight, "icss_runtime_artifact_determinism_straight_");
+    verify_mode(SampleMode::TrackedIntercept, "icss_runtime_artifact_determinism_tracked_intercept_");
+    verify_mode(SampleMode::UnguidedIntercept, "icss_runtime_artifact_determinism_unguided_intercept_");
     return 0;
 }

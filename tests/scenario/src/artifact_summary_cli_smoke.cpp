@@ -32,21 +32,21 @@ int main() {
     using namespace icss::core;
 
     const auto temp_root = icss::testsupport::make_temp_configured_repo("icss_artifact_summary_cli_");
-    BaselineRuntime guided_runtime(default_runtime_config(temp_root), SampleMode::Guided);
-    const auto guided_result = guided_runtime.run();
-    assert(guided_result.summary.judgment_ready);
+    BaselineRuntime tracked_intercept_runtime(default_runtime_config(temp_root), SampleMode::TrackedIntercept);
+    const auto tracked_intercept_result = tracked_intercept_runtime.run();
+    assert(tracked_intercept_result.summary.assessment_ready);
 
-    const auto straight_root = icss::testsupport::make_temp_configured_repo("icss_artifact_summary_cli_straight_");
-    BaselineRuntime straight_runtime(default_runtime_config(straight_root), SampleMode::Straight);
-    const auto straight_result = straight_runtime.run();
-    assert(straight_result.summary.judgment_ready);
+    const auto unguided_intercept_root = icss::testsupport::make_temp_configured_repo("icss_artifact_summary_cli_unguided_intercept_");
+    BaselineRuntime unguided_intercept_runtime(default_runtime_config(unguided_intercept_root), SampleMode::UnguidedIntercept);
+    const auto unguided_intercept_result = unguided_intercept_runtime.run();
+    assert(unguided_intercept_result.summary.assessment_ready);
 
-    fs::create_directories(temp_root / "assets/sample-aar/straight");
-    fs::copy_file(straight_root / "assets/sample-aar/session-summary.json",
-                  temp_root / "assets/sample-aar/straight/session-summary.json",
+    fs::create_directories(temp_root / "assets/sample-aar/unguided_intercept");
+    fs::copy_file(unguided_intercept_root / "assets/sample-aar/session-summary.json",
+                  temp_root / "assets/sample-aar/unguided_intercept/session-summary.json",
                   fs::copy_options::overwrite_existing);
-    fs::copy_file(straight_root / "assets/sample-aar/replay-timeline.json",
-                  temp_root / "assets/sample-aar/straight/replay-timeline.json",
+    fs::copy_file(unguided_intercept_root / "assets/sample-aar/replay-timeline.json",
+                  temp_root / "assets/sample-aar/unguided_intercept/replay-timeline.json",
                   fs::copy_options::overwrite_existing);
 
     const fs::path output_file = temp_root / "artifact-summary.txt";
@@ -64,21 +64,21 @@ int main() {
 
     const auto output = read_text(output_file);
     assert(output.find("ICSS Artifact Summary") != std::string::npos);
-    assert(output.find("guided.summary.session_id=1001") != std::string::npos);
-    assert(output.find("guided.summary.judgment_code=intercept_success") != std::string::npos);
-    assert(output.find("guided.timeline.event_count=") != std::string::npos);
-    assert(output.find("guided.log.backend=in_process") != std::string::npos);
-    assert(output.find("straight.available=true") != std::string::npos);
-    assert(output.find("straight.summary.judgment_code=timeout_observed") != std::string::npos);
-    assert(output.find("compare.guided_judgment=intercept_success") != std::string::npos);
-    assert(output.find("compare.straight_judgment=timeout_observed") != std::string::npos);
-    assert(output.find("compare.guided_launch_mode=guided") != std::string::npos);
-    assert(output.find("compare.straight_launch_mode=straight") != std::string::npos);
+    assert(output.find("tracked_intercept.summary.session_id=1001") != std::string::npos);
+    assert(output.find("tracked_intercept.summary.assessment_code=intercept_success") != std::string::npos);
+    assert(output.find("tracked_intercept.timeline.event_count=") != std::string::npos);
+    assert(output.find("tracked_intercept.log.backend=in_process") != std::string::npos);
+    assert(output.find("unguided_intercept.available=true") != std::string::npos);
+    assert(output.find("unguided_intercept.summary.assessment_code=timeout_observed") != std::string::npos);
+    assert(output.find("compare.tracked_intercept_judgment=intercept_success") != std::string::npos);
+    assert(output.find("compare.unguided_intercept_judgment=timeout_observed") != std::string::npos);
+    assert(output.find("compare.tracked_intercept_intercept_profile=tracked_intercept") != std::string::npos);
+    assert(output.find("compare.unguided_intercept_intercept_profile=unguided_intercept") != std::string::npos);
 
     const fs::path compare_output_file = temp_root / "artifact-summary-compare.txt";
     const std::string compare_command =
-        "\"" + tool_path + "\" --guided-root \"" + temp_root.string()
-            + "\" --straight-root \"" + straight_root.string()
+        "\"" + tool_path + "\" --tracked_intercept-root \"" + temp_root.string()
+            + "\" --unguided_intercept-root \"" + unguided_intercept_root.string()
             + "\" > \"" + compare_output_file.string() + "\" 2>&1";
     const int compare_result = run_command_to_file(compare_command);
 #if !defined(_WIN32)
@@ -88,14 +88,14 @@ int main() {
     assert(compare_result == 0);
 #endif
     const auto compare_output = read_text(compare_output_file);
-    assert(compare_output.find("guided.summary.judgment_code=intercept_success") != std::string::npos);
-    assert(compare_output.find("straight.summary.judgment_code=timeout_observed") != std::string::npos);
-    assert(compare_output.find("compare.guided_judgment=intercept_success") != std::string::npos);
-    assert(compare_output.find("compare.straight_judgment=timeout_observed") != std::string::npos);
+    assert(compare_output.find("tracked_intercept.summary.assessment_code=intercept_success") != std::string::npos);
+    assert(compare_output.find("unguided_intercept.summary.assessment_code=timeout_observed") != std::string::npos);
+    assert(compare_output.find("compare.tracked_intercept_judgment=intercept_success") != std::string::npos);
+    assert(compare_output.find("compare.unguided_intercept_judgment=timeout_observed") != std::string::npos);
 
     const fs::path invalid_output_file = temp_root / "artifact-summary-invalid.txt";
     const std::string partial_invalid_command =
-        "\"" + tool_path + "\" --guided-root \"" + temp_root.string()
+        "\"" + tool_path + "\" --tracked_intercept-root \"" + temp_root.string()
             + "\" > \"" + invalid_output_file.string() + "\" 2>&1";
     const int partial_invalid_result = run_command_to_file(partial_invalid_command);
 #if !defined(_WIN32)
@@ -105,13 +105,13 @@ int main() {
     assert(partial_invalid_result != 0);
 #endif
     const auto partial_invalid_output = read_text(invalid_output_file);
-    assert(partial_invalid_output.find("--guided-root and --straight-root must be provided together") != std::string::npos);
+    assert(partial_invalid_output.find("--tracked_intercept-root and --unguided_intercept-root must be provided together") != std::string::npos);
 
     const fs::path mixed_output_file = temp_root / "artifact-summary-mixed-invalid.txt";
     const std::string mixed_invalid_command =
         "\"" + tool_path + "\" --repo-root \"" + temp_root.string()
-            + "\" --guided-root \"" + temp_root.string()
-            + "\" --straight-root \"" + straight_root.string()
+            + "\" --tracked_intercept-root \"" + temp_root.string()
+            + "\" --unguided_intercept-root \"" + unguided_intercept_root.string()
             + "\" > \"" + mixed_output_file.string() + "\" 2>&1";
     const int mixed_invalid_result = run_command_to_file(mixed_invalid_command);
 #if !defined(_WIN32)
@@ -124,6 +124,6 @@ int main() {
     assert(mixed_invalid_output.find("--repo-root cannot be combined with compare-root flags") != std::string::npos);
 
     fs::remove_all(temp_root);
-    fs::remove_all(straight_root);
+    fs::remove_all(unguided_intercept_root);
     return 0;
 }

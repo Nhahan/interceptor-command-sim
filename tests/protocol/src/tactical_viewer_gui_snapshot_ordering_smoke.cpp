@@ -29,15 +29,15 @@ icss::protocol::SnapshotPayload make_snapshot(std::uint64_t sequence,
     payload.target_velocity_world_x = 5.0F;
     payload.target_velocity_world_y = -3.0F;
     payload.target_heading_deg = -31.0F;
-    payload.asset_id = "asset-interceptor";
-    payload.asset_active = false;
-    payload.asset_x = 160;
-    payload.asset_y = 60;
-    payload.asset_world_x = 160.0F;
-    payload.asset_world_y = 60.0F;
-    payload.asset_velocity_world_x = 0.0F;
-    payload.asset_velocity_world_y = 0.0F;
-    payload.asset_heading_deg = 0.0F;
+    payload.interceptor_id = "interceptor-alpha";
+    payload.interceptor_active = false;
+    payload.interceptor_x = 160;
+    payload.interceptor_y = 60;
+    payload.interceptor_world_x = 160.0F;
+    payload.interceptor_world_y = 60.0F;
+    payload.interceptor_velocity_world_x = 0.0F;
+    payload.interceptor_velocity_world_y = 0.0F;
+    payload.interceptor_heading_deg = 0.0F;
     payload.interceptor_speed_per_tick = 32;
     payload.interceptor_acceleration_per_tick = 8.0F;
     payload.intercept_radius = 24;
@@ -47,11 +47,11 @@ icss::protocol::SnapshotPayload make_snapshot(std::uint64_t sequence,
     payload.off_boresight_deg = 0.0F;
     payload.predicted_intercept_valid = false;
     payload.time_to_intercept_s = 0.0F;
-    payload.tracking_active = false;
-    payload.asset_status = "idle";
-    payload.command_status = "none";
-    payload.judgment_ready = false;
-    payload.judgment_code = "pending";
+    payload.track_active = false;
+    payload.interceptor_status = "idle";
+    payload.engage_order_status = "none";
+    payload.assessment_ready = false;
+    payload.assessment_code = "pending";
     return payload;
 }
 
@@ -78,10 +78,10 @@ int main() {
     using namespace icss::viewer_gui;
 
     ViewerState state;
-    state.review.available = true;
-    state.review.loaded = true;
-    state.review.visible = true;
-    state.review.judgment_code = "intercept_success";
+    state.aar.available = true;
+    state.aar.loaded = true;
+    state.aar.visible = true;
+    state.aar.assessment_code = "intercept_success";
     state.timeline_scroll_lines = 9;
 
     apply_snapshot(state, make_snapshot(5U, 10U, 110.0F, 110));
@@ -90,9 +90,9 @@ int main() {
     assert(state.snapshot.telemetry.tick == 0U);
     assert(state.snapshot.target_world_position.x == 110.0F);
     assert(state.target_history.size() == 1);
-    assert(!state.review.available);
-    assert(!state.review.loaded);
-    assert(!state.review.visible);
+    assert(!state.aar.available);
+    assert(!state.aar.loaded);
+    assert(!state.aar.visible);
     assert(state.timeline_scroll_lines == 0U);
 
     apply_snapshot(state, make_snapshot(4U, 9U, 90.0F, 90));
@@ -128,12 +128,12 @@ int main() {
     assert(state.last_server_event_type == "session_started");
     assert(state.recent_server_events.size() == 2);
 
-    auto newer_after_reset = make_telemetry(12U, 21U, 12U, "asset_updated", "asset ready");
+    auto newer_after_reset = make_telemetry(12U, 21U, 12U, "interceptor_updated", "interceptor ready");
     newer_after_reset.sample.last_snapshot_timestamp_ms = 7100U;
     apply_telemetry(state, newer_after_reset);
     assert(state.snapshot.telemetry.tick == 12U);
     assert(state.snapshot.telemetry.latency_ms == 21U);
-    assert(state.last_server_event_type == "asset_updated");
+    assert(state.last_server_event_type == "interceptor_updated");
     assert(state.recent_server_events.size() == 3);
 
     auto same_snapshot_older_event = make_telemetry(12U, 55U, 10U, "client_left", "older event same snapshot");
@@ -141,15 +141,15 @@ int main() {
     apply_telemetry(state, same_snapshot_older_event);
     assert(state.snapshot.telemetry.tick == 12U);
     assert(state.snapshot.telemetry.latency_ms == 21U);
-    assert(state.last_server_event_type == "asset_updated");
+    assert(state.last_server_event_type == "interceptor_updated");
     assert(state.recent_server_events.size() == 3);
 
-    auto same_snapshot_newer_event = make_telemetry(12U, 19U, 13U, "command_accepted", "newer event same snapshot");
+    auto same_snapshot_newer_event = make_telemetry(12U, 19U, 13U, "engage_order_accepted", "newer event same snapshot");
     same_snapshot_newer_event.sample.last_snapshot_timestamp_ms = 7100U;
     apply_telemetry(state, same_snapshot_newer_event);
     assert(state.snapshot.telemetry.tick == 12U);
     assert(state.snapshot.telemetry.latency_ms == 19U);
-    assert(state.last_server_event_type == "command_accepted");
+    assert(state.last_server_event_type == "engage_order_accepted");
     assert(state.recent_server_events.size() == 4);
 
     return 0;

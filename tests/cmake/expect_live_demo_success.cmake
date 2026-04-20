@@ -43,9 +43,9 @@ if(NOT result EQUAL 0)
 endif()
 
 foreach(expected
-        "command_issue: accepted"
-        "guided.summary.judgment_code=timeout_observed"
-        "straight.available=false"
+        "engage_order: accepted"
+        "tracked_intercept.summary.assessment_code=timeout_observed"
+        "unguided_intercept.available=false"
         "viewer_state.received_snapshot=true"
         "viewer_state.received_telemetry=true"
         "demo_completed=true")

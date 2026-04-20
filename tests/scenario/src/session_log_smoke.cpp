@@ -46,7 +46,7 @@ int main() {
 
     BaselineRuntime runtime(default_runtime_config(temp_root));
     const auto result = runtime.run();
-    assert(result.summary.judgment_ready);
+    assert(result.summary.assessment_ready);
 
     const fs::path log_file = temp_root / "logs/session.log";
     assert(fs::exists(log_file));
@@ -55,16 +55,16 @@ int main() {
     std::string line;
     bool saw_summary = false;
     bool saw_schema_version = false;
-    bool saw_command_accepted = false;
+    bool saw_engage_order_accepted = false;
     bool saw_resilience = false;
     bool saw_backend = false;
-    bool saw_judgment_code = false;
-    bool saw_guidance_state = false;
-    bool saw_launch_mode = false;
+    bool saw_assessment_code = false;
+    bool saw_effective_track_state = false;
+    bool saw_intercept_profile = false;
     bool saw_launch_angle = false;
     bool saw_command_connection = false;
     bool saw_last_event_type = false;
-    bool saw_guidance_event = false;
+    bool saw_track_event = false;
     bool saw_launch_event_metadata = false;
     std::size_t record_count = 0;
     while (std::getline(in, line)) {
@@ -79,30 +79,30 @@ int main() {
         if (record_type.as_string() == "session_summary") {
             saw_summary = true;
             saw_backend = saw_backend || icss::testsupport::minijson::require_field(object, "backend").as_string() == "in_process";
-            saw_judgment_code = saw_judgment_code || icss::testsupport::minijson::require_field(object, "judgment_code").as_string() == "intercept_success";
-            saw_guidance_state = saw_guidance_state || icss::testsupport::minijson::require_field(object, "guidance_state").as_string() == "on";
-            saw_launch_mode = saw_launch_mode || icss::testsupport::minijson::require_field(object, "launch_mode").as_string() == "guided";
+            saw_assessment_code = saw_assessment_code || icss::testsupport::minijson::require_field(object, "assessment_code").as_string() == "intercept_success";
+            saw_effective_track_state = saw_effective_track_state || icss::testsupport::minijson::require_field(object, "effective_track_state").as_string() == "tracked";
+            saw_intercept_profile = saw_intercept_profile || icss::testsupport::minijson::require_field(object, "intercept_profile").as_string() == "tracked_intercept";
             saw_launch_angle = saw_launch_angle || icss::testsupport::minijson::require_field(object, "launch_angle_deg").as_int() == 45;
-            saw_command_connection = saw_command_connection || icss::testsupport::minijson::require_field(object, "command_console_connection").as_string() == "connected";
+            saw_command_connection = saw_command_connection || icss::testsupport::minijson::require_field(object, "fire_control_console_connection").as_string() == "connected";
             saw_last_event_type = saw_last_event_type || icss::testsupport::minijson::require_field(object, "last_event_type").as_string() == "session_ended";
             assert(icss::testsupport::minijson::require_field(object, "session_id").is_int());
             assert(icss::testsupport::minijson::require_field(object, "phase").is_string());
             assert(icss::testsupport::minijson::require_field(object, "snapshot_count").is_int());
             assert(icss::testsupport::minijson::require_field(object, "event_count").is_int());
-            assert(icss::testsupport::minijson::require_field(object, "viewer_connection").is_string());
+            assert(icss::testsupport::minijson::require_field(object, "display_connection").is_string());
             assert(icss::testsupport::minijson::require_field(object, "resilience").is_string());
         }
         if (record_type.as_string() == "event") {
             const auto& event_type = icss::testsupport::minijson::require_field(object, "event_type");
             assert(event_type.is_string());
-            saw_command_accepted = saw_command_accepted || event_type.as_string() == "command_accepted";
+            saw_engage_order_accepted = saw_engage_order_accepted || event_type.as_string() == "engage_order_accepted";
             saw_resilience = saw_resilience || event_type.as_string() == "resilience_triggered";
             if (event_type.as_string() == "track_updated") {
-                saw_guidance_event = icss::testsupport::minijson::require_field(object, "guidance_active").as_bool();
+                saw_track_event = icss::testsupport::minijson::require_field(object, "track_active").as_bool();
             }
-            if (event_type.as_string() == "command_accepted") {
-                saw_launch_event_metadata = icss::testsupport::minijson::require_field(object, "guidance_active").as_bool()
-                    && icss::testsupport::minijson::require_field(object, "launch_mode").as_string() == "guided"
+            if (event_type.as_string() == "engage_order_accepted") {
+                saw_launch_event_metadata = icss::testsupport::minijson::require_field(object, "track_active").as_bool()
+                    && icss::testsupport::minijson::require_field(object, "intercept_profile").as_string() == "tracked_intercept"
                     && icss::testsupport::minijson::require_field(object, "launch_angle_deg").as_int() == 45;
             }
             assert(icss::testsupport::minijson::require_field(object, "tick").is_int());
@@ -117,16 +117,16 @@ int main() {
     assert(record_count >= 2);
     assert(saw_schema_version);
     assert(saw_summary);
-    assert(saw_command_accepted);
+    assert(saw_engage_order_accepted);
     assert(saw_resilience);
     assert(saw_backend);
-    assert(saw_judgment_code);
-    assert(saw_guidance_state);
-    assert(saw_launch_mode);
+    assert(saw_assessment_code);
+    assert(saw_effective_track_state);
+    assert(saw_intercept_profile);
     assert(saw_launch_angle);
     assert(saw_command_connection);
     assert(saw_last_event_type);
-    assert(saw_guidance_event);
+    assert(saw_track_event);
     assert(saw_launch_event_metadata);
 
     fs::remove_all(temp_root);

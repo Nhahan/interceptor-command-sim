@@ -37,10 +37,10 @@ public:
 
     virtual icss::core::CommandResult start_scenario() = 0;
     virtual icss::core::CommandResult reset_session(std::string reason) = 0;
-    virtual icss::core::CommandResult dispatch(const icss::protocol::TrackRequestPayload& payload) = 0;
-    virtual icss::core::CommandResult dispatch(const icss::protocol::TrackReleasePayload& payload) = 0;
-    virtual icss::core::CommandResult dispatch(const icss::protocol::AssetActivatePayload& payload) = 0;
-    virtual icss::core::CommandResult dispatch(const icss::protocol::CommandIssuePayload& payload) = 0;
+    virtual icss::core::CommandResult dispatch(const icss::protocol::TrackAcquirePayload& payload) = 0;
+    virtual icss::core::CommandResult dispatch(const icss::protocol::TrackDropPayload& payload) = 0;
+    virtual icss::core::CommandResult dispatch(const icss::protocol::InterceptorReadyPayload& payload) = 0;
+    virtual icss::core::CommandResult dispatch(const icss::protocol::EngageOrderPayload& payload) = 0;
     virtual void advance_tick() = 0;
     virtual void archive_session() = 0;
 

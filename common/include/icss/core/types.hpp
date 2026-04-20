@@ -11,8 +11,8 @@ namespace icss::core {
 inline constexpr std::uint32_t kServerSenderId = 1U;
 
 enum class ClientRole : std::uint8_t {
-    CommandConsole,
-    TacticalViewer,
+    FireControlConsole,
+    TacticalDisplay,
 };
 
 enum class ConnectionState : std::uint8_t {
@@ -23,24 +23,24 @@ enum class ConnectionState : std::uint8_t {
 };
 
 enum class SessionPhase : std::uint8_t {
-    Initialized,
+    Standby,
     Detecting,
     Tracking,
-    AssetReady,
-    CommandIssued,
-    Engaging,
-    Judged,
+    InterceptorReady,
+    EngageOrdered,
+    Intercepting,
+    Assessed,
     Archived,
 };
 
-enum class AssetStatus : std::uint8_t {
+enum class InterceptorStatus : std::uint8_t {
     Idle,
     Ready,
-    Engaging,
+    Intercepting,
     Complete,
 };
 
-enum class CommandLifecycle : std::uint8_t {
+enum class EngageOrderStatus : std::uint8_t {
     None,
     Accepted,
     Executing,
@@ -48,7 +48,7 @@ enum class CommandLifecycle : std::uint8_t {
     Rejected,
 };
 
-enum class JudgmentCode : std::uint8_t {
+enum class AssessmentCode : std::uint8_t {
     Pending,
     InterceptSuccess,
     InvalidTransition,
@@ -72,7 +72,7 @@ struct EntityState {
 };
 
 struct ClientState {
-    ClientRole role {ClientRole::CommandConsole};
+    ClientRole role {ClientRole::FireControlConsole};
     ConnectionState connection {ConnectionState::Disconnected};
     std::uint32_t sender_id {};
     bool has_connected_before {false};
@@ -90,9 +90,9 @@ struct TrackState {
     std::uint32_t missed_updates {0};
 };
 
-struct JudgmentState {
+struct AssessmentState {
     bool ready {false};
-    JudgmentCode code {JudgmentCode::Pending};
+    AssessmentCode code {AssessmentCode::Pending};
     std::string summary;
 };
 
@@ -105,19 +105,19 @@ struct CommandResult {
 struct Snapshot {
     protocol::SessionEnvelope envelope {};
     protocol::SnapshotHeader header {};
-    SessionPhase phase {SessionPhase::Initialized};
+    SessionPhase phase {SessionPhase::Standby};
     int world_width {2304};
     int world_height {1536};
     EntityState target;
-    EntityState asset;
+    EntityState interceptor;
     Vec2f target_world_position {};
-    Vec2f asset_world_position {};
+    Vec2f interceptor_world_position {};
     int target_velocity_x {0};
     int target_velocity_y {0};
     Vec2f target_velocity {};
-    Vec2f asset_velocity {};
+    Vec2f interceptor_velocity {};
     float target_heading_deg {0.0F};
-    float asset_heading_deg {0.0F};
+    float interceptor_heading_deg {0.0F};
     int interceptor_speed_per_tick {0};
     float interceptor_acceleration_per_tick {0.0F};
     int intercept_radius {0};
@@ -129,10 +129,10 @@ struct Snapshot {
     Vec2f predicted_intercept_position {};
     float time_to_intercept_s {0.0F};
     TrackState track;
-    AssetStatus asset_status {AssetStatus::Idle};
-    CommandLifecycle command_status {CommandLifecycle::None};
-    JudgmentState judgment;
-    ConnectionState viewer_connection {ConnectionState::Disconnected};
+    InterceptorStatus interceptor_status {InterceptorStatus::Idle};
+    EngageOrderStatus engage_order_status {EngageOrderStatus::None};
+    AssessmentState assessment;
+    ConnectionState display_connection {ConnectionState::Disconnected};
     protocol::TelemetrySample telemetry {};
     float launch_angle_deg {45.0F};
 };
@@ -147,13 +147,13 @@ struct EventRecord {
 
 struct SessionSummary {
     std::uint32_t session_id {};
-    SessionPhase phase {SessionPhase::Initialized};
+    SessionPhase phase {SessionPhase::Standby};
     std::size_t snapshot_count {};
     std::size_t event_count {};
-    ConnectionState command_console_connection {ConnectionState::Disconnected};
-    ConnectionState viewer_connection {ConnectionState::Disconnected};
-    bool judgment_ready {false};
-    JudgmentCode judgment_code {JudgmentCode::Pending};
+    ConnectionState fire_control_console_connection {ConnectionState::Disconnected};
+    ConnectionState display_connection {ConnectionState::Disconnected};
+    bool assessment_ready {false};
+    AssessmentCode assessment_code {AssessmentCode::Pending};
     bool has_last_event {false};
     protocol::EventType last_event_type {protocol::EventType::SessionStarted};
     std::string resilience_case;
@@ -161,8 +161,8 @@ struct SessionSummary {
 
 inline constexpr const char* to_string(ClientRole role) {
     switch (role) {
-    case ClientRole::CommandConsole: return "command_console";
-    case ClientRole::TacticalViewer: return "tactical_viewer";
+    case ClientRole::FireControlConsole: return "fire_control_console";
+    case ClientRole::TacticalDisplay: return "tactical_display";
     }
     return "unknown_client_role";
 }
@@ -179,47 +179,47 @@ inline constexpr const char* to_string(ConnectionState state) {
 
 inline constexpr const char* to_string(SessionPhase phase) {
     switch (phase) {
-    case SessionPhase::Initialized: return "initialized";
+    case SessionPhase::Standby: return "standby";
     case SessionPhase::Detecting: return "detecting";
     case SessionPhase::Tracking: return "tracking";
-    case SessionPhase::AssetReady: return "asset_ready";
-    case SessionPhase::CommandIssued: return "command_issued";
-    case SessionPhase::Engaging: return "engaging";
-    case SessionPhase::Judged: return "judged";
+    case SessionPhase::InterceptorReady: return "interceptor_ready";
+    case SessionPhase::EngageOrdered: return "engage_ordered";
+    case SessionPhase::Intercepting: return "intercepting";
+    case SessionPhase::Assessed: return "assessed";
     case SessionPhase::Archived: return "archived";
     }
     return "unknown_session_phase";
 }
 
-inline constexpr const char* to_string(AssetStatus status) {
+inline constexpr const char* to_string(InterceptorStatus status) {
     switch (status) {
-    case AssetStatus::Idle: return "idle";
-    case AssetStatus::Ready: return "ready";
-    case AssetStatus::Engaging: return "engaging";
-    case AssetStatus::Complete: return "complete";
+    case InterceptorStatus::Idle: return "idle";
+    case InterceptorStatus::Ready: return "ready";
+    case InterceptorStatus::Intercepting: return "intercepting";
+    case InterceptorStatus::Complete: return "complete";
     }
-    return "unknown_asset_status";
+    return "unknown_interceptor_status";
 }
 
-inline constexpr const char* to_string(CommandLifecycle lifecycle) {
+inline constexpr const char* to_string(EngageOrderStatus lifecycle) {
     switch (lifecycle) {
-    case CommandLifecycle::None: return "none";
-    case CommandLifecycle::Accepted: return "accepted";
-    case CommandLifecycle::Executing: return "executing";
-    case CommandLifecycle::Completed: return "completed";
-    case CommandLifecycle::Rejected: return "rejected";
+    case EngageOrderStatus::None: return "none";
+    case EngageOrderStatus::Accepted: return "accepted";
+    case EngageOrderStatus::Executing: return "executing";
+    case EngageOrderStatus::Completed: return "completed";
+    case EngageOrderStatus::Rejected: return "rejected";
     }
     return "unknown_command_lifecycle";
 }
 
-inline constexpr const char* to_string(JudgmentCode code) {
+inline constexpr const char* to_string(AssessmentCode code) {
     switch (code) {
-    case JudgmentCode::Pending: return "pending";
-    case JudgmentCode::InterceptSuccess: return "intercept_success";
-    case JudgmentCode::InvalidTransition: return "invalid_transition";
-    case JudgmentCode::TimeoutObserved: return "timeout_observed";
+    case AssessmentCode::Pending: return "pending";
+    case AssessmentCode::InterceptSuccess: return "intercept_success";
+    case AssessmentCode::InvalidTransition: return "invalid_transition";
+    case AssessmentCode::TimeoutObserved: return "timeout_observed";
     }
-    return "unknown_judgment_code";
+    return "unknown_assessment_code";
 }
 
 }  // namespace icss::core
