@@ -53,7 +53,7 @@ Operator-facing note:
 | `world_snapshot` | periodic world snapshot |
 | `entity_state` | target/interceptor state summary |
 | `track_summary` | tracking-specific state summary |
-| `telemetry` | tick/latency/packet-loss/last-snapshot telemetry |
+| `telemetry` | tick/tick-interval/packet-loss/last-snapshot telemetry |
 | `display_heartbeat` | viewer liveness heartbeat over UDP |
 
 ## Event Types (`EventType`)

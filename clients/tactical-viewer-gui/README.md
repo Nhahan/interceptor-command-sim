@@ -22,9 +22,9 @@ Current behavior:
 - shows server event history in a larger terminal-style log panel
 - keeps heartbeat traffic out of the event log and reports it as telemetry instead
 - auto-attaches the control channel when the first control button is used
-- provides `Start`, `Track`, `Ready`, `Engage`, `Reset`, and a separate `AAR` action
-- automatically archives the run after assessment; `AAR` is post-assessment/post-archive inspection rather than a primary live-control step
-- uses the bottom panel as an event timeline: live server events plus control acknowledgements during operation, and a separate AAR mode after `AAR`
+- provides `Start`, `Track`, `Ready`, `Engage`, `Reset`, and a separate `Review` action
+- automatically archives the run after assessment; `Review` is post-assessment/post-archive inspection rather than a primary live-control step
+- uses the bottom panel as an event timeline: live server events plus control acknowledgements during operation, and a separate review mode after `Review`
 - keeps the event timeline in a fixed terminal-style color scheme so mode changes do not re-style the panel
 - clips overflowing timeline lines, shows a scrollbar when needed, and supports mouse-wheel / `PageUp` / `PageDown` / `Home` / `End` scrolling
 - highlights the next recommended control based on the current authoritative phase instead of relying on a static workflow hint
@@ -44,5 +44,5 @@ Current behavior:
 - accepts `--repo-root` so the viewer's setup panel preloads the same scenario config the server will run
 - supports reset-to-standby followed by a fresh `Start`
 - gives immediate visual command feedback by highlighting the intercept line/target box and updating control state locally on accepted actions
-- keeps the state-machine story explicit with `STANDBY -> DETECTING -> TRACK ESTABLISHED -> INTERCEPTOR READY -> ENGAGE ORDERED -> INTERCEPTING -> ASSESSMENT COMPLETE -> ARCHIVED`
+- keeps the state-machine story explicit with `STANDBY -> DETECTING -> TRACK FILE -> WEAPON READY -> FIRE ORDERED -> INTERCEPTING -> ENGAGEMENT ASSESSED -> ARCHIVED`
 - supports `--headless --dump-state` for automated smoke coverage

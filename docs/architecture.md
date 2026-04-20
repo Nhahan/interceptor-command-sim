@@ -51,10 +51,10 @@ Responsibilities:
 ### 3. Minimal 2D Tactical Viewer
 Responsibilities:
 - render target / interceptor positions
-- show tracking residual/covariance state and snapshot freshness
+- show tracking residual/covariance state and picture status
 - display connection status and telemetry
 - surface event log panel
-- show AAR playback cursor/state during replay
+- show post-engagement review cursor/state during replay
 - expose richer command/assessment state panels
 
 ## Authority Model
@@ -62,7 +62,7 @@ Responsibilities:
 - The server is the **single source of truth**.
 - Clients send requests and render state.
 - Final validation and assessment happen only on the server.
-- Replay/AAR is generated from server-side event history, not reconstructed from client guesses.
+- Replay/post-engagement review is generated from server-side event history, not reconstructed from client guesses.
 
 ## Tick Model
 
@@ -72,7 +72,7 @@ Each tick should:
 3. apply state transitions
 4. emit important events
 5. publish snapshot/telemetry
-6. persist replay/AAR-relevant records
+6. persist replay/review-relevant records
 
 The current implementation uses a **deterministic in-process clock** so that generated AAR/example artifacts and regression tests remain stable across runs.
 

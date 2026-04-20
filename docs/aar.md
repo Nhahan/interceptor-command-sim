@@ -1,8 +1,8 @@
-# AAR / Replay Design
+# Post-Engagement Review / Replay Design
 
 ## Goal
 
-AAR (After Action Review) provides an inspectable record of what happened, when it happened, and why the system reached a given outcome.
+Post-engagement review (`AAR`, After Action Review) provides an inspectable record of what happened, when it happened, and why the system reached a given outcome.
 
 ## Minimum Output
 
@@ -43,10 +43,10 @@ Current control semantics:
 - `step_backward` moves back from the current cursor
 - out-of-range requests clamp to the nearest valid cursor
 
-## Tactical Viewer + AAR
+## Tactical Viewer + Post-Engagement Review
 
 During replay mode, the viewer should show:
-- AAR playback cursor
+- post-engagement review cursor
 - current snapshot time/tick
 - visible event panel updates
 - enough state visualization to connect events with positions/status
@@ -65,4 +65,4 @@ The session summary should also expose effective track state, intercept profile,
 The replay timeline and summary artifacts should carry explicit schema/version metadata.
 When both are present, `session-summary.md` is the human-readable view and `session-summary.json` is the machine-readable companion.
 
-The normal GUI flow auto-archives immediately after assessment, so AAR/review normally begins from an already-archived run rather than waiting for an explicit stop command.
+The normal GUI flow auto-archives immediately after assessment, so post-engagement review normally begins from an already-archived run rather than waiting for an explicit stop command.

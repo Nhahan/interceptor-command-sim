@@ -4,19 +4,19 @@ Role:
 - minimal 2D tactical/state viewer
 - render positions/status as an observability-first display
 - display telemetry and event panel
-- support AAR playback cursor visualization
+- support post-engagement review cursor visualization
 
 Required elements:
 - target / interceptor position icons
 - tracking status
 - tracking residual / covariance state
 - connection status
-- freshness state
-- tick / latency / packet loss telemetry
+- picture status
+- tick / update-gap / packet loss telemetry
 - snapshot sequence
 - last snapshot timestamp
 - event log panel
-- AAR playback cursor
+- post-engagement review cursor
 - interceptor status / engage order status / assessment state
 
 Non-goals:
@@ -29,4 +29,4 @@ Entrypoint:
 
 Current behavior:
 - renders an ASCII tactical frame
-- shows telemetry, freshness state, connection state, recent events, and AAR cursor position
+- shows link/picture status, connection state, recent events, and post-engagement review cursor position

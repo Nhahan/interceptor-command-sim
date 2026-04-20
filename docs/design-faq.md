@@ -36,7 +36,7 @@ So a late-joining or slower viewer can catch up quickly when only the latest sta
 
 Because the protocol names are stable implementation identifiers, while the GUI wording is tuned for operator legibility. The authoritative runtime still enters the internal `Tracking` phase, but the operator-facing control is a track toggle: `Acquire Track` establishes a pre-launch firing solution and `Drop Track` leaves the interceptor on an `unguided_intercept` launch path.
 
-## Why include AAR?
+## Why include Post-Engagement Review?
 
 Because post-run traceability is part of the system contract, not an afterthought.
 
@@ -50,4 +50,4 @@ So the viewer can expose tracker estimate/covariance state, interceptor status, 
 
 ## Why remove the Stop button from the GUI flow?
 
-Because the current scenario has no meaningful post-command operator action before review. Once assessment is produced, the runtime auto-archives the run and leaves `AAR` / `Reset` as the only useful next actions.
+Because the current scenario has no meaningful post-command operator action before review. Once assessment is produced, the runtime auto-archives the run and leaves `Review` / `Reset` as the only useful next actions.

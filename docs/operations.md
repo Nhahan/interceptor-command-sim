@@ -38,7 +38,7 @@ Startup output should expose at least:
 - delivery settings such as `udp_send_latest_only` and `udp_max_batch_snapshots`
 - command and viewer connection state
 - latest event type when available
-- current viewer connection/freshness state
+- current viewer connection/picture-status state
 - latest snapshot sequence, or `none` when the server has not emitted a snapshot yet
 - last snapshot timestamp for viewer-side staleness interpretation
 
@@ -69,14 +69,14 @@ Minimum expectations:
 
 Current log output:
 - runtime writes `logs/session.log`
-- AAR artifacts are written under `assets/sample-aar/`
+- post-engagement review artifacts are written under `assets/sample-aar/`
 - `logs/session.log` now contains one session-summary record plus structured event records
 - the summary log includes backend name, assessment code, and resilience summary
 - runtime log and generated artifacts carry explicit schema/version fields
 
 Live mode output parity:
-- when snapshots exist, `socket_live` mode also writes session log, AAR artifacts, and sample output
-- when no snapshot has been emitted yet, startup output reports that AAR artifacts were skipped
+- when snapshots exist, `socket_live` mode also writes session log, review artifacts, and sample output
+- when no snapshot has been emitted yet, startup output reports that review artifacts were skipped
 - during signal-driven shutdown, the server reports shutdown reason and flushes summary/output artifacts before exit
 - the summary artifact is emitted in both Markdown and JSON forms
 - successful intercepts deactivate the target before archive so post-run artifacts show the target as removed rather than still moving
@@ -104,18 +104,18 @@ At minimum, make abnormal states visible for:
 ### Telemetry Visibility
 The tactical display or fire control console should expose at least:
 - connection status
-- freshness state
+- picture status
 - tick
-- latency
+- update gap
 - packet loss estimate
 - snapshot sequence
 - last snapshot timestamp
 - richer track/interceptor/command/assessment state
 
-Recommended freshness labels:
-- `fresh` for current snapshots
+Recommended picture-status labels:
+- `current` for current snapshots
 - `degraded` when packet loss is visible but the stream is still current
-- `resync` immediately after viewer reconnection
+- `reacquiring` immediately after viewer reconnection
 - `stale` when the viewer has timed out or fallen out of date
 
 ## Operational Signals

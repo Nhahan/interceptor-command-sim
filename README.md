@@ -1,6 +1,6 @@
 # Interceptor Command Simulation System
 
-> C++ authoritative simulation system with role-separated clients, a protocol-defined TCP/UDP split, and AAR-focused observability.
+> C++ authoritative simulation system with role-separated clients, a protocol-defined TCP/UDP split, and post-engagement review focused observability.
 
 ## Overview
 
@@ -12,7 +12,7 @@ Core characteristics:
 - protocol-defined TCP/UDP role separation
 - multi-client command/viewer handling
 - resilience under abnormal network conditions
-- replayable logging / AAR (After Action Review)
+- replayable logging / post-engagement review (`AAR`, After Action Review)
 - operability and maintainable component boundaries
 
 ## Implementation State
@@ -25,12 +25,12 @@ This repository contains an implemented system with deterministic local verifica
 - deterministic in-process runtime plus socket-based transport backend
 - executable server modes for `in_process` and `socket_live`
 - process-level live smoke for the executable `socket_live` server path
-- live server mode writes runtime log and AAR/sample outputs when snapshots exist
+- live server mode writes runtime log and post-engagement review/sample outputs when snapshots exist
 - single-session live transport policy with one fire control console and one tactical display
-- command, snapshot, telemetry, AAR, and timeout flows exercised in code
+- command, snapshot, telemetry, post-engagement review, and timeout flows exercised in code
 - regression coverage for protocol, runtime, transport, logging, replay, and resilience paths
 
-The default runtime remains **in-process** for deterministic verification, while a separate live socket backend provides TCP/UDP bind/listen behavior, command/AAR exchange, heartbeat handling, and configurable snapshot delivery.
+The default runtime remains **in-process** for deterministic verification, while a separate live socket backend provides TCP/UDP bind/listen behavior, command/review exchange, heartbeat handling, and configurable snapshot delivery.
 Both server modes now print backend, bind, heartbeat, and delivery settings at startup.
 
 ## Focus
@@ -48,7 +48,7 @@ Both server modes now print backend, bind, heartbeat, and delivery settings at s
 - 1 representative scenario
 - server-authoritative validation and assessment
 - TCP/UDP split with documented responsibilities
-- replayable event logging / AAR
+- replayable event logging / post-engagement review
 - at least 1 resilience case
   - reconnect, timeout, or UDP loss recovery
 
@@ -57,12 +57,12 @@ Both server modes now print backend, bind, heartbeat, and delivery settings at s
 - track state
 - tracker estimate/covariance state
 - connection status
-- freshness state
-- tick / latency / packet loss telemetry
+- picture status
+- tick / update-gap / packet loss telemetry
 - snapshot sequence
 - last snapshot timestamp
 - event log panel
-- AAR playback cursor
+- post-engagement review cursor
 - interceptor status / engage order status / assessment state
 
 ### Explicit Non-Goals
@@ -74,7 +74,7 @@ Both server modes now print backend, bind, heartbeat, and delivery settings at s
 
 ## Outputs
 - core documentation set under `docs/`
-- generated AAR outputs under `assets/sample-aar/`
+- generated post-engagement review outputs under `assets/sample-aar/`
 - generated sample output under `examples/`
 
 ## Guide
@@ -83,7 +83,7 @@ Both server modes now print backend, bind, heartbeat, and delivery settings at s
 - `docs/protocol.md` — TCP/UDP responsibilities and message families
 - `docs/scenario.md` — representative scenario and state flow
 - `docs/operations.md` — logging, configuration, resilience, cleanup
-- `docs/aar.md` — event schema and replay/AAR design
+- `docs/aar.md` — event schema and replay/post-engagement review design
 - `docs/test-report.md` — verification plan and result log
 - `docs/design-faq.md` — public design rationale and common questions
 - `docs/walkthrough.md` — recommended system walkthrough
@@ -143,7 +143,7 @@ ctest --test-dir build --output-on-failure
 `icss_tactical_display_gui` is not just a position plot. The window emphasizes:
 - the current mission phase/state-machine step
 - the latest authoritative server decision or rejection reason via a compact status badge and `Authoritative Status` panel
-- resilience/telemetry state (`fresh`, `degraded`, `resync`, `stale`)
+- resilience/telemetry state (`current`, `degraded`, `reacquiring`, `stale`)
 - a terminal-style server event log
 - the tactical picture with target/interceptor geometry as supporting context
 - a larger 2304x1536 world-space picture rather than a tiny fixed board
@@ -190,9 +190,9 @@ Default behavior:
 - starts `icss_server --backend socket_live --run-forever`
 - starts `icss_tactical_display_gui`
 - leaves control to the GUI panel
-- GUI live control order: `Start -> Track -> Ready -> Engage -> AAR -> Reset -> Start`
-- `AAR` is intentionally separate from the live control chain; request it after assessment/archive to inspect server-side AAR data
-- the bottom timeline panel now shows live server events plus control acknowledgements; `AAR` switches that panel into post-action AAR mode
+- GUI live control order: `Start -> Track -> Ready -> Engage -> Review -> Reset -> Start`
+- `Review` is intentionally separate from the live control chain; request it after assessment/archive to inspect the server-side post-engagement review
+- the bottom timeline panel now shows live server events plus control acknowledgements; `Review` switches that panel into post-action review mode
 - the timeline panel now clips overflowing log lines, draws a scrollbar, and supports mouse-wheel / PageUp / PageDown / Home / End scrolling
 - the GUI highlights mission phase, authoritative decision state, and resilience telemetry while you step through the flow
 
@@ -219,7 +219,7 @@ Regenerate the checked-in tracked_intercept/unguided_intercept comparison bundle
 ```
 
 That command refreshes:
-- tracked_intercept AAR/sample output under `assets/sample-aar/` and `examples/sample-output.md`
+- tracked_intercept review/sample output under `assets/sample-aar/` and `examples/sample-output.md`
 - unguided_intercept comparison artifacts under `assets/sample-aar/unguided_intercept/` and `examples/sample-output-unguided_intercept.md`
 - deterministic viewer-state goldens under `assets/screenshots/tactical-display-tracked_intercept-state.json` and `assets/screenshots/tactical-display-unguided_intercept-state.json`
 - GUI screenshots under `assets/screenshots/tactical-display-tracked_intercept.bmp` and `assets/screenshots/tactical-display-unguided_intercept.bmp`
@@ -244,7 +244,7 @@ The regression suite now keeps repo-root review assets stable:
 - `common/include/icss/protocol/serialization.hpp` — textual payload serialization/parse helpers
 - `common/include/icss/net/transport.hpp` — transport abstraction and backend factory
 - `common/include/icss/core/` — shared session/domain types and simulation API
-- `common/src/` — config loader, split transport backends, runtime orchestration, split simulation/runtime lifecycle, AAR writer, ASCII tactical display renderer
+- `common/src/` — config loader, split transport backends, runtime orchestration, split simulation/runtime lifecycle, review artifact writer, ASCII tactical display renderer
 - `server/src/main.cpp` — authoritative reference entrypoint
 - `clients/command-console/src/main.cpp` — fire control console reference flow and socket-live client path
 - `clients/tactical-viewer/src/main.cpp` — minimal 2D tactical display reference flow

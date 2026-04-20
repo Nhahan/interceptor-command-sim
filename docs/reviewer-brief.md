@@ -5,7 +5,7 @@
 Interceptor Command Simulation System is a C++ real-time simulation/control system built around:
 - server-authoritative state
 - TCP control + UDP state propagation
-- replayable event history / AAR
+- replayable event history / post-engagement review
 - resilience visibility under reconnect, timeout, and packet-loss conditions
 
 ## Suggested Review Order
@@ -42,22 +42,22 @@ If you only have a few minutes:
 ### 1. Authority Boundary
 - the server owns validation and assessment
 - clients issue requests or render state
-- AAR is derived from server-side history
+- post-engagement review is derived from server-side history
 
 ### 2. Transport Split
-- TCP is used for control, acknowledgements, and AAR requests
+- TCP is used for control, acknowledgements, and post-engagement review requests
 - UDP is used for snapshots, telemetry, and viewer liveness
 
 ### 3. Operability
 - structured runtime log under `logs/session.log`
-- generated AAR under `assets/sample-aar/`
+- generated post-engagement review artifacts under `assets/sample-aar/`
 - generated viewer-oriented sample output under `examples/sample-output.md`
 - unguided_intercept comparison artifacts under `assets/sample-aar/unguided_intercept/` and `examples/sample-output-unguided_intercept.md`
 
 ### 4. Resilience
-- reconnect/resync visibility
+- reconnect/reacquire visibility
 - timeout visibility
-- degraded freshness under packet loss
+- degraded picture status under packet loss
 - snapshot batching/filtering behavior
 
 ## Evidence Map
@@ -71,7 +71,7 @@ If you only have a few minutes:
 - renderer: `common/src/ascii_tactical_view.cpp`
 - tactical display entrypoint: `clients/tactical-viewer/src/main.cpp`
 
-### AAR / output artifacts
+### Post-Engagement Review / output artifacts
 - replay timeline: `assets/sample-aar/replay-timeline.json`
 - session summary: `assets/sample-aar/session-summary.md`
 - machine-readable summary: `assets/sample-aar/session-summary.json`
@@ -131,5 +131,5 @@ The current regression set covers:
 - transport backend behavior
 - process-level live server smoke for binary and JSON framing
 - runtime config validation
-- AAR control semantics
-- resilience and viewer freshness transitions
+- post-engagement review control semantics
+- resilience and viewer picture-status transitions

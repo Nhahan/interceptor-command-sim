@@ -37,7 +37,7 @@ Current verification covers:
 - startup output exposes backend, bind, heartbeat, and delivery settings
 - startup output exposes connection-state and latest-event summaries
 - the executable `socket_live` server path is exercised through a process-level live smoke
-- process-level live smoke covers AAR response and automatic post-assessment archive behavior
+- process-level live smoke covers post-engagement review response and automatic post-assessment archive behavior
 - process-level live smoke covers both binary and JSON TCP framing
 - the fire control console executable drives a scripted `socket_live` flow over TCP
 - the SDL GUI viewer attaches to the live UDP path and is covered by a headless smoke
@@ -46,7 +46,7 @@ Current verification covers:
 - command acceptance now has explicit GUI-side visual feedback and dedicated smoke coverage
 - the GUI exposes mission phase, authoritative decision, and resilience telemetry as first-class panels rather than only map geometry
 - GUI headless smoke asserts phase banner and authoritative decision semantics through dump-state fields
-- GUI review smoke verifies that AAR is requested as a post-assessment/post-archive review action rather than a primary live control
+- GUI review smoke verifies that Review is requested as a post-assessment/post-archive action rather than a primary live control
 - the GUI routes review output through the bottom log panel, avoiding overlap with the live authoritative-decision panel
 - the GUI live timeline now includes control acknowledgements alongside server events so the log panel remains useful before the next telemetry update
 - user-facing viewer text now presents the interceptor as an interceptor
@@ -59,17 +59,17 @@ Current verification covers:
 - tracker observation cadence now produces real non-zero measurement age between scheduled updates and deterministic missed-update counts on dropped samples, so those fields are meaningfully exercised in runtime/tests
 - a dedicated GUI auto-rejoin smoke verifies that the viewer can recover from a timeout by reissuing `session_join`
 - a dedicated GUI repo-root smoke verifies that the setup panel preloads scenario parameters from the provided runtime config root
-- a dedicated GUI malformed-udp smoke verifies that malformed UDP datagrams are ignored without advancing viewer freshness timestamps or mutating timeline state
+- a dedicated GUI malformed-udp smoke verifies that malformed UDP datagrams are ignored without advancing viewer picture-status timestamps or mutating timeline state
 - the same malformed-udp smoke also verifies that the viewer ignores datagrams from unexpected UDP endpoints
 - a dedicated GUI snapshot-ordering smoke verifies that out-of-order snapshots and older telemetry samples do not roll back viewer state
 - scenario flow coverage now also verifies that `reset_session()` resets logical tick to zero without rolling snapshot sequence or snapshot timestamps backward
 - baseline scenario flow now also verifies that the no-arg `run_baseline_demo()` follows the repository runtime config rather than drifting to struct-default values
 - a dedicated example-output smoke verifies that `SimulationSession::write_example_output()` works with a plain relative filename that has no parent directory component
-- a dedicated AAR-artifact smoke verifies that `SimulationSession::write_aar_artifacts()` works when asked to emit directly into the current working directory
+- a dedicated post-engagement review artifact smoke verifies that `SimulationSession::write_aar_artifacts()` works when asked to emit directly into the current working directory
 - a dedicated GUI relative-dump-path smoke verifies that `--dump-state` and `--dump-frame` work with plain filenames in the current working directory
 - a dedicated GUI duplicate-start smoke verifies that a rejected second `Start` does not overwrite the active authoritative scenario picture with a new local randomization
 - the fire control console now loads scenario-start parameters from `--repo-root` config instead of falling back to baked defaults
-- command-console live flow now bounds its AAR polling window from scenario timeout parameters instead of using a fixed short retry budget
+- command-console live flow now bounds its review polling window from scenario timeout parameters instead of using a fixed short retry budget
 - the one-command live demo script now configures/builds required binaries and clears repo-local stale demo processes before launch
 - the live demo smoke now mutates the runtime-root scenario config to prove the script forwards that config path through to the fire control console
 - the server CLI now validates `--sample-mode tracked_intercept|unguided_intercept` for deterministic in-process artifact generation
@@ -90,7 +90,7 @@ Current verification covers:
 - transport backend dispatch behavior is verified
 - live transport session policy is verified
 - scenario branching smoke verifies that command timing/kinematics can change the final assessment
-- AAR control semantics are verified
+- post-engagement review control semantics are verified
 - the scenario flow passes end-to-end regression
 - invalid command ordering is rejected and logged
 - duplicate start/stop and post-archive control requests are rejected and logged
@@ -106,8 +106,8 @@ Current verification covers:
 - resilience/replay rendering behavior passes smoke verification
 - live viewer heartbeat timeout behavior is verified against the socket backend
 - telemetry payloads now align event summaries to the snapshot tick they accompany, and a dedicated smoke verifies that alignment
-- live viewer freshness transitions are verified against the socket backend
-- degraded freshness under packet loss is verified in rendered output
+- live viewer picture-status transitions are verified against the socket backend
+- degraded picture status under packet loss is verified in rendered output
 - live snapshot batching/filtering is verified against the socket backend
 - a dedicated drift smoke regenerates tracked_intercept/unguided_intercept text artifacts plus viewer-state goldens into a temp runtime root and verifies they still match the checked-in canonical bundle
 
@@ -162,7 +162,7 @@ Current verification covers:
 ## Acceptance Checks
 
 ### 1. Scenario Completeness
-- [x] scenario runs from start to AAR
+- [x] scenario runs from start to post-engagement review
 - [x] command validation occurs on server
 - [x] final assessment is produced by server
 
@@ -181,7 +181,7 @@ Current verification covers:
 - [x] logs show the abnormal case clearly
 - [x] system behavior after the abnormal case is understandable
 
-### 5. AAR Coverage
+### 5. Post-Engagement Review Coverage
 - [x] one sample session can be replayed/reconstructed
 - [x] event timeline includes key command/assessment points
 
@@ -192,11 +192,11 @@ Current verification covers:
 
 ## Related Outputs
 
-- sample AAR: `assets/sample-aar/session-summary.md`
-- sample AAR JSON: `assets/sample-aar/session-summary.json`
+- sample review summary: `assets/sample-aar/session-summary.md`
+- sample review summary JSON: `assets/sample-aar/session-summary.json`
 - replay timeline: `assets/sample-aar/replay-timeline.json`
-- unguided_intercept sample AAR: `assets/sample-aar/unguided_intercept/session-summary.md`
-- unguided_intercept sample AAR JSON: `assets/sample-aar/unguided_intercept/session-summary.json`
+- unguided_intercept review summary: `assets/sample-aar/unguided_intercept/session-summary.md`
+- unguided_intercept review summary JSON: `assets/sample-aar/unguided_intercept/session-summary.json`
 - unguided_intercept replay timeline: `assets/sample-aar/unguided_intercept/replay-timeline.json`
 - unguided_intercept sample output: `examples/sample-output-unguided_intercept.md`
 - viewer-state goldens: `assets/screenshots/tactical-display-tracked_intercept-state.json`, `assets/screenshots/tactical-display-unguided_intercept-state.json`

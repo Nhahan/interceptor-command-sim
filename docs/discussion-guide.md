@@ -16,7 +16,7 @@ To keep validation and assessment in one place. The server is the only source of
 ### Why split TCP and UDP?
 Control traffic needs reliability and ordering. Snapshot traffic needs freshness more than per-packet guarantees.
 
-### Why include AAR?
+### Why include Post-Engagement Review?
 Because post-run analysis is part of the system contract. Commands, judgments, and resilience events should be explainable after execution.
 
 ### Why keep the tactical display read-only?
@@ -26,7 +26,7 @@ The viewer exists to expose state, telemetry, and replay information. It is an o
 The current scope optimizes for clear ownership, stable verification, and explainable behavior.
 
 ### How is resilience represented?
-Through reconnect/resync, timeout visibility, degraded freshness under packet loss, and snapshot convergence.
+Through reconnect/reacquire, timeout visibility, degraded picture status under packet loss, and snapshot convergence.
 
 ## Longer Discussion Points
 
@@ -35,10 +35,10 @@ Through reconnect/resync, timeout visibility, degraded freshness under packet lo
 - `in_process` keeps deterministic local verification simple
 - `socket_live` exercises actual TCP/UDP behavior
 
-### 2. Replay / AAR
+### 2. Replay / Post-Engagement Review
 - event history is server-side
 - replay cursor semantics are explicit
-- live AAR requests return cursor and summary metadata
+- live review requests return cursor and summary metadata
 
 ### 3. Operability
 - config is split into server/scenario/logging

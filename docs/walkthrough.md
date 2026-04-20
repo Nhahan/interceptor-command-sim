@@ -2,7 +2,7 @@
 
 ## Goal
 
-Show command/control flow, state propagation, one resilience case, and AAR outputs.
+Show command/control flow, state propagation, one resilience case, and post-engagement review outputs.
 
 ## Outline
 
@@ -31,21 +31,21 @@ Show command/control flow, state propagation, one resilience case, and AAR outpu
 - show server-side validation/assessment result; on success the target should disappear/deactivate before archive
 - keep telemetry visible
 - point out richer state panels (track measurement residual / covariance / interceptor status / engage order status / assessment code)
-- point out connection and freshness labels on the viewer
+- point out connection and picture-status labels on the viewer
 
 ### 2:30–3:20 — Resilience case
 - exercise reconnect / timeout / UDP loss convergence
 - surface viewer heartbeat/timeout visibility on the live transport path when appropriate
-- point out `freshness=degraded` when packet loss is visible but the stream is still current
-- point out `freshness=resync` and `freshness=stale` transitions when applicable
+- point out `picture_status=degraded` when packet loss is visible but the stream is still current
+- point out `picture_status=reacquiring` and `picture_status=stale` transitions when applicable
 - point out snapshot batching/filtering behavior when a viewer joins late
 - explain what the viewer and logs show
 
-### 3:20–4:20 — AAR
-- open replay/AAR artifact
+### 3:20–4:20 — Post-Engagement Review
+- open replay/review artifact
 - compare tracked_intercept and unguided_intercept launch artifacts side by side
 - point to timeline, event log, track state, intercept profile, and assessment outputs
-- point to freshness and latest snapshot metadata in the generated summaries
+- point to picture-status and latest snapshot metadata in the generated summaries
 
 ### Closing
 - reiterate why the architecture was chosen
@@ -56,7 +56,7 @@ Show command/control flow, state propagation, one resilience case, and AAR outpu
 - keep one terminal for server startup output
 - keep one terminal for fire control console actions
 - keep one terminal or window for the tactical display/sample output
-- prepare the AAR session summary and replay timeline in advance
+- prepare the review session summary and replay timeline in advance
 - avoid editing files live during the recording
 
 ## Shot List
@@ -65,15 +65,15 @@ Show command/control flow, state propagation, one resilience case, and AAR outpu
 2. command sequence
 3. tactical display state
 4. one resilience moment
-5. tracked_intercept and unguided_intercept AAR summaries / replay timelines
+5. tracked_intercept and unguided_intercept review summaries / replay timelines
 6. checked-in GUI screenshots (`assets/screenshots/tactical-display-tracked_intercept.bmp`, `assets/screenshots/tactical-display-unguided_intercept.bmp`)
 
 ## Minimal Interceptor Set
 
 - server startup output
 - one command sequence
-- one viewer frame with freshness labels
+- one viewer frame with picture-status labels
 - one resilience example
-- one tracked_intercept AAR summary
-- one unguided_intercept AAR summary
+- one tracked_intercept review summary
+- one unguided_intercept review summary
 - one checked-in GUI screenshot under `assets/screenshots/`
