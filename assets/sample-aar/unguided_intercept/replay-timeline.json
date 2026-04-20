@@ -4,9 +4,9 @@
   "final_phase": "archived",
   "snapshot_count": 67,
   "event_count": 13,
-  "judgment_code": "timeout_observed",
-  "guidance_state": "off",
-  "launch_mode": "straight",
+  "assessment_code": "timeout_observed",
+  "effective_track_state": "untracked",
+  "intercept_profile": "unguided_intercept",
   "launch_angle_deg": 45,
   "resilience_case": "reconnect_and_resync,udp_snapshot_gap_convergence",
   "events": [
@@ -14,7 +14,7 @@
       "timestamp_ms": 1776327000200,
       "tick": 0,
       "event_type": "client_joined",
-      "source": "command_console",
+      "source": "fire_control_console",
       "entity_ids": [],
       "summary": "Client joined session",
       "details": "Client registered before scenario activity."
@@ -23,7 +23,7 @@
       "timestamp_ms": 1776327000400,
       "tick": 0,
       "event_type": "client_joined",
-      "source": "tactical_viewer",
+      "source": "tactical_display",
       "entity_ids": [],
       "summary": "Client joined session",
       "details": "Client registered before scenario activity."
@@ -41,34 +41,34 @@
       "timestamp_ms": 1776327001000,
       "tick": 0,
       "event_type": "track_updated",
-      "source": "command_console",
+      "source": "fire_control_console",
       "entity_ids": ["target-alpha"],
-      "summary": "Guidance enabled",
-      "details": "Target-follow guidance is now enabled before launch."
+      "summary": "Track acquired",
+      "details": "A target track is now established for pre-launch fire control."
     },
     {
       "timestamp_ms": 1776327001600,
       "tick": 1,
-      "event_type": "asset_updated",
-      "source": "command_console",
-      "entity_ids": ["asset-interceptor"],
-      "summary": "Interceptor activation accepted",
-      "details": "Interceptor is ready for command issue."
+      "event_type": "interceptor_updated",
+      "source": "fire_control_console",
+      "entity_ids": ["interceptor-alpha"],
+      "summary": "Interceptor readied",
+      "details": "Interceptor is readied for an engage order."
     },
     {
       "timestamp_ms": 1776327002000,
       "tick": 1,
       "event_type": "track_updated",
-      "source": "command_console",
-      "entity_ids": ["target-alpha", "asset-interceptor"],
-      "summary": "Guidance disabled",
-      "details": "Straight launch will be used unless guidance is re-enabled before command. The interceptor remains ready."
+      "source": "fire_control_console",
+      "entity_ids": ["target-alpha", "interceptor-alpha"],
+      "summary": "Track dropped",
+      "details": "Unguided intercept will be used unless track is reacquired before engage order. The interceptor remains ready."
     },
     {
       "timestamp_ms": 1776327002400,
       "tick": 1,
       "event_type": "client_left",
-      "source": "tactical_viewer",
+      "source": "tactical_display",
       "entity_ids": [],
       "summary": "Client disconnected",
       "details": "viewer reconnect exercised for resilience evidence"
@@ -77,7 +77,7 @@
       "timestamp_ms": 1776327002600,
       "tick": 1,
       "event_type": "client_reconnected",
-      "source": "tactical_viewer",
+      "source": "tactical_display",
       "entity_ids": [],
       "summary": "Client reconnected",
       "details": "Client resumed control-plane visibility and should resync on the next snapshot."
@@ -94,11 +94,11 @@
     {
       "timestamp_ms": 1776327003000,
       "tick": 1,
-      "event_type": "command_accepted",
-      "source": "command_console",
-      "entity_ids": ["asset-interceptor", "target-alpha"],
+      "event_type": "engage_order_accepted",
+      "source": "fire_control_console",
+      "entity_ids": ["interceptor-alpha", "target-alpha"],
       "summary": "Launch accepted",
-      "details": "Authoritative server accepted the operator command and launched the interceptor on a straight path at 45 deg."
+      "details": "Authoritative server accepted the operator command and launched the interceptor on a unguided_intercept path at 45 deg."
     },
     {
       "timestamp_ms": 1776327003400,
@@ -112,20 +112,20 @@
     {
       "timestamp_ms": 1776327015400,
       "tick": 61,
-      "event_type": "judgment_produced",
+      "event_type": "assessment_produced",
       "source": "simulation_server",
-      "entity_ids": ["asset-interceptor", "target-alpha"],
-      "summary": "Judgment produced",
-      "details": "Server-authoritative judgment marked the intercept attempt as timed out before intercept."
+      "entity_ids": ["interceptor-alpha", "target-alpha"],
+      "summary": "Assessment produced",
+      "details": "Server-authoritative assessment marked the intercept attempt as timed out before intercept."
     },
     {
       "timestamp_ms": 1776327015800,
       "tick": 61,
       "event_type": "session_ended",
       "source": "simulation_server",
-      "entity_ids": ["target-alpha", "asset-interceptor"],
+      "entity_ids": ["target-alpha", "interceptor-alpha"],
       "summary": "Session archived",
-      "details": "Scenario completed and artifacts are ready for AAR review."
+      "details": "Scenario completed and artifacts are ready for AAR."
     }
   ]
 }

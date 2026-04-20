@@ -5,23 +5,24 @@
 - schema_version: icss-session-summary-v1
 - session_id: 1001
 - final_phase: archived
-- snapshot_count: 193
-- event_count: 3
-- command_console_connection: disconnected
-- viewer_connection: connected
-- judgment_ready: false
-- judgment_code: pending
-- guidance_state: off
-- launch_mode: straight
+- snapshot_count: 46
+- event_count: 12
+- fire_control_console_connection: connected
+- display_connection: connected
+- assessment_ready: true
+- assessment_code: intercept_success
+- effective_track_state: tracked
+- intercept_profile: tracked_intercept
 - launch_angle_deg: 45
 - last_event_type: session_ended
-- resilience_case: udp_snapshot_gap_convergence
-- latest_snapshot_sequence: 193
-- latest_viewer_connection: connected
+- resilience_case: reconnect_and_resync,udp_snapshot_gap_convergence
+- latest_snapshot_sequence: 46
+- latest_display_connection: connected
 - latest_freshness: fresh
 
 ## Recent Events
 
+- [tick 1] Launch accepted (engage_order_accepted)
 - [tick 2] Snapshot gap exercised (resilience_triggered)
-- [tick 6] Client joined session (client_joined)
-- [tick 192] Session archived (session_ended)
+- [tick 41] Assessment produced (assessment_produced)
+- [tick 41] Session archived (session_ended)

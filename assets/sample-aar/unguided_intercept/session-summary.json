@@ -4,22 +4,22 @@
   "final_phase": "archived",
   "snapshot_count": 67,
   "event_count": 13,
-  "command_console_connection": "connected",
-  "viewer_connection": "connected",
-  "judgment_ready": true,
-  "judgment_code": "timeout_observed",
-  "guidance_state": "off",
-  "launch_mode": "straight",
+  "fire_control_console_connection": "connected",
+  "display_connection": "connected",
+  "assessment_ready": true,
+  "assessment_code": "timeout_observed",
+  "effective_track_state": "untracked",
+  "intercept_profile": "unguided_intercept",
   "launch_angle_deg": 45,
   "last_event_type": "session_ended",
   "resilience_case": "reconnect_and_resync,udp_snapshot_gap_convergence",
   "latest_snapshot_sequence": 67,
-  "latest_viewer_connection": "connected",
+  "latest_display_connection": "connected",
   "latest_freshness": "fresh",
   "recent_events": [
     {
       "tick": 1,
-      "event_type": "command_accepted",
+      "event_type": "engage_order_accepted",
       "summary": "Launch accepted"
     },
     {
@@ -29,8 +29,8 @@
     },
     {
       "tick": 61,
-      "event_type": "judgment_produced",
-      "summary": "Judgment produced"
+      "event_type": "assessment_produced",
+      "summary": "Assessment produced"
     },
     {
       "tick": 61,

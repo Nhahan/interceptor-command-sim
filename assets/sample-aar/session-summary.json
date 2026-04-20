@@ -2,33 +2,38 @@
   "schema_version": "icss-session-summary-json-v1",
   "session_id": 1001,
   "final_phase": "archived",
-  "snapshot_count": 193,
-  "event_count": 3,
-  "command_console_connection": "disconnected",
-  "viewer_connection": "connected",
-  "judgment_ready": false,
-  "judgment_code": "pending",
-  "guidance_state": "off",
-  "launch_mode": "straight",
+  "snapshot_count": 46,
+  "event_count": 12,
+  "fire_control_console_connection": "connected",
+  "display_connection": "connected",
+  "assessment_ready": true,
+  "assessment_code": "intercept_success",
+  "effective_track_state": "tracked",
+  "intercept_profile": "tracked_intercept",
   "launch_angle_deg": 45,
   "last_event_type": "session_ended",
-  "resilience_case": "udp_snapshot_gap_convergence",
-  "latest_snapshot_sequence": 193,
-  "latest_viewer_connection": "connected",
+  "resilience_case": "reconnect_and_resync,udp_snapshot_gap_convergence",
+  "latest_snapshot_sequence": 46,
+  "latest_display_connection": "connected",
   "latest_freshness": "fresh",
   "recent_events": [
+    {
+      "tick": 1,
+      "event_type": "engage_order_accepted",
+      "summary": "Launch accepted"
+    },
     {
       "tick": 2,
       "event_type": "resilience_triggered",
       "summary": "Snapshot gap exercised"
     },
     {
-      "tick": 6,
-      "event_type": "client_joined",
-      "summary": "Client joined session"
+      "tick": 41,
+      "event_type": "assessment_produced",
+      "summary": "Assessment produced"
     },
     {
-      "tick": 192,
+      "tick": 41,
       "event_type": "session_ended",
       "summary": "Session archived"
     }
